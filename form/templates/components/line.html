@@ -1,0 +1,20 @@
+<td>
+
+    <div class="{{ class }}-checkboxes" data-id="{{ veiculo_id }}" data-field="{{ field_name }}" data-values="{{display}}">
+        <label>
+            <input type="checkbox" class="circle" 
+                   {% if 'All support OBD' in display %}checked{% endif %}>
+            <!-- OBD -->
+        </label>
+        <label>
+            <input type="checkbox" class="square"
+                   {% if 'All support on' in display %}checked{% endif %}>
+            <!-- On-Bench -->
+        </label>
+        <label>
+            <input type="checkbox" class="triangle"
+                   {% if 'Not supported' in display %}checked{% endif %}>
+            <!-- Not Supported -->
+        </label>
+    </div>
+</td>
