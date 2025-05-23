@@ -93,76 +93,15 @@
             <div class="col-md-12 mt-4">
                 <h5>Métodos</h5>
                 <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Adicionar Chave:</label>
-                            <div class="form-check" id="id_add_key">
-                                {% for checkbox in form.add_key %}
-                                <div class="form-check">
-                                    {{ checkbox.tag }}
-                                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
-                                        {{ checkbox.choice_label }}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>All keys lost:</label>
-                            <div class="form-check" id="id_keys_lost">
-                                {% for checkbox in form.keys_lost %}
-                                <div class="form-check">
-                                    {{ checkbox.tag }}
-                                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
-                                        {{ checkbox.choice_label }}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Ler Senha:</label>
-                            <div class="form-check" id="id_read_password">
-                                {% for checkbox in form.read_password %}
-                                <div class="form-check">
-                                    {{ checkbox.tag }}
-                                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
-                                        {{ checkbox.choice_label }}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Aprendizado Remoto:</label>
-                            <div class="form-check" id="id_remote_learning">
-                                {% for checkbox in form.remote_learning %}
-                                <div class="form-check">
-                                    {{ checkbox.tag }}
-                                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
-                                        {{ checkbox.choice_label }}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-
-                    
+                    {% include 'components/column-create.html' with subtitle="Adicionar Chave" id="id_add_key" checkboxes=form.add_key%}
+                    {% include 'components/column-create.html' with subtitle="All keys lost" id="id_keys_lost" checkboxes=form.keys_lost%}
+                    {% include 'components/column-create.html' with subtitle="Ler Senha" id="id_read_password" checkboxes=form.read_password%}
+                    {% include 'components/column-create.html' with subtitle="Aprendizado Remoto" id="id_remote_learning" checkboxes=form.remote_learning%}
                 </div>
             </div>
         </div>
         
-        <div class="mt-4">
+        <div class="mt-4 submits">
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-save"></i> Salvar Veículo
             </button>
@@ -176,7 +115,162 @@
 
 {% block extra_css %}
 <style>
-/* Estilo para simular radios com checkboxes */
+/* Reset simples */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: sans-serif;
+}
+
+/* Container centralizado */
+.container {
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Espaçamento entre seções */
+.mt-3 { margin-top: 1rem; }
+
+/* Grid layout */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.col-md-12 { flex: 1 1 100%; }
+.col-md-6 { flex: 1 1 calc(50% - 1rem); }
+.col-md-4 { flex: 1 1 calc(33.333% - 1rem); }
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .col-md-6,
+    .col-md-4,
+    .col-md-12 {
+        flex: 1 1 100%;
+    }
+}
+
+/* Formulário */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.subtitle{
+    color:#0056b3;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+.submits{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+/* Texto pequeno */
+.form-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Botões */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+
+.btn i {
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0069d9;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* Alertas */
+.alert {
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+    position: relative;
+}
+
+.alert-success { background-color: #d4edda; color: #155724; }
+.alert-danger { background-color: #f8d7da; color: #721c24; }
+.alert-warning { background-color: #fff3cd; color: #856404; }
+.alert-info { background-color: #d1ecf1; color: #0c5460; }
+
+.alert .btn-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    cursor: pointer;
+    color: inherit;
+}
+
+/* Form-check (checkboxes e radios) */
+.form-check-container {
+    display: flex;
+    align-items: start;
+    margin-bottom: 0.5rem;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.form-check{
+    display: flex;
+    align-items: row;
+}
+
+.form-check input[type="checkbox"],
+.form-check input[type="radio"] {
+    margin-right: 0.5rem;
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+/* Checkboxes customizados simulando radios */
 .method-checkbox {
     appearance: none;
     -webkit-appearance: none;
@@ -185,8 +279,7 @@
     border: 2px solid #007bff;
     border-radius: 50%;
     margin-right: 5px;
-    position: relative;
-    top: 3px;
+    top: 2px;
     cursor: pointer;
 }
 
@@ -206,28 +299,21 @@
     left: 2px;
 }
 
-.form-check-label {
-    margin-left: 5px;
-    cursor: pointer;
-}
-
-.form-check {
-    margin-bottom: 8px;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
+/* Estilo para 'Not Supported' */
 input[value="none"] + label {
-    color: #dc3545; /* Vermelho do Bootstrap para danger */
+    color: #dc3545; /* vermelho */
 }
 
-/* Estilo para checkboxes normais */
 .method-checkbox:not([value="none"]) + label {
-    color: #212529; /* Cor padrão de texto */
+    color: #212529;
+}
+h5{
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: #0a2e5a;
 }
 </style>
+
 {% endblock %}
 
 {% block javascript %}
@@ -253,7 +339,6 @@ $(document).ready(function() {
         const groups = {
             'OBD': ['allOBD', 'partOBD'],
             'BENCH': ['allBENCH', 'partBENCH'],
-            'NONES': ['notreq', 'none']
         };
         
         // Aplica a todos os campos de método

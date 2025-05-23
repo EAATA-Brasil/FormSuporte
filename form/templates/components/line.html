@@ -1,20 +1,7 @@
 <td>
-
-    <div class="{{ class }}-checkboxes" data-id="{{ veiculo_id }}" data-field="{{ field_name }}" data-values="{{display}}">
+    <div class="editable-field-container {{ field_name }}" data-id="{{ veiculo_id }}" data-field="{{ field_name }}">
         <label>
-            <input type="checkbox" class="circle" 
-                   {% if 'All support OBD' in display %}checked{% endif %}>
-            <!-- OBD -->
-        </label>
-        <label>
-            <input type="checkbox" class="square"
-                   {% if 'All support on' in display %}checked{% endif %}>
-            <!-- On-Bench -->
-        </label>
-        <label>
-            <input type="checkbox" class="triangle"
-                   {% if 'Not supported' in display %}checked{% endif %}>
-            <!-- Not Supported -->
+            <input type="text" class=" auto-save-input" placeholder="{{display}}" data-initial-value="{{ display }}" id="{{field_name}}{{veiculo_id}}">
         </label>
     </div>
 </td>

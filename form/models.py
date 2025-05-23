@@ -4,17 +4,13 @@ from multiselectfield import MultiSelectField
 # Definindo as choices como variável global
 METHOD_CHOICES = {
     "OBD": {
-        'allOBD': 'All support OBD method',
-        'partOBD': 'Part of the models support OBD method'
+        'allOBD': 'allOBD',
+        'partOBD': 'partOBD'
     },
     "BENCH": {
-        'allBENCH': 'All support on-bench/boot method',
-        'partBENCH': 'Part of the models support on-bench/boot method'
+        'allBENCH': 'allBENCH',
+        'partBENCH': 'partBENCH'
     },
-    "NONES": {
-        'notreq': 'Not required',
-        'none': 'Not supported'
-    }
 }
 
 def get_flat_choices():

@@ -3,7 +3,7 @@ from .models import Veiculo, METHOD_CHOICES
 
 def get_flat_choices():
     """Reutiliza a mesma função do models.py"""
-    flat_choices = [('', '---------')]
+    flat_choices = []
     for grupo in METHOD_CHOICES.values():
         flat_choices.extend(grupo.items())
     return flat_choices
