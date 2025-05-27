@@ -277,57 +277,57 @@ $(document).ready(function() {
         }
     
     // Garante o salvamento ao perder o foco
-    inputs.on('blur', function() {
-        clearTimeout(typingTimer);
-        const input = $(this);
-        if(input.hasClass('pending-save')) {
-            saveField(input);
-        }
-    });
-    
-    function saveField(inputElement) {
-        const container = inputElement.closest('.editable-field-container');
-        const veiculoId = container.data('id');
-        
-        const fieldName = container.data('field');
-        const newValue = inputElement.val();
-        
-        $.ajax({
-            url: 'update-field/',
-            method: 'POST',
-            data: {
-                id: veiculoId,
-                field: fieldName,
-                value: newValue,
-                csrfmiddlewaretoken: '{{ csrf_token }}'
-            },
-            beforeSend: function() {
-                inputElement.addClass('saving');
-            },
-            success: function(response) {
-                if(response.status === 'success') {
-                    inputElement.removeClass('pending-save saving')
-                               .data('initial-value', newValue);
-                    
-                    // Atualiza o display se necessário
-                    if(response.display_value) {
-                        inputElement.val(response.display_value)
-                                   .attr('placeholder', response.display_value)
-                                   .data('initial-value', response.display_value);
-                    }
-                }
-            },
-            error: function(xhr) {
-                console.error('Erro:', xhr.responseJSON?.message || 'Erro desconhecido');
-                inputElement.removeClass('saving').addClass('error');
-                setTimeout(() => inputElement.removeClass('error'), 2000);
-                
-                // Reverte para o valor original em caso de erro
-                inputElement.val(inputElement.data('initial-value'));
+        inputs.on('blur', function() {
+            clearTimeout(typingTimer);
+            const input = $(this);
+            if(input.hasClass('pending-save')) {
+                saveField(input);
             }
         });
-    }
-});
+    
+        function saveField(inputElement) {
+            const container = inputElement.closest('.editable-field-container');
+            const veiculoId = container.data('id');
+        
+            const fieldName = container.data('field');
+            const newValue = inputElement.val();
+        
+            $.ajax({
+                url: 'update-field/',
+                method: 'POST',
+                data: {
+                    id: veiculoId,
+                    field: fieldName,
+                    value: newValue,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                beforeSend: function() {
+                    inputElement.addClass('saving');
+                },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        inputElement.removeClass('pending-save saving')
+                        .data('initial-value', newValue);
+                    
+                    // Atualiza o display se necessário
+                        if(response.display_value) {
+                            inputElement.val(response.display_value)
+                            .attr('placeholder', response.display_value)
+                            .data('initial-value', response.display_value);
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Erro:', xhr.responseJSON?.message || 'Erro desconhecido');
+                    inputElement.removeClass('saving').addClass('error');
+                    setTimeout(() => inputElement.removeClass('error'), 2000);
+                
+                    // Reverte para o valor original em caso de erro
+                    inputElement.val(inputElement.data('initial-value'));
+                }
+            });
+        }
+    });
     
 });
 

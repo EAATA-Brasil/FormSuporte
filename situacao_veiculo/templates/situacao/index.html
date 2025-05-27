@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EAATA Brasil - Controle de Acesso ao Suporte</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="{% static 'situacao/css/style.css' %}">
 </head>
 <body>
     <div class="container">
@@ -15,39 +16,73 @@
             </div>
             <h1 class="title">CONTROLE DE ACESSO AO SUPORTE</h1>
         </header>
-
+        
         <main class="content">
-            <div class="form-group">
-                <label for="serie">Nº Série</label>
-                <input type="text" id="serie" class="form-control">
-            </div>
+            <form method="POST" action="{% url 'buscar_serial' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="serie">Nº Série</label>
+                    <input type="text" id="serie" name="serial" class="form-control" 
+                           value="{{ request.POST.serial }}" required>
+                    <button type="submit" class="btn-buscar">Buscar</button>
+                </div>
+            </form>
 
+            {% if cliente %}
+            <script>
+                console.log("{{cliente.cnpj}}");
+                
+            </script>
             <div class="section">
                 <h2 class="section-title">Dados Cliente:</h2>
                 <div class="form-group">
-                    <input type="text" class="form-control">
+                    {{ cliente.nome | yesno:"talvez" }}
                 </div>
                 <div class="form-group">
-                    <input type="text" class="form-control">
+                    
+                    {{ cliente.cnpj}}
                 </div>
                 <div class="form-group">
-                    <input type="text" class="form-control">
+                    {{ cliente.tel }}
                 </div>
                 <div class="form-group">
-                    <input type="text" class="form-control">
+                    {{ cliente.equipamento }}
                 </div>
             </div>
 
             <div class="section">
                 <h2 class="section-title">Status de Uso</h2>
-                <div class="status-box">
-                    <p class="status-text">SEM DADOS</p>
+                <div class="status-box {{ status }}" id="status">
+                    <p class="status-text">{{ status_message }}</p>
+                </div>
+            </div>
+            {%else%}
+            <div class="section">
+                <h2 class="section-title">Dados Cliente:</h2>
+                <div class="form-group">
+                    SEM DADOS
+                </div>
+                <div class="form-group">
+                    SEM DADOS
+                </div>
+                <div class="form-group">
+                    SEM DADOS
+                </div>
+                <div class="form-group">
+                    SEM DADOS
                 </div>
             </div>
 
-            <div class="footer">
-                <p class="note">** Passar para o comercial atualizar o cadastro</p>
-                <button class="btn-close">FECHAR</button>
+            <div class="section">
+                <h2 class="section-title">Status de Uso</h2>
+                <div class="status-box sem" id="status">
+                    <p class="status-text">SEM DADOS</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="footer" id="message">
+                <p class="note">{{ mensagem }}</p>
             </div>
         </main>
     </div>

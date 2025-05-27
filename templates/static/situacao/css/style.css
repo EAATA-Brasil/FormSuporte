@@ -1,0 +1,222 @@
+:root {
+    --primary: #0056b3;
+    --primary-light: #3a7bc8;
+    --secondary: #0a2e5a;
+    --dark: #1a1a1a;
+    --light: #ffffff;
+    --gray: #f5f7fa;
+    --text: #333333;
+    --text-light: #6b7280;
+    --error: #ffb6b6;
+    --error-text: #cc0000;
+    --success: #d4edda;
+    --success-text: #155724;
+    --warning: #fff3cd;
+    --warning-text: #856404;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: var(--gray);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+    background-color: var(--light);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+/* Cabeçalho */
+.header {
+    background-color: var(--primary);
+    color: var(--light);
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.logo-text {
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.logo-brasil {
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.title {
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    flex-grow: 1;
+}
+
+/* Conteúdo */
+.content {
+    padding: 20px;
+}
+
+/* Formulário */
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: var(--text);
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--text-light);
+    border-radius: 0;
+    font-size: 16px;
+    outline: none;
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+}
+
+/* Botão de busca */
+.btn-buscar {
+    background-color: var(--secondary);
+    color: var(--light);
+    border: none;
+    padding: 5px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 5px;
+}
+
+.btn-buscar:hover {
+    background-color: var(--primary);
+}
+
+/* Seções */
+.section {
+    margin-top: 20px;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: var(--text);
+}
+
+/* Status de uso */
+.status-box {
+    padding: 15px;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.status-text {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.status-box.vencido{
+    background-color: #ff000047 ;
+    color: #aa0000;
+}
+.status-box.direito{
+    background-color: #49d36869 ;
+    color: #008105;
+}
+.status-box.vencendo{
+    background-color: #f3da78a8 ;
+    color: #996d07;
+}
+
+.status-box {
+    background-color: rgba(147, 112, 219, 0.2);
+    padding: 15px;
+    text-align: center;
+    color: #9370DB;
+}
+
+.status-box.ativo {
+    background-color: var(--success);
+}
+
+.status-box.ativo .status-text {
+    color: var(--success-text);
+}
+
+.status-box.vencido {
+    background-color: var(--error);
+}
+
+.status-box.vencido .status-text {
+    color: var(--error-text);
+}
+
+.status-box.pendente {
+    background-color: var(--warning);
+}
+
+.status-box.pendente .status-text {
+    color: var(--warning-text);
+}
+
+/* Rodapé e mensagens */
+.footer {
+    margin-top: 15px;
+}
+
+.note {
+    font-size: 14px;
+    color: var(--text);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 10px;
+    }
+    
+    .logo {
+        margin-bottom: 10px;
+        align-items: center;
+    }
+    
+    .title {
+        font-size: 18px;
+    }
+    
+    .content {
+        padding: 15px;
+    }
+}
