@@ -9,9 +9,7 @@ class Cliente(models.Model):
     nome = models.CharField(verbose_name="Nome", max_length=100, blank=False)
     cnpj = models.CharField(max_length=30, verbose_name='CPF/CNPJ', blank=True, default="SEM DADO")
     tel = models.CharField(max_length=30, verbose_name='Telefone', blank=True, default="SEM DADO")
-    email = models.EmailField(verbose_name='Email', blank=True)
-    feedback = models.CharField(verbose_name='Feedback', blank=True, max_length=255, default="")
-    equipamento = models.CharField(verbose_name='Equipamento', max_length=100, blank=False)
+    equipamento = models.CharField(verbose_name='Equipamento', max_length=100, blank=True)
 
     def save(self, *args, **kwargs):
         if self.data and not self.vencimento:

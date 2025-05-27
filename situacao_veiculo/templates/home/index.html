@@ -1,0 +1,26 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página Inicial</title>
+    <link rel="stylesheet" href="{% static 'home/css/styles.css' %}">
+    
+</head>
+<body>
+    <div class="container">
+        <img src="{% static 'home/images/logo.webp' %}" alt="" style="width:100%; background-color: #0056b3; border-radius: 100px;">
+        <p>Esta é uma página inicial simples para direcionamento. Escolha um dos links abaixo para continuar navegando em nosso site.</p>
+        
+        <div class="links-container">
+            <a href="form" class="link">Formulário de cobertura</a>
+            <a href="situacao" class="link secondary">Atendimento suporte</a>
+        </div>
+        
+        <footer>
+            <p>© 2025 - Todos os direitos reservados</p>
+        </footer>
+    </div>
+</body>
+</html>
