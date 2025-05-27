@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'form/base.html' %}
 
 {% block content %}
 <div class="container mt-4">
@@ -54,7 +54,7 @@
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-filter"></i> Aplicar Filtros
                 </button>
-                <a href="{% url 'index' %}" class="btn btn-secondary">
+                <a href="{% url 'index_form' %}" class="btn btn-secondary">
                     <i class="fas fa-undo"></i> Limpar
                 </a>
             </div>
@@ -97,22 +97,18 @@
                 <td>{{ veiculo.brand|default:"-" }}</td>
                 <td>{{ veiculo.modelo|default:"-" }}</td>
                 <td>{{ veiculo.ano|default:"-" }}</td>
-                {% include 'components/line.html' with veiculo_id=veiculo.id field_name='sistema' display=veiculo.sistema|default:'Not defined'%}
-                <script>
-                    console.log("{{veiculo.get_add_key_display}}");
-                    
-                </script>
+                {% include 'form/components/line.html' with veiculo_id=veiculo.id field_name='sistema' display=veiculo.sistema|default:'Not defined'%}
                 <!-- Checkboxes -->
-                {% include 'components/checkbox_line.html' with veiculo_id=veiculo.id field_name='add_key' display=veiculo.get_add_key_display%}
-                {% include 'components/checkbox_line.html' with veiculo_id=veiculo.id field_name='key_lost' display=veiculo.get_key_lost_display%}
-                {% include 'components/checkbox_line.html' with veiculo_id=veiculo.id field_name='read_password' display=veiculo.get_read_password_display%}
-                {% include 'components/checkbox_line.html' with veiculo_id=veiculo.id field_name='remote_learning' display=veiculo.get_remote_learning_display%}
+                {% include 'form/components/checkbox_line.html' with veiculo_id=veiculo.id field_name='add_key' display=veiculo.get_add_key_display%}
+                {% include 'form/components/checkbox_line.html' with veiculo_id=veiculo.id field_name='key_lost' display=veiculo.get_key_lost_display%}
+                {% include 'form/components/checkbox_line.html' with veiculo_id=veiculo.id field_name='read_password' display=veiculo.get_read_password_display%}
+                {% include 'form/components/checkbox_line.html' with veiculo_id=veiculo.id field_name='remote_learning' display=veiculo.get_remote_learning_display%}
 
                 <!-- Informações adicionais -->
-                {% include 'components/line.html' with veiculo_id=veiculo.id field_name='tipo_chave' display=veiculo.tipo_chave|default:'Not defined'%}
-                {% include 'components/select_line.html' with veiculo_id=veiculo.id field_name='frequencia' display=veiculo.get_frequencia_display|default:''%}
-                {% include 'components/line.html' with veiculo_id=veiculo.id field_name='transponder' display=veiculo.transponder|default:'Not defined'%}
-                {% include 'components/line.html' with veiculo_id=veiculo.id field_name='immo_part_replacement' display=veiculo.immo_part_replacement|default:'Not defined'%}
+                {% include 'form/components/line.html' with veiculo_id=veiculo.id field_name='tipo_chave' display=veiculo.tipo_chave|default:'Not defined'%}
+                {% include 'form/components/select_line.html' with veiculo_id=veiculo.id field_name='frequencia' display=veiculo.get_frequencia_display|default:''%}
+                {% include 'form/components/line.html' with veiculo_id=veiculo.id field_name='transponder' display=veiculo.transponder|default:'Not defined'%}
+                {% include 'form/components/line.html' with veiculo_id=veiculo.id field_name='immo_part_replacement' display=veiculo.immo_part_replacement|default:'Not defined'%}
 
             </tr>
             {% empty %}
@@ -226,7 +222,7 @@ $(document).ready(function() {
         }
         
         $.ajax({
-            url: '/update-vehicle/',
+            url: 'update-vehicle/',
             method: 'POST',
             data: {
                 'id': veiculoId,
@@ -251,10 +247,9 @@ $(document).ready(function() {
         const veiculoId = container.data('id');
         const fieldName = container.data('field');
         const checkboxType = $(this).attr('class');
-        console.log();
 
         $.ajax({
-            url: '/update-vehicle/',
+            url: 'update-vehicle/',
             method: 'POST',
             data: {
                 'id': veiculoId,
@@ -298,7 +293,7 @@ $(document).ready(function() {
         const newValue = inputElement.val();
         
         $.ajax({
-            url: '/update-field/',
+            url: 'update-field/',
             method: 'POST',
             data: {
                 id: veiculoId,
@@ -342,6 +337,7 @@ $(document).ready(function() {
     const marcaInput = $('#id_brand');
     const modeloInput = $('#id_modelo');
     const anoInput = $('#id_ano');
+    const paisesDatalist = $('#paisesList');
     const marcaDatalist = $('#marcasList');
     const modeloDatalist = $('#modelosList');
     const anoDatalist = $('#anosList');
@@ -350,10 +346,17 @@ $(document).ready(function() {
     function atualizarOpcoes() {
         const pais = paisInput.val();
         const marca = marcaInput.val();
+        const modelo = modeloInput.val();
 
         // Requisição AJAX para a API
-        $.get('/get-opcoes/', { pais: pais, marca: marca }, function(data) {
+        $.get('get-opcoes/', { pais: pais, marca: marca, modelo: modelo }, function(data) {
             // Atualiza opções de marca
+            console.log(data.pais);
+            
+            data.pais.forEach((pais)=>{
+                paisesDatalist.append(`<option value="${pais}">`)
+            })
+
             marcaDatalist.empty();
             data.marcas.forEach(function(marca) {
                 marcaDatalist.append(`<option value="${marca}">`);
@@ -368,8 +371,9 @@ $(document).ready(function() {
             data.anos.forEach(function(ano) {
                 anoDatalist.append(`<option value="${ano}">`);
             });
-
+            
             // Ativa/desativa campo de modelo
+            marcaInput.prop('disabled', !data.marcas.length);
             modeloInput.prop('disabled', !data.modelos.length);
             anoInput.prop('disabled', !data.anos.length);
             

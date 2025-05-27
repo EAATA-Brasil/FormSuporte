@@ -13,13 +13,13 @@ def cadastrar_veiculo(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Veículo cadastrado com sucesso!')
-            return redirect('index')
+            return redirect('index_form')
         else:
             messages.error(request, 'Por favor, corrija os erros abaixo.')
     else:
         form = VeiculoForm()
     
-    return render(request, 'create.html', {'form': form})
+    return render(request, 'form/create.html', {'form': form})
 
 def index(request):
     filtros = Q()
@@ -34,14 +34,14 @@ def index(request):
     if request.GET.get('ano'):
         filtros &= Q(ano__icontains=request.GET['ano'])
     
-    veiculos = Veiculo.objects.filter(filtros).order_by('brand', 'modelo')
+    veiculos = Veiculo.objects.filter(filtros).order_by('pais','brand', 'modelo','ano')
 
     # Paginação
     paginator = Paginator(object_list=veiculos, per_page=10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    return render(request, 'index.html', {
+    return render(request, 'form/index.html', {
         'page_obj': page_obj,
         'filtros': request.GET,
     })
@@ -59,6 +59,7 @@ def get_opcoes_filtro(request):
         resultados = resultados.filter(brand__icontains=marca)
     
     data = {
+        'pais': list(resultados.values_list('pais', flat=True).distinct()),
         'marcas': list(resultados.values_list('brand', flat=True).distinct()),
         'modelos': list(resultados.values_list('modelo', flat=True).distinct()),
         'anos': list(resultados.values_list('ano', flat=True).distinct()),
