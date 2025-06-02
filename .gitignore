@@ -1,0 +1,53 @@
+# Arquivos do ambiente virtual Python
+.env/
+venv/
+env/
+*.py[cod]
+__pycache__/
+
+# Arquivos de configuração local (não versionar credenciais!)
+.env
+.env.local
+.env.*.local
+*.env
+secrets.py
+settings/local.py
+
+# Banco de dados SQLite (comum em desenvolvimento)
+*.sqlite3
+*.db
+
+# Arquivos estáticos e de mídia (gerados coletados)
+/staticfiles/
+/media/
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs e cache
+*.log
+*.pot
+*.pyc
+.cache/
+.pytest_cache/
+
+# Pip/Setuptools
+pip-delete-this-directory.txt
+pip-selfcheck.json
+/dist/
+/build/
+*.egg-info/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Celery (se usado)
+celerybeat-schedule.*
+
+# Outros
+coverage.xml
+*.sql
