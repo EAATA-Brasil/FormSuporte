@@ -22,5 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("", views.index, name="index"),
     path("form/", include("form.urls")),
-    path("situacao/", include("situacao_veiculo.urls"))
+    path("situacao/", include("situacao_veiculo.urls")),
+    path("ocorrencia/", include("ocorrencia_erro.urls"))
 ]

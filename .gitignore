@@ -14,7 +14,6 @@ secrets.py
 settings/local.py
 
 # Banco de dados SQLite (comum em desenvolvimento)
-*.sqlite3
 *.db
 
 # Arquivos estáticos e de mídia (gerados coletados)

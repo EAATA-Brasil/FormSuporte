@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'form',
-    'situacao_veiculo'
+    'situacao_veiculo',
+    'ocorrencia_erro'
 ]
 
 MIDDLEWARE = [
