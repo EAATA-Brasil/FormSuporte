@@ -1,0 +1,18 @@
+{% if not ID %}
+    {% with ID=name %}
+    <th data-column="{{ID}}">
+        {{name}}
+        {%if checbox != 'false'%}
+            <span class="filter-icon">▼</span>
+            <div class="filter-box" id="filter-box-{{ID}}"></div>
+        {%endif%}
+    </th>
+    {% endwith %}
+{%else%}
+    <th data-column="{{ID}}">
+        {{name}}
+        {%if checbox != 'false'%}
+            <span class="filter-icon">▼</span>
+            <div class="filter-box" id="filter-box-{{ID}}"></div>
+        {%endif%}
+{% endif %}

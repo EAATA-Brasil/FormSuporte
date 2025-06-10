@@ -1,0 +1,295 @@
+
+
+:root {
+    --primary: #0056b3;
+    --primary-light: #3a7bc8;
+    --secondary: #0a2e5a;
+    --dark: #1a1a1a;
+    --light: #ffffff;
+    --gray: #f5f7fa;
+    --text: #333333;
+    --text-light: #6b7280;
+    --border-color: #dee2e6; /* Adicionando uma cor de borda padrão */
+    --hover-bg: #e9ecef; /* Adicionando uma cor de fundo para hover */
+}
+
+body {
+    font-family: sans-serif; /* Usar uma fonte padrão mais moderna */
+    color: var(--text);
+    background-color: var(--light);
+    margin: 20px;
+    line-height: 1.5;
+}
+
+
+
+/* --- Estilos da Tabela --- */
+#data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: var(--light);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+#data-table thead th {
+    background-color: var(--gray);
+    color: var(--secondary);
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    position: relative; /* Para posicionar a caixa de filtro */
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+#data-table thead th:hover {
+    background-color: var(--hover-bg);
+}
+
+/* Indicador de filtro ativo no cabeçalho */
+#data-table thead th.filtered {
+    background-color: var(--primary-light);
+    color: var(--light);
+}
+
+.filter-header label{
+    color: black !important;
+}
+
+#data-table tbody td {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text);
+}
+
+#data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+#data-table tbody tr:nth-child(even) {
+    background-color: var(--gray);
+}
+
+#data-table tbody tr:hover {
+    background-color: var(--hover-bg);
+}
+
+/* --- Estilos da Caixa de Filtro --- */
+.filter-box {
+    display: none;
+    position: absolute;
+    background-color: var(--light);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    padding: 10px;
+    z-index: 100;
+    min-width: 250px;
+    max-height: 400px; /* Altura máxima com scroll */
+    overflow-y: auto;
+    font-size: 0.9em;
+}
+
+.filter-section {
+    color: var(--secondary);
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.filter-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+/* Opções de Ordenação */
+.filter-sort-options .sort-option {
+    padding: 5px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.filter-sort-options .sort-option:hover {
+    background-color: var(--hover-bg);
+    color: var(--primary);
+}
+
+/* Caixa de Pesquisa */
+.filter-search-input {
+    width: calc(100% - 16px); /* Desconta padding */
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+/* Container das Opções */
+.filter-options {
+    display: flex;
+    flex-direction: column;
+    max-height: 200px; /* Altura máxima para opções antes de scroll interno */
+    overflow-y: auto;
+    padding-right: 5px; /* Espaço para scrollbar */
+}
+
+/* Opções Individuais (Label + Checkbox) */
+.filter-options label {
+    color: var(--secondary);
+    display: block;
+    margin-bottom: 5px;
+    cursor: pointer;
+    padding: 3px 5px;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+    white-space: nowrap; /* Evita quebra de linha */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filter-options label:hover {
+    background-color: var(--hover-bg);
+}
+
+.filter-options label input[type="checkbox"] {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* Estilo para opções desabilitadas */
+.filter-options label.disabled {
+    color: var(--text-light);
+    cursor: not-allowed;
+    font-style: italic;
+}
+
+.filter-options label.disabled:hover {
+    background-color: transparent; /* Sem hover em desabilitado */
+}
+
+/* --- Estilos da Árvore de Datas --- */
+.tree-node {
+    margin-left: 15px;
+}
+
+.tree-node > label {
+    font-weight: 500; /* Destaca nós pais */
+}
+
+.tree-node .tree-node {
+    margin-left: 15px; /* Indentação adicional */
+}
+
+.tree-node .tree-node > label {
+    font-weight: normal;
+}
+
+.tree-expander {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    margin-right: 5px;
+    cursor: pointer;
+    background-color: var(--gray);
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+.tree-expander:hover {
+    background-color: var(--hover-bg);
+    border-color: var(--primary);
+}
+
+.tree-node-content {
+    padding-left: 5px; /* Leve indentação para conteúdo */
+    border-left: 1px dashed var(--border-color);
+    margin-left: 8px; /* Alinha com o texto após o expander */
+}
+
+/* --- Botões de Ação --- */
+.filter-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.filter-actions button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.filter-apply-button {
+    background-color: var(--primary);
+    color: var(--light);
+}
+
+.filter-apply-button:hover {
+    background-color: var(--primary-light);
+}
+
+.filter-clear-button {
+    background-color: var(--gray);
+    color: var(--text);
+    border: 1px solid var(--border-color);
+}
+
+.filter-clear-button:hover {
+    background-color: var(--hover-bg);
+}
+
+.filter-actions button:disabled {
+    background-color: var(--border-color);
+    color: var(--text-light);
+    cursor: not-allowed;
+}
+
+
+.date-input-container {
+    display: table-cell !important;
+    align-items: center;
+    gap: 5px;
+}
+
+.date-text-input {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 120px;
+}
+
+.date-picker-button {
+    padding: 6px 10px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.date-picker-button:hover {
+    background: #e0e0e0;
+}
+
+td input:focus-visible{
+    outline: none;
+}
+.erro{
+    border: 2px red solid;
+}
+.success{
+    border: 2px green solid;
+}
+.date-text-input:disabled{
+    background-color: #d1d1d1 !important;
+}

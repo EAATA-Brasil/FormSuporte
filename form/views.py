@@ -5,7 +5,6 @@ from .forms import VeiculoForm
 from .models import Veiculo
 from django.db.models import Q
 from django.core.paginator import Paginator
-from django.views.decorators.csrf import csrf_exempt
 
 def cadastrar_veiculo(request):
     if request.method == 'POST':

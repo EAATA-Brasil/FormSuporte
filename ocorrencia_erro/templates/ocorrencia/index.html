@@ -5,16 +5,868 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <link rel="stylesheet" href="{% static 'ocorrencia/css/styles.css'%}">
+    <link rel="stylesheet" href="{% static 'ocorrencia/css/styles.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <table>
+
+    <table id="data-table" class="table">
         <thead>
             <tr>
-                (th>span.filter-icon+div.filter-box#filter-box)*17
-                
+                {% include 'ocorrencia/components/lineHead.html' with name='data' ID="data"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='technical' ID="technical"%}
+                {# Condicional para exibir a coluna País apenas para superusuários #}
+                {% if has_full_permission %}
+                    <!-- DEBUG: Bloco has_full_permission para header país RENDERIZADO -->
+                    {% include 'ocorrencia/components/lineHead.html' with name='país' ID="country"%}
+                {% else %}
+                    <!-- DEBUG: Bloco has_full_permission para header país NÃO RENDERIZADO -->
+                {% endif %}
+                {% include 'ocorrencia/components/lineHead.html' with name='device' ID="device"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='area' ID="area"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='serial' ID="serial"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='brand' ID="brand"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='model' ID="model"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='year' ID="year"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='version' ID="version"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='Problem Detected' ID="problem_detected" checbox='false'%}
+                {% include 'ocorrencia/components/lineHead.html' with name='status' ID="status"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='deadline' ID="deadline"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='responsible' ID="responsible"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='finished' ID="finished"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='Feedback Technical' ID="feedback_technical" checbox='false'%}
+                {% include 'ocorrencia/components/lineHead.html' with name='Feedback Manager' ID="feedback_manager" checbox='false'%}
             </tr>
+            
         </thead>
+        <tbody id="table-body">
+        {# O corpo da tabela será preenchido via AJAX #}
+        </tbody>
     </table>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        "use strict";
+
+        function isValidDate(input) {
+            // Verifica o formato com regex: dd/mm/yyyy
+            const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            const match = input.match(regex);
+
+            if (!match) return false;
+
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const year = parseInt(match[3], 10);
+
+            // Valida mês de 1 a 12
+            if (month < 1 || month > 12) return false;
+
+            // Cria a data com JS (os meses são de 0 a 11)
+            const date = new Date(year, month - 1, day);
+
+            // Verifica se o dia, mês e ano conferem
+            return (
+                date.getFullYear() === year &&
+                date.getMonth() === month - 1 &&
+                date.getDate() === day
+            );
+        }
+
+        const table = document.getElementById("data-table");
+        if (!table) {
+            console.error("Erro: Tabela com ID \"data-table\" não encontrada.");
+            return;
+        }
+        const tableBody = document.getElementById("table-body");
+        if (!tableBody) {
+            console.error("Erro: Corpo da tabela com ID \"table-body\" não encontrado.");
+            return;
+        }
+        
+        const headers = Array.from(table.querySelectorAll("thead th[data-column]")); 
+        //console.log("Cabeçalhos encontrados no DOM:", headers.map(h => h.getAttribute("data-column")));
+
+        const headerData = headers
+            .map((header) => ({
+                element: header,
+                columnName: header.getAttribute("data-column"),
+                filterBox: header.querySelector(".filter-box"),
+                isDateColumn: ["data", "deadline", "finished"].includes(
+                    header.getAttribute("data-column")
+                ),
+                isTextAreaColumn: ["feedback_technical", "feedback_manager"].includes(
+                    header.getAttribute("data-column")
+                ),
+            }))
+            .filter((h) => h.columnName);
+
+        // console.log("HeaderData processado:", headerData.map(h => ({ col: h.columnName, hasFilterBox: !!h.filterBox })));
+
+        let openFilterBox = null;
+        let currentFilters = {}; 
+        let currentSort = { column: "data", direction: "asc" };
+        let currentFilterOptions = {}; // Armazena as opções de filtro recebidas do backend
+        const CSRF_TOKEN = getCookie("csrftoken");
+
+        // --- Funções Auxiliares --- 
+        function getCookie(name) { /* ... como antes ... */ 
+             if (document.cookie && document.cookie !== "") {
+                const cookies = document.cookie.split(";");
+                for (let i = 0; i < cookies.length; i++) {
+                    let cookie = cookies[i].trim();
+                    if (cookie.startsWith(name + "=")) {
+                        return decodeURIComponent(cookie.substring(name.length + 1));
+                    }
+                }
+            }
+            return null;
+        }
+
+        function parseDateToISO(dateString) { /* ... como antes ... */ 
+            if (!dateString || typeof dateString !== "string") return dateString;
+            const parts = dateString.trim().split("/");
+            if (parts.length === 3) {
+                const [day, month, year] = parts;
+                if (
+                    day.length === 2 &&
+                    month.length === 2 &&
+                    year.length === 4 &&
+                    !isNaN(parseInt(day)) &&
+                    !isNaN(parseInt(month)) &&
+                    !isNaN(parseInt(year))
+                ) {
+                    return `${year}-${month}-${day}`;
+                }
+            }
+            if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                return dateString;
+            }
+            return dateString;
+        }
+        function formatDateToDisplay(isoDateString) { /* ... como antes ... */ 
+            if (!isoDateString || typeof isoDateString !== "string") return "";
+            const parts = isoDateString.split("-");
+            if (parts.length === 3) {
+                const [year, month, day] = parts;
+                if (
+                    day.length === 2 &&
+                    month.length === 2 &&
+                    year.length === 4 &&
+                    !isNaN(parseInt(day)) &&
+                    !isNaN(parseInt(month)) &&
+                    !isNaN(parseInt(year))
+                ) {
+                    return `${day}/${month}/${year}`;
+                }
+            }
+            return isoDateString;
+        }
+
+        // --- Lógica de UI (Filter Box) --- 
+        function positionFilterBox(headerElement, filterBoxElement) { /* ... como antes ... */ 
+            const headerRect = headerElement.getBoundingClientRect();
+            const tableRect = table.getBoundingClientRect();
+            filterBoxElement.style.top = `${headerRect.bottom - tableRect.top + window.scrollY + 2}px`;
+            filterBoxElement.style.display = "block";
+            const boxRect = filterBoxElement.getBoundingClientRect();
+            if (boxRect.right > window.innerWidth - 10) {
+                filterBoxElement.style.left = `${Math.max(0, window.innerWidth - boxRect.width - 10 - tableRect.left + window.scrollX)}px`;
+            }
+            if (boxRect.left < 0) {
+                filterBoxElement.style.left = "0px";
+            }
+        }
+
+        // *** NOVO: Função para criar a árvore de datas ***
+        function createDateTreeHTML(columnName, dateTree, level = 0, parentPath = '') {
+            let html = '';
+            const sortedYears = Object.keys(dateTree).sort();
+
+            sortedYears.forEach(year => {
+                const yearPath = parentPath ? `${parentPath}-${year}` : year;
+                const yearId = `date-${columnName}-${yearPath}`;
+                html += `<div class="filter-tree-node" style="margin-left: ${level * 15}px;">
+                           <input type="checkbox" id="${yearId}" data-filter-option="${columnName}" data-tree-level="year" value="${year}">
+                           <label for="${yearId}">${year}</label>
+                         </div>`;
+                
+                const sortedMonths = Object.keys(dateTree[year]).sort();
+                sortedMonths.forEach(month => {
+                    const monthPath = `${yearPath}-${month}`;
+                    const monthId = `date-${columnName}-${monthPath}`;
+                    html += `<div class="filter-tree-node" style="margin-left: ${(level + 1) * 15}px;">
+                               <input type="checkbox" id="${monthId}" data-filter-option="${columnName}" data-tree-level="month" value="${year}-${month}">
+                               <label for="${monthId}">${month}</label>
+                             </div>`;
+
+                    const sortedDays = dateTree[year][month].sort();
+                    sortedDays.forEach(day => {
+                        const dayPath = `${monthPath}-${day}`;
+                        const dayId = `date-${columnName}-${dayPath}`;
+                        const fullDateValue = `${year}-${month}-${day}`;
+                        html += `<div class="filter-tree-node" style="margin-left: ${(level + 2) * 15}px;">
+                                   <input type="checkbox" id="${dayId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${fullDateValue}">
+                                   <label for="${dayId}">${day}</label>
+                                 </div>`;
+                    });
+                });
+            });
+            return html;
+        }
+
+        // *** NOVO: Função para popular a caixa de filtro com opções dinâmicas ***
+        function populateFilterBox(filterBoxElement, headerInfo) {
+            const columnName = headerInfo.columnName;
+            const options = currentFilterOptions[columnName] || (headerInfo.isDateColumn ? {} : []);
+            const isDate = headerInfo.isDateColumn;
+            const savedFilter = currentFilters[columnName] || { values: [], isApplied: false };
+            
+            //console.log(`Populando filtro para ${columnName}. Opções:`, options);
+
+            let optionsHTML = '';
+            if (isDate) {
+                if (Object.keys(options).length > 0) {
+                    optionsHTML = createDateTreeHTML(columnName, options);
+                } else {
+                    optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma data disponível.</p>';
+                }
+            } else {
+                if (options.length > 0) {
+                    options.forEach(option => {
+                        const optionId = `filter-${columnName}-${option || 'empty'}`;
+                        const isChecked = savedFilter.isApplied && savedFilter.values.includes(option);
+                        optionsHTML += `<div class="filter-option">
+                                        <input type="checkbox" id="${optionId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${option}" ${isChecked ? 'checked' : ''}>
+                                        <label for="${optionId}">${option || '(Vazio)'}</label>
+                                      </div>`;
+                    });
+                } else {
+                     optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma opção disponível.</p>';
+                }
+            }
+
+            const selectAllId = `select-all-${columnName}`;
+            const hasOptions = (isDate && Object.keys(options).length > 0) || (!isDate && options.length > 0);
+            
+            filterBoxElement.innerHTML = `
+                <div class="filter-header">
+                    ${hasOptions ? `<input type="checkbox" id="${selectAllId}" class="select-all-filter"><label for="${selectAllId}" style="color:#0a2e5a">Selecionar Tudo</label>` : ''}
+                    <input type="text" class="filter-search-input" placeholder="Buscar...">
+                </div>
+                <div class="filter-options">${optionsHTML}</div>
+                <div class="filter-actions">
+                    <button class="apply-filter-btn">Aplicar</button>
+                    <button class="clear-filter-btn">Limpar</button>
+                </div>
+            `;
+
+            // Adiciona listeners aos botões e checkboxes recém-criados
+            const applyBtn = filterBoxElement.querySelector('.apply-filter-btn');
+            const clearBtn = filterBoxElement.querySelector('.clear-filter-btn');
+            if(applyBtn) applyBtn.onclick = () => applyFiltersAndSort();
+            if(clearBtn) clearBtn.onclick = () => clearFilter(columnName);
+
+            const searchInput = filterBoxElement.querySelector('.filter-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    filterBoxElement.querySelectorAll('.filter-options > div').forEach(div => {
+                        const label = div.querySelector('label');
+                        if (label) {
+                            div.style.display = label.textContent.toLowerCase().includes(searchTerm) ? '' : 'none';
+                        }
+                    });
+                });
+            }
+
+            const selectAllCheckbox = filterBoxElement.querySelector(`#${selectAllId}`);
+            const optionCheckboxes = filterBoxElement.querySelectorAll(`input[data-filter-option="${columnName}"]`);
+            
+            if (selectAllCheckbox) {
+                // Atualiza estado inicial do "Selecionar Tudo"
+                updateSelectAllState(selectAllCheckbox, optionCheckboxes);
+
+                selectAllCheckbox.addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    optionCheckboxes.forEach(cb => {
+                        // Só altera checkboxes visíveis (considerando busca)
+                        if (cb.closest('div').style.display !== 'none') {
+                             cb.checked = isChecked;
+                        }
+                    });
+                });
+
+                optionCheckboxes.forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        updateSelectAllState(selectAllCheckbox, optionCheckboxes);
+                    });
+                });
+            }
+            
+            // Adiciona listeners para a árvore de datas (se aplicável)
+            if (isDate) {
+                 filterBoxElement.querySelectorAll('input[data-tree-level="year"], input[data-tree-level="month"]').forEach(parentCb => {
+                    parentCb.addEventListener('change', (e) => {
+                        const isChecked = e.target.checked;
+                        const parentDiv = e.target.closest('.filter-tree-node');
+                        // Encontra todos os descendentes folhas
+                        parentDiv.parentElement.querySelectorAll(`input[data-tree-level="leaf"][id^="${e.target.id}"]`).forEach(leafCb => {
+                             if (leafCb.closest('div').style.display !== 'none') { // Considera busca
+                                leafCb.checked = isChecked;
+                             }
+                        });
+                        // Atualiza estado do "Selecionar Tudo" geral
+                        if(selectAllCheckbox) updateSelectAllState(selectAllCheckbox, optionCheckboxes);
+                    });
+                });
+            }
+        }
+        
+        // *** NOVO: Função para atualizar o estado do checkbox "Selecionar Tudo" ***
+        function updateSelectAllState(selectAllCheckbox, optionCheckboxes) {
+            if (!selectAllCheckbox) return;
+            let allChecked = true;
+            let noneChecked = true;
+            let visibleOptionCount = 0;
+
+            optionCheckboxes.forEach(cb => {
+                 // Considera apenas checkboxes folha e visíveis
+                if (cb.getAttribute('data-tree-level') === 'leaf' && cb.closest('div').style.display !== 'none') {
+                    visibleOptionCount++;
+                    if (cb.checked) {
+                        noneChecked = false;
+                    } else {
+                        allChecked = false;
+                    }
+                }
+            });
+
+            if (visibleOptionCount === 0) { // Nenhuma opção visível
+                 selectAllCheckbox.checked = false;
+                 selectAllCheckbox.indeterminate = false;
+                 selectAllCheckbox.disabled = true;
+            } else if (allChecked) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.disabled = false;
+            } else if (noneChecked) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.disabled = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+                selectAllCheckbox.disabled = false;
+            }
+        }
+
+        // --- Lógica de Filtragem e Ordenação (Comunicação com Backend) ---
+        function applySort(columnName, direction) { /* ... como antes ... */ 
+            currentSort = { column: columnName, direction: direction };
+            applyFiltersAndSort(false);
+        }
+        function clearFilter(columnName) { /* ... como antes ... */ 
+             if (currentFilters[columnName]) {
+                currentFilters[columnName].isApplied = false;
+                currentFilters[columnName].values = [];
+            }
+            const headerInfo = headerData.find((h) => h.columnName === columnName);
+            if (headerInfo && headerInfo.element) { // Verifica se elemento existe
+                headerInfo.element.classList.remove("filtered");
+            }
+            applyFiltersAndSort(); // Aplica para buscar dados e atualizar opções
+        }
+
+        function applyFiltersAndSort(closeBox = true) {
+            let filterChanged = false;
+
+            // 1. Coleta filtros da caixa *aberta* 
+            if (openFilterBox) {
+                
+                const openColumnName = openFilterBox.parentElement.getAttribute("data-column");
+                const headerContainer = openFilterBox.querySelector(".filter-header");
+                const optionsContainer = openFilterBox.querySelector(".filter-options");
+                // console.log(openFilterBox);
+                if (optionsContainer && openColumnName) {
+                    const selectedValues = [];
+                    // Coleta apenas dos checkboxes folha (leaf)
+                    optionsContainer
+                        .querySelectorAll(
+                            `input[data-filter-option="${openColumnName}"][data-tree-level="leaf"]:checked`
+                        )
+                        .forEach((checkbox) => {
+                            selectedValues.push(checkbox.value);
+                            
+                        });
+
+                    const selectAllCheckbox = headerContainer.querySelector(
+                        
+                        `#select-all-${openColumnName}`
+                    );
+                    // console.log(optionsContainer)
+                    
+                    let isFilterAppliedForThisColumn = false;
+                    // O filtro é considerado aplicado se "Selecionar Tudo" não estiver marcado (ou indeterminado)
+                    // E se houver opções visíveis para selecionar
+                    // console.log(selectAllCheckbox);
+                    
+                    if (
+                        selectAllCheckbox &&
+                        !selectAllCheckbox.disabled && 
+                        (!selectAllCheckbox.checked || selectAllCheckbox.indeterminate)
+                    ) {
+                         isFilterAppliedForThisColumn = true;
+                    }
+
+                    const previousState = currentFilters[openColumnName] ? JSON.stringify(currentFilters[openColumnName]) : null;
+                    
+                    if (isFilterAppliedForThisColumn) {
+
+                        currentFilters[openColumnName] = {
+                            values: selectedValues, // Armazena os valores selecionados
+                            isApplied: true,
+                        };
+                        
+                    } else {
+                        // Se "Selecionar Tudo" está marcado, o filtro não está ativo
+                        if (currentFilters[openColumnName]) {
+                            currentFilters[openColumnName].isApplied = false;
+                            currentFilters[openColumnName].values = []; // Limpa valores salvos
+                        }
+                    }
+                    const newState = currentFilters[openColumnName] ? JSON.stringify(currentFilters[openColumnName]) : null;
+                    if(previousState !== newState) filterChanged = true;
+                }
+            }
+
+            // 2. Prepara dados para o backend
+            const activeFiltersForBackend = {};
+            for (const colName in currentFilters) {
+                
+                if (currentFilters[colName].isApplied) {
+                    
+                    activeFiltersForBackend[colName] = currentFilters[colName].values;
+                }
+            }
+            const filterData = {
+                filters: activeFiltersForBackend,
+                sort: currentSort,
+            };
+            
+
+            // 3. Atualiza estado visual dos cabeçalhos
+            headerData.forEach((headerInfo) => {
+                const colName = headerInfo.columnName;
+                const filterIsActive = currentFilters[colName]?.isApplied ?? false;
+                if (headerInfo.element) {
+                    if (filterIsActive) {
+                        headerInfo.element.classList.add("filtered");
+                    } else {
+                        headerInfo.element.classList.remove("filtered");
+                    }
+                }
+            });
+
+            // 4. Envia requisição para o backend
+            //console.log("Enviando para backend:", JSON.stringify(filterData)); 
+            fetch("{% url 'filter_data' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": CSRF_TOKEN,
+                },
+                body: JSON.stringify(filterData),
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        return response.text().then((text) => {
+                            throw new Error(
+                                `Erro HTTP ${response.status}: ${response.statusText}. Detalhes: ${text}`
+                            );
+                        });
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    //console.log("Recebido do backend:", data); 
+                    if (data && Array.isArray(data.records) && data.filter_options) {
+                        currentFilterOptions = data.filter_options; // Armazena as novas opções
+                        updateTable(data.records);
+                        
+                    } else {
+                        console.error("Resposta inválida do backend (faltando records ou filter_options):", data);
+                        currentFilterOptions = {};
+                        updateTable([]);
+                    }
+                })
+                .catch((error) => {
+                    console.error("Erro ao buscar dados filtrados:", error);
+                    currentFilterOptions = {};
+                    updateTable([]);
+                });
+
+            // 5. Fecha a caixa de filtro
+            if (closeBox && openFilterBox) {
+                openFilterBox.style.display = "none";
+                openFilterBox = null;
+            }
+        }
+
+        /**
+        * Atualiza o corpo da tabela.
+        */
+        function updateTable(records) { /* ... como antes ... */ 
+            tableBody.innerHTML = ""; 
+            if (!records || records.length === 0) {
+                const colspan = table.querySelectorAll("thead th[data-column]").length;
+                const noResultsRow = tableBody.insertRow();
+                const cell = noResultsRow.insertCell();
+                
+                cell.colSpan = colspan > 0 ? colspan : 1; 
+                cell.textContent = "Nenhum registro encontrado.";
+                cell.style.textAlign = "center";
+                return;
+            }
+            const visibleColumns = Array.from(table.querySelectorAll("thead th[data-column]")).map(th => th.getAttribute('data-column'));
+            //console.log("Colunas visíveis para renderizar linhas:", visibleColumns); 
+            let has_full_permission = '{{has_full_permission}}'
+
+            const UTCtime = new Date()
+            var today = new Date(`${UTCtime.getUTCMonth()+1}/${UTCtime.getUTCDate()}/${UTCtime.getUTCFullYear()}`)
+            
+            records.forEach((record) => {
+                const row = tableBody.insertRow();
+                visibleColumns.forEach(columnName => {
+                    const cell = row.insertCell();
+                    cell.setAttribute("data-column", columnName);
+                    cell.setAttribute("data-id", record.id)
+
+                    let value = record[columnName]; 
+                    const headerInfo = headerData.find(h => h.columnName === columnName);
+                    // Formata data apenas se for uma coluna de data e tiver valor
+                    if (headerInfo?.isDateColumn) { 
+                        if(value){
+                            value = formatDateToDisplay(value);
+                        }
+                        else{
+                            if(columnName == "deadline"){
+                                value = 'Não iniciado'
+                            }
+                            else{
+                                value = 'Não finalizado'
+                            }
+                        }
+                    }
+                    
+                    if (columnName == 'status'){
+                        
+                        var data_deadline= `${record['deadline'].split('-')[1]}/${record['deadline'].split('-')[2]}/${record['deadline'].split('-')[0]}`
+                        var data_finished= `${record['finished'].split('-')[1]}/${record['finished'].split('-')[2]}/${record['finished'].split('-')[0]}`
+                        
+                        data_deadline = record['deadline'] ? new Date(data_deadline) : null
+                        data_finished = record['finished'] ? new Date(data_finished) : null
+                        
+                        
+
+                        cell.id = `${columnName}${record.id}`
+                        cell.classList.add('field-container')
+                        let statu = document.querySelector(`#${columnName}${record.id}`)
+                        statu.setAttribute('data-initial-value', value)
+
+                        let valor_inicial = statu.getAttribute('data-initial-value')
+
+                        if(valor_inicial != 'Concluído'){
+                            if(data_finished){
+                                statu.value = 'Concluído'
+                                saveField(statu)
+                                location.reload()
+                            }
+                            else if(!data_deadline && valor_inicial != 'Requisitado'){
+                                statu.value = 'Requisitado'
+                                saveField(statu)
+                                location.reload()
+                                record['finished'].disabled = true
+                                
+
+                            }
+                            else if(today  < data_deadline && valor_inicial != 'Em progresso'){
+                                statu.value = 'Em progresso'
+                                saveField(statu)
+                                location.reload()
+                            }
+                            else if(today  > data_deadline && valor_inicial == 'Em progresso'){
+                                statu.value = 'Atrasado'
+                                saveField(statu)
+                                location.reload()
+                            }
+                            else{
+                                // console.log(today);
+                                // console.log(data_deadline);
+                                
+                            
+                            }
+                        }
+                        
+                    }
+
+                    if( (columnName == 'deadline' && '{{has_full_permission}}' === 'True') || columnName == 'finished' ) {
+                        cell.id = `${columnName}${record.id}`
+                        cell.classList.add('editable-field-container')
+                        cell.classList.add('date-input-container')  
+                        
+                        // Input de texto para a data formatada
+                        const textInput = document.createElement('input');
+                        textInput.type = 'text';
+                        textInput.placeholder = 'DD/MM/AAAA';
+                        textInput.classList.add('date-text-input')
+                        
+                        
+
+                        if(columnName == "finished" && !record['deadline']){
+                            textInput.disabled = true
+                            
+                        }
+
+                        textInput.placeholder = value;
+                        textInput.setAttribute('data-initial-value', value)
+                        let [initial_day, initial_month, initial_year] = value.split("/").map(Number)
+                        let initial_date = new Date(`${initial_month+1}/${initial_day}/ ${initial_year}`)
+                        
+                        // Adiciona os elementos ao container
+                        cell.appendChild(textInput);
+                        
+                        // Configura os eventos
+                        textInput.addEventListener('blur', function(e){
+                            e.target.classList.remove("erro")
+                            e.target.classList.remove("success")
+                        })
+
+                        textInput.addEventListener('input', function(e) {
+                            let value = e.target.value.replace(/\D/g, '');
+                            
+                            // Formatação automática: DD/MM/AAAA
+                            if (value.length > 2) value = value.substring(0, 2) + '/' + value.substring(2);
+                            if (value.length > 5) value = value.substring(0, 5) + '/' + value.substring(5, 9);
+
+                            
+                            
+                            e.target.value = value;
+                            if(columnName == 'finished'){
+                                if(value.split('/').length !=3){
+                                    e.target.classList.add("erro")
+                                    e.target.classList.remove("success")
+                                }
+                                else{
+                                    
+                                    var deadline_data = new Date(record['deadline'])
+                                    var input_data = new Date(`${value.split('/')[1]}/${value.split('/')[0]}/${value.split('/')[2]}`)
+                                    
+                                    if(input_data < deadline_data){
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+                                    }
+                                    else if(value.split('/')[2].length == 4 && isValidDate(value)){
+                                        e.target.classList.remove("erro")
+                                        e.target.classList.add("success")
+                                        atualizarDados(e)
+                                    }
+                                    else{
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+                                    }
+                                }
+                            }else if(columnName == 'deadline'){
+                                if(value.split('/').length !=3){
+                                    e.target.classList.add("erro")
+                                    e.target.classList.remove("success")
+                                }
+                                else{
+                                    var finished = new Date(record['finished'])
+                                    var data = new Date(record['data'])
+                                    var input_data = new Date(`${value.split('/')[1]}/${value.split('/')[0]}/${value.split('/')[2]}`)
+                                    
+                                    if(input_data < data){
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+
+                                    }
+                                    else if(finished && input_data <= finished){
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+
+                                    }
+                                    else if(value.split('/')[2].length == 4 && isValidDate(value)){
+                                        e.target.classList.remove("erro")
+                                        e.target.classList.add("success")
+                                        atualizarDados(e)
+                                    }
+                                    else{
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+                                    }
+                                }
+                            }
+                            
+                        })
+                        if(textInput.classList[0] == 'date-text-input'){
+                            let teste = flatpickr('.date-text-input', {'allowInput':true, 'dateFormat':'d/m/Y', 'minDate':'today'})
+                        }
+                    }
+                    
+                    
+                    else if(headerInfo.isTextAreaColumn){
+                        cell.id = `${columnName}${record.id}`
+                        cell.classList.add('editable-field-container')
+                        cell.classList.add('date-input-container')
+
+                        let textArea = document.createElement('textarea')
+                        textArea.setAttribute('data-initial-value', value)
+                        textArea.rows = 5
+                        textArea.cols = 20
+                        textArea.placeholder = value
+                        textArea.id = `${columnName}${record.id}`
+                        textArea.addEventListener('input', (e)=>atualizarDados(e))
+                        cell.appendChild(textArea)
+                    }
+                    else{
+                        cell.textContent = (value !== null && value !== undefined) ? value : ""; 
+                    }
+                    
+                });
+            });
+        }
+
+        // --- Inicialização ---
+        //console.log("Inicializando event listeners para cabeçalhos...");
+        headerData.forEach((headerInfo) => {
+            const { element: headerElement, filterBox: filterBoxElement, columnName } = headerInfo;
+            if (filterBoxElement) { 
+                //console.log(`Adicionando listener de clique para ${columnName}`);
+                filterBoxElement.id = `filter-box-${columnName}`;
+                headerElement.addEventListener("click", (event) => {
+                    //console.log(`Clique detectado no cabeçalho ${columnName}`);
+                    if (event.target.closest(".filter-box")) {
+                        //console.log("Clique dentro da filter-box, ignorando.");
+                        return; 
+                    }
+                    if (openFilterBox && openFilterBox !== filterBoxElement) {
+                        //console.log("Fechando outra filter-box aberta.");
+                        openFilterBox.style.display = "none";
+                    }
+                    const isCurrentlyOpen = filterBoxElement.style.display === "block";
+                    if (isCurrentlyOpen) {
+                        //console.log(`Fechando filter-box para ${columnName}`);
+                        filterBoxElement.style.display = "none";
+                        openFilterBox = null;
+                    } else {
+                        //console.log(`Abrindo filter-box para ${columnName}`);
+                        // *** AGORA POPULA COM OPÇÕES DINÂMICAS ***
+                        populateFilterBox(filterBoxElement, headerInfo); 
+                        
+                        filterBoxElement.style.display = "block";
+                        positionFilterBox(headerElement, filterBoxElement);
+                        openFilterBox = filterBoxElement;
+                        const searchInput = filterBoxElement.querySelector(".filter-search-input");
+                        if (searchInput) searchInput.focus();
+                    }
+                    event.stopPropagation(); 
+                });
+            } else {
+                 //console.log(`Sem filter-box para ${columnName}, listener não adicionado.`);
+            }
+        });
+
+        // Listener para fechar a caixa ao clicar fora
+        document.addEventListener("click", (event) => {
+            if (
+                openFilterBox &&
+                !event.target.closest("th") && 
+                !openFilterBox.contains(event.target) 
+            ) {
+                //console.log("Clique fora, fechando filter-box.");
+                openFilterBox.style.display = "none";
+                openFilterBox = null;
+            }
+        });
+        
+        // Chama para carregar dados iniciais via AJAX
+        //console.log("Chamando applyFiltersAndSort para carregamento inicial...");
+        applyFiltersAndSort(false); 
+
+        let typingTimer;
+        const doneTypingInterval = 300;
+
+        function atualizarDados(e){   
+            clearTimeout(typingTimer);   
+            let dado = e.target ? e.target : e
+                
+            let valor_inicial = dado.getAttribute('data-initial-value')
+            let valor_input = dado.value
+            
+            if(valor_input !== valor_inicial) {
+                dado.classList.add('pending-save')
+                typingTimer = setTimeout(() => saveField(dado), doneTypingInterval);
+            }
+            
+        }
+        function saveField(inputElement) {
+            const container = inputElement.closest('.editable-field-container') ? inputElement.closest('.editable-field-container') : inputElement.closest('.field-container');
+            const reportID = container.getAttribute('data-id');
+            const fieldName = container.getAttribute('data-column');
+            const newValue = inputElement.value
+            
+            
+            $.ajax({
+                url: '{%url "update_ocorrencia/"%}',
+                method: 'POST',
+                data:{
+                    id:reportID,
+                    field: fieldName,
+                    value: newValue,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                beforeSend: function() {
+                    inputElement.classList.add('saving');
+                },
+                success: function(response) {
+                    
+                    if(response.status === 'success') {
+                        
+                        inputElement.classList.remove('pending-save')
+                        inputElement.classList.remove('saving')
+                        inputElement.setAttribute('data-initial-value', newValue);
+                        
+                        
+                    // Atualiza o display se necessário
+                        if(response.display_value) {
+                            inputElement.val(response.display_value)
+                            .attr('placeholder', response.display_value)
+                            .data('initial-value', response.display_value);
+                        }
+                    }
+                    location.reload()
+                    setTimeout(() => inputElement.classList.remove('success'), 5000);
+                },
+                error: function(xhr) {
+                    console.error('Erro:', xhr.responseJSON?.message || 'Erro desconhecido');
+                    inputElement.classList.remove('saving')
+                    inputElement.classList.add('error');
+                    setTimeout(() => inputElement.classList.remove('error'), 5000);
+                
+                }
+            })
+    
+
+        }
+    
+
+    });
+</script>
+
 </body>
 </html>
+

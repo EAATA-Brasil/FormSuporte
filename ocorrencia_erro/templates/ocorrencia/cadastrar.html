@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login</title>
+  <style>
+    :root {
+      --primary: #0056b3;
+      --primary-light: #3a7bc8;
+      --secondary: #0a2e5a;
+      --dark: #1a1a1a;
+      --light: #ffffff;
+      --gray: #f5f7fa;
+      --text: #333333;
+      --text-light: #6b7280;
+      --border-color: #dee2e6;
+      --hover-bg: #e9ecef;
+      --success: #198754;
+      --error: #dc3545;
+      --warning: #ffc107;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background-color: var(--gray);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-form {
+      background: var(--light);
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 360px;
+      border: 1px solid var(--border-color);
+    }
+
+    .login-form h2 {
+      text-align: center;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+    }
+
+    .login-form input[type="text"],
+    .login-form input[type="password"] {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: var(--gray);
+      color: var(--text);
+    }
+
+    .login-form input[type="text"]:focus,
+    .login-form input[type="password"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      background-color: var(--light);
+    }
+
+    .login-form input[type="submit"] {
+      width: 100%;
+      padding: 0.75rem;
+      background-color: var(--primary);
+      color: var(--light);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .login-form input[type="submit"]:hover {
+      background-color: var(--primary-light);
+    }
+
+    .messages {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 1rem;
+    }
+
+    .messages li {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      color: var(--light);
+      font-size: 0.9rem;
+    }
+
+    .messages li.success {
+      background-color: var(--success);
+    }
+
+    .messages li.error {
+      background-color: var(--error);
+    }
+
+    .messages li.warning {
+      background-color: var(--warning);
+      color: var(--dark);
+    }
+  </style>
+</head>
+<body>
+  <div class="login-form">
+    <h2>Cadastro de paises</h2>
+
+    {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <form action="{% url 'cadastrar_pais' %}" method="POST">
+      {% csrf_token %}
+      <input type="text" name="country" placeholder="Country" required>
+      <input type="password" name="password" placeholder="******" required>
+      <input type="submit" value="Cadastrar">
+    </form>
+  </div>
+</body>
+</html>
