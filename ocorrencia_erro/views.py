@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.db.models import Q, Count
 import json
+from django.core.paginator import Paginator
 from .models import Record # Certifique-se que o modelo Record está importado corretamente
 from datetime import datetime, date
 from django.http import HttpResponse
@@ -234,11 +235,23 @@ def filter_data_view(request):
                         elif record[date_col] is None:
                              record[date_col] = '' # Garante string vazia para None
             
+
+            paginator = Paginator(object_list=filtered_records, per_page=10)
+            page_number = data.get('page')
+            page_obj = paginator.get_page(page_number)
+
+            records_list = list(page_obj.object_list)
+
+
             #print("--- filter_data_view FINALIZADA COM SUCESSO ---")
             return JsonResponse({
-                'records': filtered_records,
+                'records': records_list,
                 'filter_options': filter_options, # Inclui as opções de filtro
-                'has_full_permission': has_full_permission
+                'has_full_permission': has_full_permission,
+                'num_pages': paginator.num_pages,
+                'current_page': page_obj.number,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
             })
 
         except json.JSONDecodeError:
@@ -248,6 +261,7 @@ def filter_data_view(request):
             #print(f"Erro interno ao processar requisição de filtro: {e}")
             import traceback
             #print(traceback.format_exc()) # Imprime traceback para debug
+            print(e)
             return JsonResponse({'error': 'Erro interno do servidor'}, status=500)
 
     #print("--- filter_data_view FINALIZADA - MÉTODO INVÁLIDO ---")

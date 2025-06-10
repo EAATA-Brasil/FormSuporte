@@ -45,11 +45,99 @@
         {# O corpo da tabela será preenchido via AJAX #}
         </tbody>
     </table>
+    <div id="paginate">
+        <span class="button-paginator" id="last">Voltar</span>
+        <span id="num_pages">
 
+        </span>
+        <span class="button-paginator" id="next">Avançar</span>
+    </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         "use strict";
+        var page_num = 1
+        let buttons_paginator = document.querySelectorAll('.button-paginator')
+        var total_pages
+        
+
+        buttons_paginator.forEach(button=>{
+            button.addEventListener('click', (e)=>{
+                if(e.target.id == "next" && page_num < total_pages){
+                    page_num += 1
+                }
+                else if(e.target.id == "last" && page_num > 1){
+                    page_num -= 1
+                }
+                applyFiltersAndSort()
+            })
+            
+        })
+
+        const buttons={
+                elements: document.querySelector("#paginate #num_pages"),
+                
+                create(number){
+                    const button = document.createElement("div")
+                    button.innerHTML = number
+                    button.className='page-item'
+
+                    if(page_num == number){
+                        button.classList.add("active")
+                    }
+
+                    buttons.elements.appendChild(button)
+                },
+                update(){
+                    buttons.elements.innerHTML = ''
+                    const {maxLeft, maxRight} = buttons.calculateMaxVisible()
+                    
+                    for(let page = maxLeft; page <= maxRight; page++){
+                        buttons.create(page)
+                    }
+
+                },
+                calculateMaxVisible(){
+                    const maxVisibleButtons = 3
+                    let maxLeft = (page_num - Math.floor(maxVisibleButtons/2))
+                    let maxRight = (page_num + Math.floor(maxVisibleButtons/2))
+                    
+                    if(maxLeft < 1){
+                        maxLeft = 1
+                        maxRight = maxVisibleButtons
+                    }
+                    if(maxRight > total_pages){
+                        maxLeft = total_pages - (maxVisibleButtons - 1)
+                        maxRight = total_pages
+                        if(maxLeft < 1){
+                            maxLeft = 1
+                        }
+                    }
+                    return {maxLeft, maxRight}
+                }
+            }
+
+        function paginate(hasPrev, hasNext){
+            const buttonPrev = document.getElementById("last")
+            const buttonNext = document.getElementById("next")
+            if(!hasPrev && hasNext){   
+                buttonPrev.style.visibility = 'hidden'
+                buttonNext.style.visibility = 'visible'
+            }
+            else if(!hasNext && hasPrev){
+                buttonPrev.style.visibility = 'visible'
+                buttonNext.style.visibility = 'hidden'
+            }
+            else if(!hasNext && !hasPrev){
+                buttonPrev.style.visibility = 'hidden'
+                buttonNext.style.visibility = 'hidden'
+            }
+            else{
+                buttonPrev.style.visibility = 'visible'
+                buttonNext.style.visibility = 'visible'
+            }
+            buttons.update()
+        }
 
         function isValidDate(input) {
             // Verifica o formato com regex: dd/mm/yyyy
@@ -455,6 +543,7 @@
             const filterData = {
                 filters: activeFiltersForBackend,
                 sort: currentSort,
+                page: page_num
             };
             
 
@@ -473,6 +562,7 @@
 
             // 4. Envia requisição para o backend
             //console.log("Enviando para backend:", JSON.stringify(filterData)); 
+            
             fetch("{% url 'filter_data' %}", {
                 method: "POST",
                 headers: {
@@ -480,6 +570,7 @@
                     "X-CSRFToken": CSRF_TOKEN,
                 },
                 body: JSON.stringify(filterData),
+                
             })
                 .then((response) => {
                     if (!response.ok) {
@@ -502,6 +593,8 @@
                         currentFilterOptions = {};
                         updateTable([]);
                     }
+                    total_pages = data.num_pages
+                    paginate(data.has_previous, data.has_next)
                 })
                 .catch((error) => {
                     console.error("Erro ao buscar dados filtrados:", error);
@@ -694,7 +787,7 @@
                                         e.target.classList.remove("success")
 
                                     }
-                                    else if(finished && input_data <= finished){
+                                    else if(finished && input_data > finished){
                                         e.target.classList.add("erro")
                                         e.target.classList.remove("success")
 
@@ -798,7 +891,7 @@
         applyFiltersAndSort(false); 
 
         let typingTimer;
-        const doneTypingInterval = 300;
+        const doneTypingInterval = 2000;
 
         function atualizarDados(e){   
             clearTimeout(typingTimer);   
