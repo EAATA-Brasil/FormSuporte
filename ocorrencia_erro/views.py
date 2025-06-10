@@ -314,7 +314,6 @@ def cadastrar_pais(request):
 
     try:
         User.objects.create_user(username=country_name, password=country_pass)
-        messages.success(request, f"País '{country_name}' cadastrado com sucesso!")
         return redirect('/ocorrencia')
     except Exception as e:
         messages.error(request, f"Erro ao cadastrar país: {str(e)}")

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
@@ -655,6 +656,21 @@
                         }
                     }
                     
+                    if(columnName == 'problem_detected'){
+                        cell.classList.add("no-cursor")
+                        cell.title = "Clique duas vezes para copiar o texto"
+                        cell.addEventListener('dblclick', (e)=>{
+                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
+                            Swal.fire({
+                                title:"Texto copiado",
+                                text: 'Problema copiado para área de transferência',
+                                showCloseButton: true,
+                                icon:'success'
+                            })
+                        })
+                    }
+                    
+
                     if (columnName == 'status'){
                         
                         var data_deadline= `${record['deadline'].split('-')[1]}/${record['deadline'].split('-')[2]}/${record['deadline'].split('-')[0]}`
@@ -710,14 +726,23 @@
                         cell.id = `${columnName}${record.id}`
                         cell.classList.add('editable-field-container')
                         cell.classList.add('date-input-container')  
-                        
+                        cell.title = "Clique duas vezes para copiar o texto"
                         // Input de texto para a data formatada
                         const textInput = document.createElement('input');
                         textInput.type = 'text';
                         textInput.placeholder = 'DD/MM/AAAA';
                         textInput.classList.add('date-text-input')
                         
-                        
+                        cell.addEventListener('dblclick', (e)=>{
+                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
+                            textInput.blur()
+                            Swal.fire({
+                                title:"Texto copiado",
+                                text: 'Data copiada para área de transferência',
+                                showCloseButton: true,
+                                icon:'success'
+                            })
+                        })
 
                         if(columnName == "finished" && !record['deadline']){
                             textInput.disabled = true
@@ -821,8 +846,18 @@
                         textArea.rows = 5
                         textArea.cols = 20
                         textArea.placeholder = value
+                        textArea.title="Clique duas vezes para copiar o texto"
                         textArea.id = `${columnName}${record.id}`
                         textArea.addEventListener('input', (e)=>atualizarDados(e))
+                        textArea.addEventListener('dblclick', (e)=>{
+                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
+                            Swal.fire({
+                                title:"Texto copiado",
+                                text: 'Feedback copiado para área de transferência',
+                                showCloseButton: true,
+                                icon:'success'
+                            })
+                        })
                         cell.appendChild(textArea)
                     }
                     else{

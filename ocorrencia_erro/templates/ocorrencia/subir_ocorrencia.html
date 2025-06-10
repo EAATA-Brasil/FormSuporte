@@ -101,7 +101,7 @@
     <input type="text" id="problem_detected" name="problem_detected" placeholder="Problema" />
     <input type="text" id="responsible" name="responsible" placeholder="Responsável" />
     {% if request.user.is_superuser %}
-        <input type="text" id="country" name="country" placeholder="País" />
+        <input type="text" id="country" name="country" placeholder="País" required/>
         <input type="text" id="status" name="status" placeholder="Status" />
         <input type="text" id="deadline" name="deadline" placeholder="Previsão de término" />
     {% endif %}
