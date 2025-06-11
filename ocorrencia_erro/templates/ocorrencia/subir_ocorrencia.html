@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Formulário de Ocorrência</title>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
   <style>
     :root {
       --primary: #0056b3;
@@ -130,18 +128,27 @@
       csrfmiddlewaretoken: '{{ csrf_token }}'
     };
 
-    $.ajax({
-      url: '{% url "cadastrar_ocorrencia" %}',
-      method: 'POST',
-      data: data,
-      success: function(response) {
+    fetch('{% url "cadastrar_ocorrencia" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',  // Token CSRF no cabeçalho
+            'Content-Type': 'application/x-www-form-urlencoded', // Formato padrão do Django
+        },
+        body: new URLSearchParams(data) // Converte o objeto 'data' para FormData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro ao cadastrar ocorrência');
+        }
+        return response.json(); // Supondo que a resposta seja JSON
+    })
+    .then(response => {
         alert('Ocorrência cadastrada com sucesso!');
-        location.href = "{%url '/ocorrencia' %}"
-      },
-      error: function(xhr) {
+        window.location.href = "{% url '/ocorrencia' %}";
+    })
+    .catch(error => {
         alert('Erro ao cadastrar ocorrência');
-        console.error(xhr.responseText);
-      }
+        console.error(error);
     });
   });
 </script>

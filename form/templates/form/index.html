@@ -164,239 +164,244 @@
 </div>
 {% block javascript %}
 <script>
-$(document).ready(function() {
-    
-    $('.table').on('change', 'input[type="checkbox"]', function() {
+document.addEventListener('DOMContentLoaded', function() {
+    // Checkbox change handler
+    document.querySelector('.table').addEventListener('change', function(e) {
+        if (e.target.matches('input[type="checkbox"]')) {
+            const container = e.target.closest('div[data-id]');
+            const veiculoId = container.dataset.id;
+            const fieldName = container.dataset.field;
+            const checkboxType = e.target.className;
+            const checked = e.target.checked;
+            let values = container.dataset.values ? container.dataset.values.split(", ") : [];
 
-        const container = $(this).closest('div[data-id]');
-        const veiculoId = container.data('id');
-        const fieldName = container.data('field');
-        const checkboxType = $(this).attr('class');
-        const checked = $(this).is(":checked")
-        let values = container.data("values").length > 0 ? container.data("values").split(", ") : []
-        
-        function returnIndex(array, index){
-            if(array.length <= 0 && index <0){
-                return 0
+            function returnIndex(array, index) {
+                if(array.length <= 0 && index < 0) return 0;
+                else if(array.length > 0 && index < 0) return array.length;
+                else return index;
             }
-            else if(array.length > 0 && index<0){
-                return array.length
-            }
-            else{
-                return index
-            }
-        }
 
-        // Determina o novo valor baseado no checkbox marcado
-        let newValue;
-        if (checkboxType === 'circle') {
-            let index = values.findIndex(value => value.includes("OBD"))
-            if(checked){
-                newValue = 'allOBD';
-                values[returnIndex(values,index)] = newValue
+            let newValue;
+            if (checkboxType === 'circle') {
+                let index = values.findIndex(value => value.includes("OBD"));
+                if(checked) {
+                    newValue = 'allOBD';
+                    values[returnIndex(values,index)] = newValue;
+                } else {
+                    newValue = 'partOBD';
+                    values[returnIndex(values,index)] = newValue;
+                }
+            } else if (checkboxType === 'square') {
+                let index = values.findIndex(value => value.includes("BENCH"));
+                if(checked) {
+                    newValue = 'allBENCH';
+                    values[returnIndex(values,index)] = newValue;
+                } else {
+                    newValue = 'partBENCH';
+                    values[returnIndex(values,index)] = newValue;
+                }
             }
-            else{
-                newValue = 'partOBD'
-                values[returnIndex(values,index)] = newValue
-            }
-        } else if (checkboxType === 'square') {
-            
-            let index = values.findIndex(value => value.includes("BENCH"))
-            if(checked){
-                newValue = 'allBENCH';
-                values[returnIndex(values,index)] = newValue
-            }
-            else{
-                newValue = 'partBENCH'
-                values[returnIndex(values,index)] = newValue
-            }
-        }
 
-        // Envia a atualização via AJAX
-        try{
-            values = values.join(', ')
-            
-        }
-        catch{
-            values
-        }
-        
-        $.ajax({
-            url: 'update-vehicle/',
-            method: 'POST',
-            data: {
-                'id': veiculoId,
-                'field': fieldName,
-                'value': values,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
-            success: (response)=>{
-                container.attr('data-values', response.new_display)
-                location.reload()
-            },
-            error: function(xhr) {
-                alert('Erro ao salvar: ' + xhr.responseText);
-                // Reverte a mudança visual
-                $(this).prop('checked', !$(this).prop('checked'));
+            try {
+                values = values.join(', ');
+            } catch {
+                // values remains unchanged
             }
-        });
-        
+
+            // Using fetch instead of $.ajax
+            fetch('update-vehicle/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({
+                    'id': veiculoId,
+                    'field': fieldName,
+                    'value': values
+                })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                container.setAttribute('data-values', data.new_display);
+                location.reload();
+            })
+            .catch(error => {
+                alert('Erro ao salvar: ' + error.message);
+                e.target.checked = !e.target.checked; // Revert the change
+            });
+        }
     });
-    $('.table').on('change', 'select', function(){
-        const container = $(this).closest('div[data-id]');
-        const veiculoId = container.data('id');
-        const fieldName = container.data('field');
-        const checkboxType = $(this).attr('class');
 
-        $.ajax({
-            url: 'update-vehicle/',
-            method: 'POST',
-            data: {
-                'id': veiculoId,
-                'field': fieldName,
-                'value': $(this).val(),
-                'csrfmiddlewaretoken': '{{ csrf_token }}'
+    // Select change handler
+    document.querySelector('.table').addEventListener('change', function(e) {
+        if (e.target.matches('select')) {
+            const container = e.target.closest('div[data-id]');
+            const veiculoId = container.dataset.id;
+            const fieldName = container.dataset.field;
+
+            fetch('update-vehicle/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({
+                    'id': veiculoId,
+                    'field': fieldName,
+                    'value': e.target.value
+                })
+            });
+        }
+    });
+
+    // Input saving functionality
+    const typingTimer = {};
+    const doneTypingInterval = 300;
+    const inputs = document.querySelectorAll('.auto-save-input');
+
+    inputs.forEach(input => {
+        input.dataset.initialValue = input.value;
+
+        input.addEventListener('input', function() {
+            clearTimeout(typingTimer[input.id]);
+            
+            if(input.value !== input.dataset.initialValue) {
+                input.classList.add('pending-save');
+                typingTimer[input.id] = setTimeout(() => saveField(input), doneTypingInterval);
             }
         });
-        
-    })
-    //SALVANDO INPUTS
-    // Configuração do debounce (300ms após parar de digitar)
-    let typingTimer;
-    const doneTypingInterval = 300;
-    const inputs = $('.auto-save-input');
-    
-    inputs.on('input', function() {
-        clearTimeout(typingTimer);
-        const input = $(this);
-        
-        // Verifica se o valor realmente mudou
-        if(input.val() !== input.data('initial-value')) {
-            input.addClass('pending-save');
-            typingTimer = setTimeout(() => saveField(input), doneTypingInterval);
-        }
-    
-    // Garante o salvamento ao perder o foco
-        inputs.on('blur', function() {
-            clearTimeout(typingTimer);
-            const input = $(this);
-            if(input.hasClass('pending-save')) {
+
+        input.addEventListener('blur', function() {
+            clearTimeout(typingTimer[input.id]);
+            if(input.classList.contains('pending-save')) {
                 saveField(input);
             }
         });
-    
-        function saveField(inputElement) {
-            const container = inputElement.closest('.editable-field-container');
-            const veiculoId = container.data('id');
-            
-            const fieldName = container.data('field');
-            const newValue = inputElement.val();
-        
-            $.ajax({
-                url: 'update-field/',
-                method: 'POST',
-                data: {
-                    id: veiculoId,
-                    field: fieldName,
-                    value: newValue,
-                    csrfmiddlewaretoken: '{{ csrf_token }}'
-                },
-                beforeSend: function() {
-                    inputElement.addClass('saving');
-                },
-                success: function(response) {
-                    if(response.status === 'success') {
-                        inputElement.removeClass('pending-save saving')
-                        .data('initial-value', newValue);
-                    
-                    // Atualiza o display se necessário
-                        if(response.display_value) {
-                            inputElement.val(response.display_value)
-                            .attr('placeholder', response.display_value)
-                            .data('initial-value', response.display_value);
-                        }
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Erro:', xhr.responseJSON?.message || 'Erro desconhecido');
-                    inputElement.removeClass('saving').addClass('error');
-                    setTimeout(() => inputElement.removeClass('error'), 2000);
-                
-                    // Reverte para o valor original em caso de erro
-                    inputElement.val(inputElement.data('initial-value'));
-                }
-            });
-        }
     });
-    
-});
 
-$(document).ready(function() {
-    // Elementos do formulário
-    const paisInput = $('#id_pais');
-    const marcaInput = $('#id_brand');
-    const modeloInput = $('#id_modelo');
-    const anoInput = $('#id_ano');
-    const paisesDatalist = $('#paisesList');
-    const marcaDatalist = $('#marcasList');
-    const modeloDatalist = $('#modelosList');
-    const anoDatalist = $('#anosList');
+    function saveField(inputElement) {
+        const container = inputElement.closest('.editable-field-container');
+        const veiculoId = container.dataset.id;
+        const fieldName = container.dataset.field;
+        const newValue = inputElement.value;
 
-    // Função para buscar opções dinâmicas
-    function atualizarOpcoes() {
-        const pais = paisInput.val();
-        const marca = marcaInput.val();
-        const modelo = modeloInput.val();
-
-        // Requisição AJAX para a API
-        $.get('get-opcoes/', { pais: pais, marca: marca, modelo: modelo }, function(data) {
-            // Atualiza opções de marca
-            console.log(data.pais);
-            
-            data.pais.forEach((pais)=>{
-                paisesDatalist.append(`<option value="${pais}">`)
+        fetch('update-field/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: new URLSearchParams({
+                id: veiculoId,
+                field: fieldName,
+                value: newValue
             })
-
-            marcaDatalist.empty();
-            data.marcas.forEach(function(marca) {
-                marcaDatalist.append(`<option value="${marca}">`);
-            });
-
-            // Atualiza opções de modelo
-            modeloDatalist.empty();
-            anoDatalist.empty();
-            data.modelos.forEach(function(modelo) {
-                modeloDatalist.append(`<option value="${modelo}">`);
-            });
-            data.anos.forEach(function(ano) {
-                anoDatalist.append(`<option value="${ano}">`);
-            });
-            
-            // Ativa/desativa campo de modelo
-            marcaInput.prop('disabled', !data.marcas.length);
-            modeloInput.prop('disabled', !data.modelos.length);
-            anoInput.prop('disabled', !data.anos.length);
-            
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
+        .then(data => {
+            if(data.status === 'success') {
+                inputElement.classList.remove('pending-save', 'saving');
+                inputElement.dataset.initialValue = newValue;
+                
+                if(data.display_value) {
+                    inputElement.value = data.display_value;
+                    inputElement.placeholder = data.display_value;
+                    inputElement.dataset.initialValue = data.display_value;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error.message);
+            inputElement.classList.remove('saving');
+            inputElement.classList.add('error');
+            setTimeout(() => inputElement.classList.remove('error'), 2000);
+            inputElement.value = inputElement.dataset.initialValue;
         });
     }
 
-    // Event listeners
-    paisInput.on('input', function() {
-        marcaInput.val('');  // Limpa marca quando país muda
-        modeloInput.val('');  // Limpa modelo
-        anoInput.val('');  // Limpa modelo
+    // Dynamic options functionality
+    const paisInput = document.getElementById('id_pais');
+    const marcaInput = document.getElementById('id_brand');
+    const modeloInput = document.getElementById('id_modelo');
+    const anoInput = document.getElementById('id_ano');
+    const paisesDatalist = document.getElementById('paisesList');
+    const marcaDatalist = document.getElementById('marcasList');
+    const modeloDatalist = document.getElementById('modelosList');
+    const anoDatalist = document.getElementById('anosList');
+
+    function atualizarOpcoes() {
+        const pais = paisInput.value;
+        const marca = marcaInput.value;
+        const modelo = modeloInput.value;
+
+        const params = new URLSearchParams();
+        if (pais) params.append('pais', pais);
+        if (marca) params.append('marca', marca);
+        if (modelo) params.append('modelo', modelo);
+
+        fetch(`get-opcoes/?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                // Update country options
+                paisesDatalist.innerHTML = '';
+                data.pais.forEach(pais => {
+                    const option = document.createElement('option');
+                    option.value = pais;
+                    paisesDatalist.appendChild(option);
+                });
+
+                // Update brand options
+                marcaDatalist.innerHTML = '';
+                data.marcas.forEach(marca => {
+                    const option = document.createElement('option');
+                    option.value = marca;
+                    marcaDatalist.appendChild(option);
+                });
+
+                // Update model options
+                modeloDatalist.innerHTML = '';
+                anoDatalist.innerHTML = '';
+                data.modelos.forEach(modelo => {
+                    const option = document.createElement('option');
+                    option.value = modelo;
+                    modeloDatalist.appendChild(option);
+                });
+                data.anos.forEach(ano => {
+                    const option = document.createElement('option');
+                    option.value = ano;
+                    anoDatalist.appendChild(option);
+                });
+
+                // Enable/disable fields
+                marcaInput.disabled = !data.marcas.length;
+                modeloInput.disabled = !data.modelos.length;
+                anoInput.disabled = !data.anos.length;
+            });
+    }
+
+    paisInput.addEventListener('input', function() {
+        marcaInput.value = '';
+        modeloInput.value = '';
+        anoInput.value = '';
         atualizarOpcoes();
     });
 
-    marcaInput.on('input', function() {
-        modeloInput.val('');  // Limpa modelo quando marca muda
-        anoInput.val('');  // Limpa modelo quando marca muda
+    marcaInput.addEventListener('input', function() {
+        modeloInput.value = '';
+        anoInput.value = '';
         atualizarOpcoes();
     });
 
-    // Atualiza opções ao carregar a página
+    // Initial load
     atualizarOpcoes();
 });
 </script>
-{%endblock%}
+{% endblock %}
 {%endblock%}

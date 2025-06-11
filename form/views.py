@@ -70,7 +70,6 @@ def update_vehicle(request):
         veiculo = Veiculo.objects.get(id=request.POST.get('id'))
         field_name = request.POST.get('field')
         new_value = request.POST.get('value')
-        print(request.POST.get('value'))
         try:
             veiculo = Veiculo.objects.get(id=request.POST.get('id'))
             field_name = request.POST.get('field')

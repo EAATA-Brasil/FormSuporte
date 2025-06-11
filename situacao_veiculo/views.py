@@ -18,7 +18,6 @@ def buscar_serial(request):
             data2 = datetime.strptime(str(date.today()).replace('-','/'), "%Y/%m/%d")
 
             vencimento = (data1 - data2).days
-            print(vencimento)
             if vencimento > 30:
                 context['status'] = 'direito'
                 context['mensagem'] = "Atender normalmente"

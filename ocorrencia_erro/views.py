@@ -60,7 +60,7 @@ def filter_data_view(request):
             data = json.loads(request.body)
             filters = data.get('filters', {})
             sort_info = data.get('sort', {'column': 'data', 'direction': 'asc'})
-            print(f"Filtros recebidos: {filters}")
+            # print(f"Filtros recebidos: {filters}")
             #print(f"Ordenação recebida: {sort_info}")
 
             # Comece com todos os registros
@@ -76,8 +76,8 @@ def filter_data_view(request):
                 #print(f"Usuário restrito detectado: {user.username}. Filtrando por país.")
                 queryset = queryset.filter(country__iexact=user.username) 
                 #print(f"Contagem após filtro de país: {queryset.count()}")
-            else:
-                print("Usuário com permissão total detectado.")
+            # else:
+            #     # print("Usuário com permissão total detectado.")
             
             # --- APLICA FILTROS DO FRONTEND --- 
             q_objects = Q()
@@ -364,16 +364,14 @@ def alterar_dados(request):
         field_name = request.POST.get('field')
         new_value = request.POST.get('value')
         if field_name in DATE_COLUMNS:
-            print("data a vista")
             new_value = datetime.strptime(new_value, '%d/%m/%Y').date()
         record = Record.objects.get(id=request.POST.get('id'))
-        print(new_value)
         try:
             # Atualiza o campo dinamicamente
-            print(field_name)
+            # print(field_name)
             setattr(record, field_name, new_value)
             record.save(update_fields=[field_name])
-            print(record)
+            # print(record)
             return JsonResponse({
                 'status': 'success',
                 'new_display': new_value  # Ajuste conforme o campo

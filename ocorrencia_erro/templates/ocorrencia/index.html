@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="{% static 'ocorrencia/css/styles.css' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
@@ -948,45 +947,45 @@
             const newValue = inputElement.value
             
             
-            $.ajax({
-                url: '{%url "update_ocorrencia/"%}',
+            fetch('{% url "update_ocorrencia/" %}', {
                 method: 'POST',
-                data:{
-                    id:reportID,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'  // Envia o CSRF token no cabeçalho
+                },
+                body: JSON.stringify({
+                    id: reportID,
                     field: fieldName,
-                    value: newValue,
-                    csrfmiddlewaretoken: '{{ csrf_token }}'
-                },
-                beforeSend: function() {
-                    inputElement.classList.add('saving');
-                },
-                success: function(response) {
-                    
-                    if(response.status === 'success') {
-                        
-                        inputElement.classList.remove('pending-save')
-                        inputElement.classList.remove('saving')
-                        inputElement.setAttribute('data-initial-value', newValue);
-                        
-                        
-                    // Atualiza o display se necessário
-                        if(response.display_value) {
-                            inputElement.val(response.display_value)
-                            .attr('placeholder', response.display_value)
-                            .data('initial-value', response.display_value);
-                        }
-                    }
-                    location.reload()
-                    setTimeout(() => inputElement.classList.remove('success'), 5000);
-                },
-                error: function(xhr) {
-                    console.error('Erro:', xhr.responseJSON?.message || 'Erro desconhecido');
-                    inputElement.classList.remove('saving')
-                    inputElement.classList.add('error');
-                    setTimeout(() => inputElement.classList.remove('error'), 5000);
-                
-                }
+                    value: newValue
+                })
             })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na requisição');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    inputElement.classList.remove('pending-save', 'saving');
+                    inputElement.setAttribute('data-initial-value', newValue);
+                    
+                    // Atualiza o display se necessário
+                    if (data.display_value) {
+                        inputElement.value = data.display_value;
+                        inputElement.setAttribute('placeholder', data.display_value);
+                        inputElement.dataset.initialValue = data.display_value;
+                    }
+                }
+                location.reload();
+                setTimeout(() => inputElement.classList.remove('success'), 5000);
+            })
+            .catch(error => {
+                console.error('Erro:', error.message);
+                inputElement.classList.remove('saving');
+                inputElement.classList.add('error');
+                setTimeout(() => inputElement.classList.remove('error'), 5000);
+            });
     
 
         }
