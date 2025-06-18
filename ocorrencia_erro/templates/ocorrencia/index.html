@@ -196,7 +196,7 @@
         const CSRF_TOKEN = getCookie("csrftoken");
 
         // --- Funções Auxiliares --- 
-        function getCookie(name) { /* ... como antes ... */ 
+        function getCookie(name) { 
              if (document.cookie && document.cookie !== "") {
                 const cookies = document.cookie.split(";");
                 for (let i = 0; i < cookies.length; i++) {
@@ -209,7 +209,7 @@
             return null;
         }
 
-        function parseDateToISO(dateString) { /* ... como antes ... */ 
+        function parseDateToISO(dateString) { 
             if (!dateString || typeof dateString !== "string") return dateString;
             const parts = dateString.trim().split("/");
             if (parts.length === 3) {
@@ -230,7 +230,8 @@
             }
             return dateString;
         }
-        function formatDateToDisplay(isoDateString) { /* ... como antes ... */ 
+        
+        function formatDateToDisplay(isoDateString) { 
             if (!isoDateString || typeof isoDateString !== "string") return "";
             const parts = isoDateString.split("-");
             if (parts.length === 3) {
@@ -249,8 +250,23 @@
             return isoDateString;
         }
 
+        // --- NOVA FUNÇÃO: Gerar ID único e válido ---
+        function generateUniqueId(prefix, value, index = '') {
+            // Remove caracteres especiais e espaços, substitui por underscore
+            const sanitizedValue = String(value || 'empty')
+                .replace(/[^a-zA-Z0-9]/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '');
+            
+            // Adiciona timestamp para garantir unicidade
+            const timestamp = Date.now();
+            const randomSuffix = Math.random().toString(36).substr(2, 5);
+            
+            return `${prefix}_${sanitizedValue}_${index}_${timestamp}_${randomSuffix}`;
+        }
+
         // --- Lógica de UI (Filter Box) --- 
-        function positionFilterBox(headerElement, filterBoxElement) { /* ... como antes ... */ 
+        function positionFilterBox(headerElement, filterBoxElement) { 
             const headerRect = headerElement.getBoundingClientRect();
             const tableRect = table.getBoundingClientRect();
             filterBoxElement.style.top = `${headerRect.bottom - tableRect.top + window.scrollY + 2}px`;
@@ -264,32 +280,32 @@
             }
         }
 
-        // *** NOVO: Função para criar a árvore de datas ***
+        // *** FUNÇÃO CORRIGIDA: Criar a árvore de datas com IDs únicos ***
         function createDateTreeHTML(columnName, dateTree, level = 0, parentPath = '') {
             let html = '';
             const sortedYears = Object.keys(dateTree).sort();
 
-            sortedYears.forEach(year => {
+            sortedYears.forEach((year, yearIndex) => {
                 const yearPath = parentPath ? `${parentPath}-${year}` : year;
-                const yearId = `date-${columnName}-${yearPath}`;
+                const yearId = generateUniqueId(`date_${columnName}_year`, year, yearIndex);
                 html += `<div class="filter-tree-node" style="margin-left: ${level * 15}px;">
                            <input type="checkbox" id="${yearId}" data-filter-option="${columnName}" data-tree-level="year" value="${year}">
                            <label for="${yearId}">${year}</label>
                          </div>`;
                 
                 const sortedMonths = Object.keys(dateTree[year]).sort();
-                sortedMonths.forEach(month => {
+                sortedMonths.forEach((month, monthIndex) => {
                     const monthPath = `${yearPath}-${month}`;
-                    const monthId = `date-${columnName}-${monthPath}`;
+                    const monthId = generateUniqueId(`date_${columnName}_month`, `${year}_${month}`, monthIndex);
                     html += `<div class="filter-tree-node" style="margin-left: ${(level + 1) * 15}px;">
                                <input type="checkbox" id="${monthId}" data-filter-option="${columnName}" data-tree-level="month" value="${year}-${month}">
                                <label for="${monthId}">${month}</label>
                              </div>`;
 
                     const sortedDays = dateTree[year][month].sort();
-                    sortedDays.forEach(day => {
+                    sortedDays.forEach((day, dayIndex) => {
                         const dayPath = `${monthPath}-${day}`;
-                        const dayId = `date-${columnName}-${dayPath}`;
+                        const dayId = generateUniqueId(`date_${columnName}_day`, `${year}_${month}_${day}`, dayIndex);
                         const fullDateValue = `${year}-${month}-${day}`;
                         html += `<div class="filter-tree-node" style="margin-left: ${(level + 2) * 15}px;">
                                    <input type="checkbox" id="${dayId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${fullDateValue}">
@@ -301,7 +317,7 @@
             return html;
         }
 
-        // *** NOVO: Função para popular a caixa de filtro com opções dinâmicas ***
+        // *** FUNÇÃO CORRIGIDA: Popular a caixa de filtro com IDs únicos ***
         function populateFilterBox(filterBoxElement, headerInfo) {
             const columnName = headerInfo.columnName;
             const options = currentFilterOptions[columnName] || (headerInfo.isDateColumn ? {} : []);
@@ -319,8 +335,8 @@
                 }
             } else {
                 if (options.length > 0) {
-                    options.forEach(option => {
-                        const optionId = `filter-${columnName}-${option || 'empty'}`;
+                    options.forEach((option, index) => {
+                        const optionId = generateUniqueId(`filter_${columnName}`, option, index);
                         const isChecked = savedFilter.isApplied && savedFilter.values.includes(option);
                         optionsHTML += `<div class="filter-option">
                                         <input type="checkbox" id="${optionId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${option}" ${isChecked ? 'checked' : ''}>
@@ -332,7 +348,7 @@
                 }
             }
 
-            const selectAllId = `select-all-${columnName}`;
+            const selectAllId = generateUniqueId(`select_all`, columnName);
             const hasOptions = (isDate && Object.keys(options).length > 0) || (!isDate && options.length > 0);
             
             filterBoxElement.innerHTML = `
@@ -349,9 +365,14 @@
 
             // Adiciona listeners aos botões e checkboxes recém-criados
             const applyBtn = filterBoxElement.querySelector('.apply-filter-btn');
-            const clearBtn = filterBoxElement.querySelector('.clear-filter-btn');
             if(applyBtn) applyBtn.onclick = () => applyFiltersAndSort();
-            if(clearBtn) clearBtn.onclick = () => clearFilter(columnName);
+            const clearBtn = filterBoxElement.querySelector('.clear-filter-btn');
+            if (clearBtn) {
+                clearBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    clearFilter(columnName);
+                };
+            }
 
             const searchInput = filterBoxElement.querySelector('.filter-search-input');
             if (searchInput) {
@@ -395,13 +416,27 @@
                  filterBoxElement.querySelectorAll('input[data-tree-level="year"], input[data-tree-level="month"]').forEach(parentCb => {
                     parentCb.addEventListener('change', (e) => {
                         const isChecked = e.target.checked;
-                        const parentDiv = e.target.closest('.filter-tree-node');
-                        // Encontra todos os descendentes folhas
-                        parentDiv.parentElement.querySelectorAll(`input[data-tree-level="leaf"][id^="${e.target.id}"]`).forEach(leafCb => {
-                             if (leafCb.closest('div').style.display !== 'none') { // Considera busca
-                                leafCb.checked = isChecked;
-                             }
+                        const parentValue = e.target.value;
+                        
+                        // Para anos: encontra todos os meses e dias desse ano
+                        // Para meses: encontra todos os dias desse mês
+                        optionCheckboxes.forEach(leafCb => {
+                            if (leafCb.getAttribute('data-tree-level') === 'leaf') {
+                                const leafValue = leafCb.value;
+                                let shouldCheck = false;
+                                
+                                if (e.target.getAttribute('data-tree-level') === 'year') {
+                                    shouldCheck = leafValue.startsWith(parentValue + '-');
+                                } else if (e.target.getAttribute('data-tree-level') === 'month') {
+                                    shouldCheck = leafValue.startsWith(parentValue + '-');
+                                }
+                                
+                                if (shouldCheck && leafCb.closest('div').style.display !== 'none') {
+                                    leafCb.checked = isChecked;
+                                }
+                            }
                         });
+                        
                         // Atualiza estado do "Selecionar Tudo" geral
                         if(selectAllCheckbox) updateSelectAllState(selectAllCheckbox, optionCheckboxes);
                     });
@@ -409,7 +444,7 @@
             }
         }
         
-        // *** NOVO: Função para atualizar o estado do checkbox "Selecionar Tudo" ***
+        // *** FUNÇÃO MANTIDA: Atualizar o estado do checkbox "Selecionar Tudo" ***
         function updateSelectAllState(selectAllCheckbox, optionCheckboxes) {
             if (!selectAllCheckbox) return;
             let allChecked = true;
@@ -448,166 +483,129 @@
         }
 
         // --- Lógica de Filtragem e Ordenação (Comunicação com Backend) ---
-        function applySort(columnName, direction) { /* ... como antes ... */ 
+        function applySort(columnName, direction) { 
             currentSort = { column: columnName, direction: direction };
             applyFiltersAndSort(false);
         }
-        function clearFilter(columnName) { /* ... como antes ... */ 
-             if (currentFilters[columnName]) {
-                currentFilters[columnName].isApplied = false;
-                currentFilters[columnName].values = [];
+        
+        function clearFilter(columnName) {
+            // console.log("Limpando filtro para:", columnName); // Debug
+            
+            // 1. Remover o filtro do objeto currentFilters
+            if (currentFilters[columnName]) {
+                delete currentFilters[columnName];
             }
+            
+            // 2. Remover a classe 'filtered' do cabeçalho
             const headerInfo = headerData.find((h) => h.columnName === columnName);
-            if (headerInfo && headerInfo.element) { // Verifica se elemento existe
+            if (headerInfo && headerInfo.element) {
                 headerInfo.element.classList.remove("filtered");
             }
-            applyFiltersAndSort(); // Aplica para buscar dados e atualizar opções
+            
+            // 3. Desmarcar todos os checkboxes no filtro aberto
+            if (openFilterBox) {
+                const checkboxes = openFilterBox.querySelectorAll(
+                    `input[data-filter-option="${columnName}"]`
+                );
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                
+                // Atualizar o estado do "Selecionar Tudo"
+                const selectAllCheckbox = openFilterBox.querySelector('.select-all-filter');
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                }
+                openFilterBox.style.display = "none";
+                openFilterBox = null;
+                
+            }
+            
+
+            // 4. Aplicar a remoção do filtro
+            applyFiltersAndSort(false); // Não fechar a caixa de filtro
         }
 
         function applyFiltersAndSort(closeBox = true) {
-            let filterChanged = false;
-
-            // 1. Coleta filtros da caixa *aberta* 
-            if (openFilterBox) {
-                
-                const openColumnName = openFilterBox.parentElement.getAttribute("data-column");
-                const headerContainer = openFilterBox.querySelector(".filter-header");
-                const optionsContainer = openFilterBox.querySelector(".filter-options");
-                // console.log(openFilterBox);
-                if (optionsContainer && openColumnName) {
-                    const selectedValues = [];
-                    // Coleta apenas dos checkboxes folha (leaf)
-                    optionsContainer
-                        .querySelectorAll(
+                // 1. Coletar filtros da caixa aberta (se existir)
+                if (openFilterBox) {
+                    const openColumnName = openFilterBox.parentElement.getAttribute("data-column");
+                    const optionsContainer = openFilterBox.querySelector(".filter-options");
+                    
+                    if (optionsContainer && openColumnName) {
+                        const selectedValues = [];
+                        
+                        // Coletar valores selecionados (incluindo hierarquia de datas)
+                        optionsContainer.querySelectorAll(
                             `input[data-filter-option="${openColumnName}"][data-tree-level="leaf"]:checked`
-                        )
-                        .forEach((checkbox) => {
+                        ).forEach((checkbox) => {
                             selectedValues.push(checkbox.value);
-                            
                         });
 
-                    const selectAllCheckbox = headerContainer.querySelector(
-                        
-                        `#select-all-${openColumnName}`
-                    );
-                    // console.log(optionsContainer)
-                    
-                    let isFilterAppliedForThisColumn = false;
-                    // O filtro é considerado aplicado se "Selecionar Tudo" não estiver marcado (ou indeterminado)
-                    // E se houver opções visíveis para selecionar
-                    // console.log(selectAllCheckbox);
-                    
-                    if (
-                        selectAllCheckbox &&
-                        !selectAllCheckbox.disabled && 
-                        (!selectAllCheckbox.checked || selectAllCheckbox.indeterminate)
-                    ) {
-                         isFilterAppliedForThisColumn = true;
-                    }
-
-                    const previousState = currentFilters[openColumnName] ? JSON.stringify(currentFilters[openColumnName]) : null;
-                    
-                    if (isFilterAppliedForThisColumn) {
-
-                        currentFilters[openColumnName] = {
-                            values: selectedValues, // Armazena os valores selecionados
-                            isApplied: true,
-                        };
-                        
-                    } else {
-                        // Se "Selecionar Tudo" está marcado, o filtro não está ativo
-                        if (currentFilters[openColumnName]) {
-                            currentFilters[openColumnName].isApplied = false;
-                            currentFilters[openColumnName].values = []; // Limpa valores salvos
+                        // Atualizar currentFilters
+                        if (selectedValues.length > 0) {
+                            currentFilters[openColumnName] = {
+                                values: selectedValues,
+                                isApplied: true
+                            };
+                        } else {
+                            delete currentFilters[openColumnName];
                         }
                     }
-                    const newState = currentFilters[openColumnName] ? JSON.stringify(currentFilters[openColumnName]) : null;
-                    if(previousState !== newState) filterChanged = true;
                 }
-            }
 
-            // 2. Prepara dados para o backend
-            const activeFiltersForBackend = {};
-            for (const colName in currentFilters) {
-                
-                if (currentFilters[colName].isApplied) {
+                // 2. Preparar dados para enviar
+                const activeFiltersForBackend = {};
+                for (const colName in currentFilters) {
+                    if (currentFilters[colName].isApplied) {
+                        activeFiltersForBackend[colName] = currentFilters[colName].values;
+                    }
+                }
+
+                // console.log("FILTROS ATIVOS:", activeFiltersForBackend); // Debug 
+
+                const filterData = {
+                    filters: activeFiltersForBackend,
+                    sort: currentSort,
+                    page: page_num
+                };
+
+                // 3. Enviar para o backend
+                fetch("{% url 'filter_data' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": CSRF_TOKEN,
+                    },
+                    body: JSON.stringify(filterData),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) throw new Error(data.error);
                     
-                    activeFiltersForBackend[colName] = currentFilters[colName].values;
-                }
-            }
-            const filterData = {
-                filters: activeFiltersForBackend,
-                sort: currentSort,
-                page: page_num
-            };
-            
-
-            // 3. Atualiza estado visual dos cabeçalhos
-            headerData.forEach((headerInfo) => {
-                const colName = headerInfo.columnName;
-                const filterIsActive = currentFilters[colName]?.isApplied ?? false;
-                if (headerInfo.element) {
-                    if (filterIsActive) {
-                        headerInfo.element.classList.add("filtered");
-                    } else {
-                        headerInfo.element.classList.remove("filtered");
-                    }
-                }
-            });
-
-            // 4. Envia requisição para o backend
-            //console.log("Enviando para backend:", JSON.stringify(filterData)); 
-            
-            fetch("{% url 'filter_data' %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": CSRF_TOKEN,
-                },
-                body: JSON.stringify(filterData),
-                
-            })
-                .then((response) => {
-                    if (!response.ok) {
-                        return response.text().then((text) => {
-                            throw new Error(
-                                `Erro HTTP ${response.status}: ${response.statusText}. Detalhes: ${text}`
-                            );
-                        });
-                    }
-                    return response.json();
+                    currentFilterOptions = data.filter_options || {};
+                    updateTable(data.records);
+                    
+                    total_pages = data.num_pages;
+                    paginate(data.has_previous, data.has_next);
                 })
-                .then((data) => {
-                    //console.log("Recebido do backend:", data); 
-                    if (data && Array.isArray(data.records) && data.filter_options) {
-                        currentFilterOptions = data.filter_options; // Armazena as novas opções
-                        updateTable(data.records);
-                        
-                    } else {
-                        console.error("Resposta inválida do backend (faltando records ou filter_options):", data);
-                        currentFilterOptions = {};
-                        updateTable([]);
-                    }
-                    total_pages = data.num_pages
-                    paginate(data.has_previous, data.has_next)
-                })
-                .catch((error) => {
-                    console.error("Erro ao buscar dados filtrados:", error);
-                    currentFilterOptions = {};
-                    updateTable([]);
+                .catch(error => {
+                    console.error("Erro ao filtrar:", error);
+                    Swal.fire("Erro", "Ocorreu um erro ao aplicar os filtros.", "error");
                 });
 
-            // 5. Fecha a caixa de filtro
-            if (closeBox && openFilterBox) {
-                openFilterBox.style.display = "none";
-                openFilterBox = null;
+                // 4. Fechar a caixa de filtro se necessário
+                if (closeBox && openFilterBox) {
+                    openFilterBox.style.display = "none";
+                    openFilterBox = null;
+                }
             }
-        }
 
         /**
         * Atualiza o corpo da tabela.
         */
-        function updateTable(records) { /* ... como antes ... */ 
+        function updateTable(records) { 
             tableBody.innerHTML = ""; 
             if (!records || records.length === 0) {
                 const colspan = table.querySelectorAll("thead th[data-column]").length;
@@ -652,7 +650,7 @@
                     
                     if(columnName == 'problem_detected'){
                         cell.classList.add("no-cursor")
-                        cell.title = "Clique duas vezes para copiar o texto"
+                        // cell.title = "Clique duas vezes para copiar o texto"
                         cell.addEventListener('dblclick', (e)=>{
                             navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
                             Swal.fire({
@@ -719,7 +717,7 @@
                         cell.id = `${columnName}${record.id}`
                         cell.classList.add('editable-field-container')
                         cell.classList.add('date-input-container')  
-                        cell.title = "Clique duas vezes para copiar o texto"
+                        // cell.title = "Clique duas vezes para copiar o texto"
                         // Input de texto para a data formatada
                         const textInput = document.createElement('input');
                         textInput.type = 'text';
@@ -837,7 +835,7 @@
                             input.rows = 5
                             input.cols = 20
                             input.placeholder = value
-                            input.title="Clique duas vezes para copiar o texto"
+                            // input.title="Clique duas vezes para copiar o texto"
                             input.id = `${columnName}${record.id}`
                             input.addEventListener('input', (e)=>atualizarDados(e))
                             input.addEventListener('dblclick', (e)=>{
@@ -862,7 +860,7 @@
                         textArea.rows = 5
                         textArea.cols = 20
                         textArea.placeholder = value
-                        textArea.title="Clique duas vezes para copiar o texto"
+                        // textArea.title="Clique duas vezes para copiar o texto"
                         textArea.id = `${columnName}${record.id}`
                         textArea.addEventListener('input', (e)=>atualizarDados(e))
                         textArea.addEventListener('dblclick', (e)=>{
@@ -1012,4 +1010,3 @@
 
 </body>
 </html>
-

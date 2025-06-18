@@ -77,6 +77,51 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* Responsive text for Problem Detected column */
+.table td[data-column="problem_detected"] {
+    min-width: 339px;
+    overflow-wrap: break-word;
+    cursor: pointer;
+    white-space: normal;
+    overflow: visible;
+}
+
+/* Status-based row coloring */
+.table tbody tr[data-status="Concluído"] {
+    background-color: rgba(25, 135, 84, 0.05) !important;
+    border-left: 3px solid var(--success);
+}
+
+.table tbody tr[data-status="Em progresso"] {
+    background-color: rgba(255, 193, 7, 0.05) !important;
+    border-left: 3px solid var(--warning);
+}
+
+.table tbody tr[data-status="Requisitado"] {
+    background-color: rgba(0, 86, 179, 0.05) !important;
+    border-left: 3px solid var(--primary);
+}
+
+.table tbody tr[data-status="Atrasado"] {
+    background-color: rgba(220, 53, 69, 0.05) !important;
+    border-left: 3px solid var(--error);
+}
+
+/* Keep alternating row colors for even rows */
+.table tbody tr:nth-child(even) {
+    background-color: var(--gray);
+}
+
+/* Override for status rows */
+.table tbody tr[data-status] {
+    transition: all 0.3s ease;
+}
+
+/* Hover effect for status rows */
+.table tbody tr[data-status]:hover {
+    background-color: rgba(255, 255, 255, 0.7) !important;
+}
+
 /* Ícone de filtro melhorado */
 .filter-icon {
     margin-left: 8px;
@@ -120,6 +165,11 @@ body {
         font-weight: bold;
         color: var(--primary);
     }
+
+    /* Mobile adjustments for Problem Detected */
+    .table td[data-column="problem_detected"] {
+        max-width: 150px;
+    }
 }
 
 /* Estilos para o filtro */
@@ -131,7 +181,7 @@ body {
     padding: 10px;
     z-index: 1000;
     min-width: 200px;
-    display: none; /* Escondido por padrão */
+    display: none;
 }
 
 .filter-header {
@@ -217,8 +267,6 @@ body {
     margin-right: 5px;
 }
 
-
-
 /* Responsividade avançada para tabelas */
 @media (max-width: 1024px) {
     body {
@@ -255,11 +303,6 @@ body {
         background-color: var(--light);
         padding: 15px;
         position: relative;
-    }
-
-    .table tr:hover {
-        transform: none;
-        box-shadow: 0 4px 12px var(--shadow-hover);
     }
 
     .table td {
@@ -682,7 +725,37 @@ body {
     color: var(--error);
 }
 
+.table td[data-column="status"][data-initial-value="Concluído"] {
+    background-color: var(--success) !important;
+    color: white !important;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 5px 10px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: relative;
+}
 
+.table td[data-column="status"][data-initial-value="Concluído"]::after {
+    content: "✓";
+    margin-left: 5px;
+}
+
+/* Melhorar a visualização dos outros status */
+.table td[data-column="status"][data-initial-value="Em progresso"] {
+    background-color: var(--warning) !important;
+    color: var(--dark) !important;
+}
+
+.table td[data-column="status"][data-initial-value="Atrasado"] {
+    background-color: var(--error) !important;
+    color: white !important;
+}
+
+.table td[data-column="status"][data-initial-value="Requisitado"] {
+    background-color: var(--primary-light) !important;
+    color: white !important;
+}
 
 #paginate {
     display: flex;
@@ -727,7 +800,6 @@ body {
     font-size: 14px;
     transition: all 0.2s ease;
 }
-
 
 #num_pages .page-item.active {
     background-color: var(--primary);

@@ -58,138 +58,170 @@ def index(request):
 def filter_data_view(request):
     if request.method == 'POST':
         try:
+            # print("Raw request data:", request.body)  # Debug
             data = json.loads(request.body)
+            # print("Parsed JSON data:", data)
             filters = data.get('filters', {})
             sort_info = data.get('sort', {'column': 'data', 'direction': 'asc'})
+            page_number = data.get('page', 1)
 
+            # Consulta base otimizada
             base_queryset = Record.objects.select_related('country').all()
             user = request.user
             has_full_permission = user.is_superuser
-            queryset = base_queryset
 
-            # Restrição por país
+            # Restrição por país para usuários não admin
             if not has_full_permission:
-                permitted_countries = CountryPermission.objects.filter(user=user).values_list('country', flat=True)
-                queryset = queryset.filter(country__in=permitted_countries)
+                permitted_countries = CountryPermission.objects.filter(
+                    user=user
+                ).values_list('country', flat=True)
+                queryset = base_queryset.filter(country__in=permitted_countries)
+            else:
+                queryset = base_queryset
 
-            # Aplicar filtros
+            # Construção dos filtros
             q_objects = Q()
             for column, values in filters.items():
-                if column == 'country' and not has_full_permission:
-                    permitted_countries = Country.objects.filter(
-                        countrypermission__user=user
-                    ).values_list('name', flat=True)
-                    values = [v for v in values if v in permitted_countries]
-                    if not values:
-                        continue
-
                 if not isinstance(values, list) or not values:
                     continue
 
                 column_q = Q()
-                has_empty_filter = '' in values
-                non_empty_values = [v for v in values if v != '']
+                has_empty = '' in values
+                non_empty = [v for v in values if v != '']
 
-                if non_empty_values:
+                # Filtros para valores não vazios
+                if non_empty:
                     if column == 'status':
-                        valid_status_keys = [STATUS_OCORRENCIA[v] for v in non_empty_values if v in STATUS_OCORRENCIA]
-                        column_q |= Q(**{f'{column}__in': valid_status_keys})
+                        status_values = [STATUS_OCORRENCIA.get(v, v) for v in non_empty]
+                        column_q |= Q(status__in=status_values)
                     elif column in DATE_COLUMNS:
-                        valid_dates = []
-                        for v in non_empty_values:
+                        dates = []
+                        for v in non_empty:
                             try:
-                                datetime.strptime(v, '%Y-%m-%d')
-                                valid_dates.append(v)
-                            except ValueError:
-                                pass
-                        if valid_dates:
-                            column_q |= Q(**{f'{column}__in': valid_dates})
+                                if '/' in v:  # Formato DD/MM/YYYY
+                                    dt = datetime.strptime(v, '%d/%m/%Y').date()
+                                else:  # Formato YYYY-MM-DD
+                                    dt = datetime.strptime(v, '%Y-%m-%d').date()
+                                dates.append(dt)
+                            except:
+                                continue
+                        if dates:
+                            column_q |= Q(**{f'{column}__in': dates})
                     elif column == 'country':
-                        column_q |= Q(country__name__in=non_empty_values)
+                        if has_full_permission:
+                            column_q |= Q(country__name__in=non_empty)
+                        else:
+                            # Verifica se os países filtrados estão nos permitidos
+                            permitted = set(CountryPermission.objects.filter(
+                                user=user,
+                                country__name__in=non_empty
+                            ).values_list('country__name', flat=True))
+                            filtered = [v for v in non_empty if v in permitted]
+                            if filtered:
+                                column_q |= Q(country__name__in=filtered)
                     else:
-                        column_q |= Q(**{f'{column}__in': non_empty_values})
+                        column_q |= Q(**{f'{column}__in': non_empty})
 
-                if has_empty_filter:
+                # Filtro para valores vazios/nulos
+                if has_empty:
                     if column == 'country':
                         column_q |= Q(country__isnull=True)
                     else:
                         column_q |= Q(**{f'{column}__isnull': True}) | Q(**{f'{column}__exact': ''})
 
-                q_objects &= column_q
+                if column_q:
+                    q_objects &= column_q
 
-            queryset = queryset.filter(q_objects)
+            # Aplica os filtros se houver algum
+            if q_objects:
+                queryset = queryset.filter(q_objects)
 
-            # Preparar opções de filtro
-            filter_options = defaultdict(list)
-            visible_columns = list(ALLOWED_SORT_COLUMNS)
+            # Ordenação
+            sort_column = sort_info.get('column', 'data')
+            sort_direction = sort_info.get('direction', 'asc')
+            
+            if sort_column in ALLOWED_SORT_COLUMNS:
+                if sort_column == 'country':
+                    order_field = f"{'-' if sort_direction == 'desc' else ''}country__name"
+                else:
+                    order_field = f"{'-' if sort_direction == 'desc' else ''}{sort_column}"
+                queryset = queryset.order_by(order_field)
 
+            # Paginação
+            paginator = Paginator(queryset, 10)
+            page_obj = paginator.get_page(page_number)
+
+            # Prepara os dados para resposta
+            records_data = []
+            for record in page_obj.object_list:
+                record_data = {
+                    'id': record.id,
+                    'technical': record.technical or '',
+                    'country': record.country.name if record.country else '',
+                    'device': record.device or '',
+                    'area': record.area or '',
+                    'serial': record.serial or '',
+                    'brand': record.brand or '',
+                    'model': record.model or '',
+                    'year': record.year or '',
+                    'version': record.version or '',
+                    'problem_detected': record.problem_detected or '',
+                    'status': STATUS_MAP_REVERSED.get(record.status, record.status or ''),
+                    'deadline': record.deadline.strftime('%d/%m/%Y') if record.deadline else '',
+                    'responsible': record.responsible or '',
+                    'finished': record.finished.strftime('%d/%m/%Y') if record.finished else '',
+                    'feedback_technical': record.feedback_technical or '',
+                    'feedback_manager': record.feedback_manager or '',
+                }
+                records_data.append(record_data)
+
+            # Prepara opções de filtro para a resposta
+            filter_options = {}
             for col in FILTERABLE_COLUMNS_FOR_OPTIONS:
                 if col == 'country':
                     if has_full_permission:
-                        current_col_options = base_queryset.values_list('country__name', flat=True).distinct()
+                        options = base_queryset.exclude(country__isnull=True
+                                ).values_list('country__name', flat=True).distinct()
                     else:
-                        current_col_options = CountryPermission.objects.filter(
+                        options = CountryPermission.objects.filter(
                             user=user
                         ).values_list('country__name', flat=True).distinct()
-                    filter_options[col] = sorted([opt or '' for opt in current_col_options])
+                    filter_options[col] = sorted([opt for opt in options if opt])
                 elif col == 'status':
                     status_values = queryset.values_list('status', flat=True).distinct()
-                    filter_options[col] = sorted([STATUS_MAP_REVERSED.get(opt, opt) for opt in status_values if opt])
+                    filter_options[col] = sorted(
+                        [STATUS_MAP_REVERSED.get(opt, opt) for opt in status_values if opt],
+                        key=lambda x: list(STATUS_OCORRENCIA.keys()).index(x) if x in STATUS_OCORRENCIA else float('inf')
+                    )
                 elif col in DATE_COLUMNS:
-                    dates = queryset.values_list(col, flat=True).distinct()
+                    dates = queryset.exclude(**{f'{col}__isnull': True}
+                            ).values_list(col, flat=True).distinct()
                     date_tree = defaultdict(lambda: defaultdict(list))
                     for dt in dates:
                         if dt:
                             try:
-                                dt = datetime.strptime(str(dt), '%Y-%m-%d').date()
+                                dt = dt if isinstance(dt, date) else datetime.strptime(str(dt), '%Y-%m-%d').date()
                                 year = str(dt.year)
                                 month = dt.strftime('%m')
                                 day = dt.strftime('%d')
                                 if day not in date_tree[year][month]:
                                     date_tree[year][month].append(day)
                             except:
-                                pass
+                                continue
                     for year in date_tree:
                         for month in date_tree[year]:
                             date_tree[year][month] = sorted(date_tree[year][month])
                         date_tree[year] = dict(sorted(date_tree[year].items()))
                     filter_options[col] = dict(sorted(date_tree.items()))
                 else:
-                    options = queryset.values_list(col, flat=True).distinct()
-                    filter_options[col] = sorted([opt or '' for opt in options])
-
-            # Ordenação
-            sort_column = sort_info.get('column', 'data')
-            sort_direction = sort_info.get('direction', 'asc')
-            sort_prefix = "-" if sort_direction == 'desc' else ""
-
-            if sort_column in ALLOWED_SORT_COLUMNS:
-                if sort_column == 'country':
-                    queryset = queryset.order_by(f"{sort_prefix}country__name")
-                else:
-                    queryset = queryset.order_by(f"{sort_prefix}{sort_column}")
-
-            filtered_records = list(queryset.values(*visible_columns, 'country__name'))
-
-            # Substituir id por nome do país
-            for idx, record in enumerate(filtered_records):
-                record['id'] = queryset[idx].id
-                if 'status' in record and record['status'] in STATUS_MAP_REVERSED:
-                    record['status'] = STATUS_MAP_REVERSED[record['status']]
-                for date_col in DATE_COLUMNS:
-                    if date_col in record and record[date_col]:
-                        record[date_col] = str(record[date_col])
-                if 'country' in record or 'country__name' in record:
-                    record['country'] = record.pop('country__name', '')
-
-            paginator = Paginator(filtered_records, 10)
-            page_number = data.get('page')
-            page_obj = paginator.get_page(page_number)
+                    options = queryset.exclude(**{f'{col}__isnull': True}
+                            ).exclude(**{f'{col}__exact': ''}
+                            ).values_list(col, flat=True).distinct()
+                    filter_options[col] = sorted([opt for opt in options if opt is not None])
 
             return JsonResponse({
-                'records': list(page_obj.object_list),
+                'records': records_data,
                 'filter_options': filter_options,
-                'has_full_permission': has_full_permission,
                 'num_pages': paginator.num_pages,
                 'current_page': page_obj.number,
                 'has_next': page_obj.has_next(),
@@ -197,12 +229,11 @@ def filter_data_view(request):
             })
 
         except Exception as e:
-            print(e)
+            import traceback
+            traceback.print_exc()
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Método inválido'}, status=405)
-
-
 def login(request):
     if request.method == "GET":
         next_url = request.GET.get('next', None)
