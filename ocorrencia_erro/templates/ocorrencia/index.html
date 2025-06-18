@@ -832,8 +832,32 @@
                         if(textInput.classList[0] == 'date-text-input'){
                             let teste = flatpickr('.date-text-input', {'allowInput':true, 'dateFormat':'d/m/Y', 'minDate':'today'})
                         }
+			console.log('{{has_full_permission}}');
                     }
-                    
+                    else if((columnName == 'responsible' && '{{has_full_permission}}' === 'True')){
+                        cell.id = `${columnName}${record.id}`
+                        cell.classList.add('editable-field-container')
+                        cell.classList.add('date-input-container')
+
+                        let input = document.createElement('input')
+                            input.setAttribute('data-initial-value', value)
+                            input.rows = 5
+                            input.cols = 20
+                            input.placeholder = value
+                            input.title="Clique duas vezes para copiar o texto"
+                            input.id = `${columnName}${record.id}`
+                            input.addEventListener('input', (e)=>atualizarDados(e))
+                            input.addEventListener('dblclick', (e)=>{
+                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
+                            Swal.fire({
+                                title:"Texto copiado",
+                                text: 'Feedback copiado para área de transferência',
+                                showCloseButton: true,
+                                icon:'success'
+                            })
+                        })
+                        cell.appendChild(input)
+                    }
                     
                     else if(headerInfo.isTextAreaColumn){
                         cell.id = `${columnName}${record.id}`
@@ -933,7 +957,6 @@
                 
             let valor_inicial = dado.getAttribute('data-initial-value')
             let valor_input = dado.value
-            
             if(valor_input !== valor_inicial) {
                 dado.classList.add('pending-save')
                 typingTimer = setTimeout(() => saveField(dado), doneTypingInterval);
