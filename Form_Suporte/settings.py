@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-6u$z58nj9!@tqbyx5$f103&-jj3^%1ve=p@z@aomo89#ugn6wp'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
@@ -90,7 +90,7 @@ WSGI_APPLICATION = 'Form_Suporte.wsgi.application'
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
+#         'NAME': BASE_DIR / 'db2.sqlite3',
 #     }
 # }
 
@@ -113,7 +113,7 @@ DATABASES = {
 #         'USER': 'remote',           # usuário do MySQL
 #         'PASSWORD': 'eaata360',         # senha do usuário
 #         'HOST': '0.tcp.sa.ngrok.io',                    # ou IP do servidor MySQL
-#         'PORT': '18925',                        # porta padrão do MySQL
+#         'PORT': '14451',                        # porta padrão do MySQL
 #     }
 # }
 

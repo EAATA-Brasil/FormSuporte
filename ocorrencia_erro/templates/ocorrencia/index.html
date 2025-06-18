@@ -50,6 +50,7 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         "use strict";
+
         var page_num = 1
         let buttons_paginator = document.querySelectorAll('.button-paginator')
         var total_pages
@@ -665,9 +666,8 @@
                     
 
                     if (columnName == 'status'){
-                        
-                        var data_deadline= `${record['deadline'].split('-')[1]}/${record['deadline'].split('-')[2]}/${record['deadline'].split('-')[0]}`
-                        var data_finished= `${record['finished'].split('-')[1]}/${record['finished'].split('-')[2]}/${record['finished'].split('-')[0]}`
+                        var data_deadline= record['deadline'] ? `${record['deadline'].split('-')[1]}/${record['deadline'].split('-')[2]}/${record['deadline'].split('-')[0]}` : null
+                        var data_finished= record['finished'] ? `${record['finished'].split('-')[1]}/${record['finished'].split('-')[2]}/${record['finished'].split('-')[0]}` : null
                         
                         data_deadline = record['deadline'] ? new Date(data_deadline) : null
                         data_finished = record['finished'] ? new Date(data_finished) : null

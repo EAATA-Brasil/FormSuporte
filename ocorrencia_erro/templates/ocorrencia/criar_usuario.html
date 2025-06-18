@@ -132,8 +132,8 @@
         <strong id="paises-label">Países responsáveis:</strong><br />
         {% for pais in paises %}
           <label>
-            <input type="checkbox" name="paises_responsavel" value="{{ pais }}">
-            {{ pais }}
+            <input type="checkbox" name="paises_responsavel" value="{{ pais.id }}">
+            {{ pais.name }}
           </label>
         {% empty %}
           <p>Nenhum país disponível.</p>

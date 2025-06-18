@@ -1,49 +1,53 @@
 # -*- coding: utf-8 -*-
-from django.shortcuts import render, redirect
+from datetime import datetime, date
+from collections import defaultdict
+import json
+
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.db.models import Q
 from django.core.paginator import Paginator
-from datetime import datetime, date
+from django.urls import reverse
 from django.contrib.auth import authenticate, login as login_django
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
-from collections import defaultdict
 from django.contrib import messages
-from .models import Record, CountryPermission
-from django.urls import reverse
-import json
 
-# Constantes para datas e status
-DATE_COLUMNS = ["data", "deadline", "finished"] 
+from .models import Record, Country, CountryPermission
+
+# Constantes
+DATE_COLUMNS = ["data", "deadline", "finished"]
 STATUS_OCORRENCIA = {
-    'Concluído':'DONE',
-    'Atrasado':'LATE',
-    'Em progresso':'PROGRESS',
-    'Requisitado':'REQUESTED'
+    'Concluído': 'DONE',
+    'Atrasado': 'LATE',
+    'Em progresso': 'PROGRESS',
+    'Requisitado': 'REQUESTED'
 }
 STATUS_MAP_REVERSED = {v: k for k, v in STATUS_OCORRENCIA.items()}
 
 ALLOWED_SORT_COLUMNS = [
-    'feedback_manager', 'feedback_technical', 'problem_detected', 'area', 'brand', 
-    'country', 'data', 'deadline', 'device', 'finished', 'model', 'responsible', 
+    'feedback_manager', 'feedback_technical', 'problem_detected', 'area', 'brand',
+    'country', 'data', 'deadline', 'device', 'finished', 'model', 'responsible',
     'serial', 'status', 'technical', 'version', 'year'
 ]
 
 FILTERABLE_COLUMNS_FOR_OPTIONS = [
-    'technical', 'country', 'device', 'area', 'serial', 'brand', 
-    'model', 'year', 'version', 'status', 'responsible', 
+    'technical', 'country', 'device', 'area', 'serial', 'brand',
+    'model', 'year', 'version', 'status', 'responsible',
     'data', 'deadline', 'finished'
 ]
 
 URL_LOGIN = 'login_ocorrencias'
 
-
 @login_required(login_url=URL_LOGIN)
 def index(request):
     is_super = request.user.is_superuser
-    permitted_countries = CountryPermission.objects.filter(user=request.user).values_list('country', flat=True)
+    permitted_countries = Country.objects.filter(
+        countrypermission__user=request.user
+    ).values_list('name', flat=True)
+
     context = {
-        'user':request.user,
+        'user': request.user,
         'paises_permitidos': permitted_countries,
         'has_full_permission': is_super
     }
@@ -58,22 +62,23 @@ def filter_data_view(request):
             filters = data.get('filters', {})
             sort_info = data.get('sort', {'column': 'data', 'direction': 'asc'})
 
-            base_queryset = Record.objects.all()
+            base_queryset = Record.objects.select_related('country').all()
             user = request.user
             has_full_permission = user.is_superuser
             queryset = base_queryset
 
-            # Limitar registros por país se não for superuser
+            # Restrição por país
             if not has_full_permission:
                 permitted_countries = CountryPermission.objects.filter(user=user).values_list('country', flat=True)
                 queryset = queryset.filter(country__in=permitted_countries)
 
-            # Aplica filtros
+            # Aplicar filtros
             q_objects = Q()
             for column, values in filters.items():
-                # Impede que usuários restritos filtrem países fora do permitido
                 if column == 'country' and not has_full_permission:
-                    permitted_countries = CountryPermission.objects.filter(user=user).values_list('country', flat=True)
+                    permitted_countries = Country.objects.filter(
+                        countrypermission__user=user
+                    ).values_list('name', flat=True)
                     values = [v for v in values if v in permitted_countries]
                     if not values:
                         continue
@@ -88,8 +93,7 @@ def filter_data_view(request):
                 if non_empty_values:
                     if column == 'status':
                         valid_status_keys = [STATUS_OCORRENCIA[v] for v in non_empty_values if v in STATUS_OCORRENCIA]
-                        if valid_status_keys:
-                            column_q |= Q(**{f'{column}__in': valid_status_keys})
+                        column_q |= Q(**{f'{column}__in': valid_status_keys})
                     elif column in DATE_COLUMNS:
                         valid_dates = []
                         for v in non_empty_values:
@@ -100,83 +104,83 @@ def filter_data_view(request):
                                 pass
                         if valid_dates:
                             column_q |= Q(**{f'{column}__in': valid_dates})
+                    elif column == 'country':
+                        column_q |= Q(country__name__in=non_empty_values)
                     else:
                         column_q |= Q(**{f'{column}__in': non_empty_values})
 
                 if has_empty_filter:
-                    column_q |= Q(**{f'{column}__isnull': True}) | Q(**{f'{column}__exact': ''})
+                    if column == 'country':
+                        column_q |= Q(country__isnull=True)
+                    else:
+                        column_q |= Q(**{f'{column}__isnull': True}) | Q(**{f'{column}__exact': ''})
 
                 q_objects &= column_q
 
             queryset = queryset.filter(q_objects)
 
-            # Opções de filtro
+            # Preparar opções de filtro
             filter_options = defaultdict(list)
             visible_columns = list(ALLOWED_SORT_COLUMNS)
 
             for col in FILTERABLE_COLUMNS_FOR_OPTIONS:
-                if col not in visible_columns:
-                    continue
-
                 if col == 'country':
                     if has_full_permission:
-                        current_col_options = base_queryset.values_list('country', flat=True).distinct()
+                        current_col_options = base_queryset.values_list('country__name', flat=True).distinct()
                     else:
-                        current_col_options = CountryPermission.objects.filter(user=user).values_list('country', flat=True).distinct()
-
-                    options_list = sorted([str(opt) if opt is not None else '' for opt in current_col_options])
-                    filter_options[col] = options_list
-                    continue
-
-                current_col_options = queryset.values_list(col, flat=True).distinct()
-                options_list = sorted([str(opt) if opt is not None else '' for opt in current_col_options])
-
-                if col == 'status':
-                    filter_options[col] = list(set(sorted([STATUS_MAP_REVERSED.get(opt, opt) for opt in options_list if opt])))
+                        current_col_options = CountryPermission.objects.filter(
+                            user=user
+                        ).values_list('country__name', flat=True).distinct()
+                    filter_options[col] = sorted([opt or '' for opt in current_col_options])
+                elif col == 'status':
+                    status_values = queryset.values_list('status', flat=True).distinct()
+                    filter_options[col] = sorted([STATUS_MAP_REVERSED.get(opt, opt) for opt in status_values if opt])
                 elif col in DATE_COLUMNS:
+                    dates = queryset.values_list(col, flat=True).distinct()
                     date_tree = defaultdict(lambda: defaultdict(list))
-                    for dt_str in options_list:
-                        if dt_str:
+                    for dt in dates:
+                        if dt:
                             try:
-                                dt = datetime.strptime(dt_str, '%Y-%m-%d').date()
+                                dt = datetime.strptime(str(dt), '%Y-%m-%d').date()
                                 year = str(dt.year)
                                 month = dt.strftime('%m')
                                 day = dt.strftime('%d')
                                 if day not in date_tree[year][month]:
                                     date_tree[year][month].append(day)
-                            except ValueError:
+                            except:
                                 pass
-                    for year, months in date_tree.items():
-                        for month, days in months.items():
-                            months[month] = sorted(days)
-                        date_tree[year] = dict(sorted(months.items()))
+                    for year in date_tree:
+                        for month in date_tree[year]:
+                            date_tree[year][month] = sorted(date_tree[year][month])
+                        date_tree[year] = dict(sorted(date_tree[year].items()))
                     filter_options[col] = dict(sorted(date_tree.items()))
                 else:
-                    filter_options[col] = list(set(options_list))
+                    options = queryset.values_list(col, flat=True).distinct()
+                    filter_options[col] = sorted([opt or '' for opt in options])
 
             # Ordenação
             sort_column = sort_info.get('column', 'data')
             sort_direction = sort_info.get('direction', 'asc')
             sort_prefix = "-" if sort_direction == 'desc' else ""
 
-            if sort_column in ALLOWED_SORT_COLUMNS and sort_column in visible_columns:
-                queryset = queryset.order_by(f"{sort_prefix}{sort_column}")
-            else:
-                queryset = queryset.order_by("data")
+            if sort_column in ALLOWED_SORT_COLUMNS:
+                if sort_column == 'country':
+                    queryset = queryset.order_by(f"{sort_prefix}country__name")
+                else:
+                    queryset = queryset.order_by(f"{sort_prefix}{sort_column}")
 
-            filtered_records = list(queryset.values(*visible_columns))
+            filtered_records = list(queryset.values(*visible_columns, 'country__name'))
 
-            # Ajusta os registros para JSON
+            # Substituir id por nome do país
             for idx, record in enumerate(filtered_records):
                 record['id'] = queryset[idx].id
                 if 'status' in record and record['status'] in STATUS_MAP_REVERSED:
                     record['status'] = STATUS_MAP_REVERSED[record['status']]
                 for date_col in DATE_COLUMNS:
-                    if date_col in record:
-                        if isinstance(record[date_col], (datetime, date)):
-                            record[date_col] = record[date_col].strftime('%Y-%m-%d')
-                        elif record[date_col] is None:
-                            record[date_col] = ''
+                    if date_col in record and record[date_col]:
+                        record[date_col] = str(record[date_col])
+                if 'country' in record or 'country__name' in record:
+                    record['country'] = record.pop('country__name', '')
 
             paginator = Paginator(filtered_records, 10)
             page_number = data.get('page')
@@ -192,13 +196,11 @@ def filter_data_view(request):
                 'has_previous': page_obj.has_previous(),
             })
 
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'JSON inválido'}, status=400)
         except Exception as e:
             print(e)
-            return JsonResponse({'error': 'Erro interno do servidor'}, status=500)
+            return JsonResponse({'error': str(e)}, status=500)
 
-    return JsonResponse({'error': 'Método de requisição inválido, esperado POST'}, status=405)
+    return JsonResponse({'error': 'Método inválido'}, status=405)
 
 
 def login(request):
@@ -206,35 +208,34 @@ def login(request):
         next_url = request.GET.get('next', None)
         context = {'next': next_url} if next_url else {}
         return render(request, 'ocorrencia/login.html', context)
+
     else:
-        name = request.POST.get('country', '').strip().capitalize()
+        username = request.POST.get('country', '').strip().capitalize()
         password = request.POST.get('password', '')
         next_url = request.POST.get('next', None)
 
-        user = authenticate(request, username=name, password=password)
-
+        user = authenticate(request, username=username, password=password)
         if user is None:
-            user = authenticate(request, username=name.upper(), password=password)
+            user = authenticate(request, username=username.upper(), password=password)
 
-        if user is not None:
+        if user:
             login_django(request, user)
             return redirect(next_url) if next_url else redirect('/ocorrencia')
         else:
             messages.error(request, "Usuário ou senha inválidos.")
-            return redirect(f"{reverse('login_ocorrencias')}?next={next_url}" if next_url else 'login_ocorrencias')
+            return redirect(reverse('login_ocorrencias'))
 
 
 @login_required(login_url=URL_LOGIN)
 def criar_usuario(request):
     if not request.user.is_superuser:
-        messages.error(request, "Você precisa ser superusuário para criar um usuário.")
+        messages.error(request, "Você precisa ser superusuário para criar usuários.")
         return redirect('/ocorrencia')
 
-    paises_existentes = Record.objects.values_list('country', flat=True).distinct().order_by('country')
+    paises_existentes = Country.objects.all().order_by('name')
 
     if request.method == "GET":
-        context = {'paises': paises_existentes}
-        return render(request, 'ocorrencia/criar_usuario.html', context)
+        return render(request, 'ocorrencia/criar_usuario.html', {'paises': paises_existentes})
 
     if request.method == "POST":
         username = request.POST.get('username', '').strip().upper()
@@ -242,69 +243,59 @@ def criar_usuario(request):
         paises_responsavel = request.POST.getlist('paises_responsavel')
 
         if not username or not password:
-            messages.error(request, "Nome de usuário e senha são obrigatórios.")
+            messages.error(request, "Nome de usuário e senha obrigatórios.")
             return redirect('criar_usuario')
 
         if User.objects.filter(username=username).exists():
-            messages.warning(request, "Esse usuário já existe.")
+            messages.warning(request, "Usuário já existe.")
             return redirect('criar_usuario')
 
-        try:
-            user = User.objects.create_user(username=username, password=password)
-            CountryPermission.objects.filter(user=user).delete()
-            for pais in paises_responsavel:
-                CountryPermission.objects.create(user=user, country=pais)
+        user = User.objects.create_user(username=username, password=password)
+        for pais_id in paises_responsavel:
+            try:
+                country = Country.objects.get(id=pais_id)
+                CountryPermission.objects.create(user=user, country=country)
+            except Country.DoesNotExist:
+                continue
 
-            print(request, f"Usuário {username} criado com sucesso.")
-            return redirect('/ocorrencia')
-
-        except Exception as e:
-            messages.error(request, f"Erro ao criar usuário: {str(e)}")
-            return redirect('criar_usuario')
+        messages.success(request, f"Usuário {username} criado com sucesso.")
+        return redirect('/ocorrencia')
 
 
-@login_required
+@login_required(login_url=URL_LOGIN)
 def subir_ocorrencia(request):
     has_full_permission = request.user.is_superuser
 
     if has_full_permission:
-        paises = Record.objects.values_list('country', flat=True).distinct().order_by('country')
+        paises = Country.objects.all().order_by('name')
     else:
-        paises = CountryPermission.objects.filter(user=request.user).values_list('country', flat=True)
-
+        paises = Country.objects.filter(
+            id__in=CountryPermission.objects.filter(user=request.user).values_list('country_id', flat=True)
+        ).order_by('name')
     if request.method == 'POST':
-        if has_full_permission:
-            country = request.POST.get("country")
-        else:
-            country = list(paises)[0] if paises else None
+        country_id = request.POST.get("country")
+        country = get_object_or_404(Country, id=country_id) if has_full_permission else paises.first()
+        record_data = {
+            'technical': request.POST.get("technical"),
+            'responsible': request.POST.get("responsible"),
+            'device': request.POST.get("device"),
+            'area': request.POST.get("area"),
+            'serial': request.POST.get("serial"),
+            'brand': request.POST.get("brand"),
+            'model': request.POST.get("model"),
+            'year': request.POST.get("year"),
+            'country': country,
+            'version': request.POST.get("version"),
+            'problem_detected': request.POST.get("problem_detected"),
+            'status': STATUS_OCORRENCIA.get(f'{request.POST.get("status", "Requisitado")}','REQUESTED')
+        }
 
-        tecnico = request.POST.get("technical")
-        responsavel = request.POST.get("responsible")
-        equipamento = request.POST.get("device")
-        area = request.POST.get("area")
-        serial = request.POST.get("serial")
-        marca = request.POST.get("brand")
-        modelo = request.POST.get("model")
-        ano = request.POST.get("year")
-        versao = request.POST.get("version")
-        problema = request.POST.get("problem_detected")
+        # Adiciona 'deadline' apenas se existir no POST e não for vazio
+        if request.POST.get("deadline"):
+            record_data['deadline'] = request.POST.get("deadline")
 
-        if not tecnico or not responsavel or not equipamento or not country:
-            return JsonResponse({"status": "error", "message": "Campos obrigatórios não preenchidos."}, status=400)
-
-        Record.objects.create(
-            technical=tecnico,
-            responsible=responsavel,
-            device=equipamento,
-            area=area,
-            serial=serial,
-            brand=marca,
-            model=modelo,
-            year=ano,
-            country=country,
-            version=versao,
-            problem_detected=problema,
-        )
+        # Cria o registro
+        Record.objects.create(**record_data)
         return JsonResponse({"status": "success", "message": "Ocorrência cadastrada com sucesso."}, status=201)
 
     return render(request, 'ocorrencia/subir_ocorrencia.html', {
@@ -318,20 +309,26 @@ def alterar_dados(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body.decode('utf-8'))
+            record = Record.objects.get(id=data.get('id'))
             field_name = data.get('field')
             new_value = data.get('value')
 
-            if field_name in DATE_COLUMNS and new_value:
+            if field_name == 'country':
+                new_value = get_object_or_404(Country, id=new_value)
+                setattr(record, field_name, new_value)
+                new_display = new_value.name
+            elif field_name in DATE_COLUMNS and new_value:
                 new_value = datetime.strptime(new_value, '%d/%m/%Y').date()
+                setattr(record, field_name, new_value)
+                new_display = new_value.strftime('%Y-%m-%d')
+            else:
+                setattr(record, field_name, new_value)
+                new_display = new_value
 
-            record = Record.objects.get(id=data.get('id'))
-            setattr(record, field_name, new_value)
             record.save(update_fields=[field_name])
 
-            return JsonResponse({
-                'status': 'success',
-                'new_display': new_value
-            })
+            return JsonResponse({'status': 'success', 'new_display': new_display})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
     return JsonResponse({'status': 'error'}, status=405)

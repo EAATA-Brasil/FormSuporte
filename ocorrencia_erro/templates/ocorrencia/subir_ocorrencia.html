@@ -79,79 +79,138 @@
         padding: 1rem;
       }
     }
+      form select {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  form select:focus {
+    border-color: var(--primary);
+    outline: none;
+    background-color: #fdfdfd;
+  }
   </style>
+  
 </head>
 <body>
 
-  <form id="form" method="post" novalidate>
+  <form method="POST" id="form-ocorrencia">
     {% csrf_token %}
-    <input type="text" id="technical" name="technical" placeholder="Técnico" required />
-    <input type="text" id="device" name="device" placeholder="Dispositivo" required />
-    <input type="text" id="area" name="area" placeholder="Área" />
-    <input type="text" id="serial" name="serial" placeholder="Serial" />
-    <input type="text" id="brand" name="brand" placeholder="Marca" />
-    <input type="text" id="model" name="model" placeholder="Modelo" />
-    <input type="text" id="year" name="year" placeholder="Ano" />
-    <input type="text" id="version" name="version" placeholder="Versão" />
-    <textarea name="problem_detected" id="problem_detected" placeholder="Problema Detectado" style="resize: vertical;"></textarea>
-    <input type="text" id="responsible" name="responsible" placeholder="Responsável" required />
 
-    {% if request.user.is_superuser %}
-      <input type="text" id="country" name="country" placeholder="País" required/>
-      <input type="text" id="status" name="status" placeholder="Status" />
-      <input type="text" id="deadline" name="deadline" placeholder="Previsão de término" />
-    {% else %}
-      <input type="text" id="country" name="country" value="{{ request.user.username }}" readonly />
+    {% if has_full_permission %}
+      <label for="country">País</label>
+      <select id="country" name="country" required>
+          <option value="">-- Selecione o país --</option>
+          {% for pais in paises %}
+              <option value="{{ pais.id }}">{{ pais.name }}</option>
+          {% endfor %}
+      </select>
+      {% else %}
+      <label for="country">País</label>
+      {% if paises %}
+          <select id="country" name="country" required>
+            <option value="">-- Selecione o país --</option>
+            {% for pais in paises %}
+                <option value="{{ pais.id }}">{{ pais.name }}</option>
+            {% endfor %}
+          </select>
+      {% else %}
+          <input type="text" id="country" name="country" value="Sem país atribuído" readonly />
+      {% endif %}
     {% endif %}
 
+    <label for="technical">Técnico *</label>
+    <input type="text" id="technical" name="technical" required />
+
+    <label for="responsible">Responsável *</label>
+    <input type="text" id="responsible" name="responsible" required />
+
+    <label for="device">Equipamento *</label>
+    <input type="text" id="device" name="device" required />
+
+    <label for="area">Área</label>
+    <input type="text" id="area" name="area" />
+
+    <label for="serial">Serial</label>
+    <input type="text" id="serial" name="serial" />
+
+    <label for="brand">Marca</label>
+    <input type="text" id="brand" name="brand" />
+
+    <label for="model">Modelo</label>
+    <input type="text" id="model" name="model" />
+
+    <label for="year">Ano</label>
+    <input type="text" id="year" name="year" />
+
+    <label for="version">Versão</label>
+    <input type="text" id="version" name="version" />
+
+    {% if has_full_permission %}
+
+      <label for="deadline">Deadline</label>
+      <input type="text" id="deadline" name="deadline" />
+
+      <label for="status">Status</label>
+      <select id="staus" name="status">
+        <option value="">-- Estado da ocorrência --</option>
+            <option value="Requisitado">Requisitado</option>
+            <option value="Concluído">Concluído</option>
+            <option value="Em progresso">Em progresso</option>
+            <option value="Atrasado">Atrasado</option>
+      </select>
+
+    {% else %}
+
+      <input type="hidden" name="status" value="Requisitado" />
+
+    {%endif%}
+
+    <label for="problem_detected">Problema Detectado</label>
+    <textarea id="problem_detected" name="problem_detected"></textarea>
+
     <input type="submit" value="Cadastrar Ocorrência" />
-  </form>
+</form>
 
 <script>
-  document.querySelector("#form").addEventListener('submit', function (e) {
+  document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const data = {
-      technical: document.querySelector("#technical").value.trim(),
-      device: document.querySelector("#device").value.trim(),
-      area: document.querySelector("#area").value.trim(),
-      serial: document.querySelector("#serial").value.trim(),
-      brand: document.querySelector("#brand").value.trim(),
-      model: document.querySelector("#model").value.trim(),
-      year: document.querySelector("#year").value.trim(),
-      version: document.querySelector("#version").value.trim(),
-      problem_detected: document.querySelector("#problem_detected").value.trim(),
-      responsible: document.querySelector("#responsible").value.trim(),
-      country: document.querySelector("#country").value.trim()
-    };
+    const form = e.target;
+    const data = new FormData(form);
 
-    fetch("{% url 'subir_ocorrencia' %}", {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': '{{ csrf_token }}',
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams(data)
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Erro ao cadastrar ocorrência');
-      }
-      return response.json();
-    })
-    .then(json => {
-      if (json.status === 'success') {
-        alert('Ocorrência cadastrada com sucesso!');
-        window.location.href = "{% url 'index' %}";  // Ajuste para sua URL de listagem
-      } else {
-        alert('Erro: ' + (json.message || 'Erro desconhecido'));
-      }
-    })
-    .catch(error => {
-      alert('Erro ao cadastrar ocorrência');
-      console.error(error);
-    });
-  });
+    const countrySelect = form.querySelector('#country');
+    if (countrySelect && countrySelect.value === "") {
+        alert('Por favor, selecione um país.');
+        return;
+    }
+
+    try {
+        const response = await fetch("", {
+            method: "POST",
+            headers: {
+                'X-CSRFToken': data.get('csrfmiddlewaretoken')
+            },
+            body: data
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro de rede ou do servidor');
+        }
+
+        const result = await response.json();
+
+        if (result.status === "success") {
+            alert(result.message);
+            form.reset();
+        } else {
+            alert("Erro: " + result.message);
+        }
+    } catch (error) {
+        alert("Erro inesperado: " + error.message);
+    }
+});
 </script>
 
 </body>

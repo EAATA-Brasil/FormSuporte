@@ -7,7 +7,7 @@ urlpatterns = [
     path('', views.index, name='/ocorrencia'), 
     path("filter_data/", views.filter_data_view, name="filter_data"),
     path('login/', views.login, name="login_ocorrencias"),
-    path('cadastrar_ocorrencia/', views.subir_ocorrencia, name="cadastrar_ocorrencia"),
+    path('cadastrar_ocorrencia/', views.subir_ocorrencia, name="subir_ocorrencia"),
     path('update_ocorrencia/', views.alterar_dados, name="update_ocorrencia/"),
 
     # Nova URL para criar usuário
