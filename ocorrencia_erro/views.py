@@ -354,18 +354,19 @@ def subir_ocorrencia(request):
             problem_detected=problema,
         )
 
-        return HttpResponse("Cadastrado", status=201)
+        return JsonResponse({"status": "success", "message": "Cadastrado"}, status=201)
 
     return render(request, 'ocorrencia/subir_ocorrencia.html')
 
 @login_required(login_url=URL_LOGIN)
 def alterar_dados(request):
     if request.method == 'POST':
-        field_name = request.POST.get('field')
-        new_value = request.POST.get('value')
+        data = json.loads(request.body.decode('utf-8'))
+        field_name = data.get('field')
+        new_value = data.get('value')
         if field_name in DATE_COLUMNS:
             new_value = datetime.strptime(new_value, '%d/%m/%Y').date()
-        record = Record.objects.get(id=request.POST.get('id'))
+        record = Record.objects.get(id=data.get('id'))
         try:
             # Atualiza o campo dinamicamente
             # print(field_name)

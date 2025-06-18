@@ -96,8 +96,8 @@
     <input type="text" id="model" name="model" placeholder="Modelo" />
     <input type="text" id="year" name="year" placeholder="Ano" />
     <input type="text" id="version" name="version" placeholder="Versão" />
-    <input type="text" id="problem_detected" name="problem_detected" placeholder="Problema" />
-    <input type="text" id="responsible" name="responsible" placeholder="Responsável" />
+    <textarea name="problem_detected" id="problem_detected"  style="resize: vertical;"></textarea>
+    <input type="text" id="responsible" name="responsible" placeholder="Responsável"/>
     {% if request.user.is_superuser %}
         <input type="text" id="country" name="country" placeholder="País" required/>
         <input type="text" id="status" name="status" placeholder="Status" />
@@ -112,7 +112,8 @@
 
     const countryInput = document.querySelector("#country");
     const country = countryInput ? countryInput.value : null;
-
+    console.log(document.querySelector("#problem_detected").value);
+    
     const data = {
       technical: document.querySelector("#technical").value,
       device: document.querySelector("#device").value,

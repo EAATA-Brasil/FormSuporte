@@ -87,14 +87,6 @@ WSGI_APPLICATION = 'Form_Suporte.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
@@ -108,12 +100,16 @@ DATABASES = {
 
 
 # DATABASES = {
-#     'default': dj_database_url.config(
-#         default=os.environ.get('DATABASE_URL'),
-#         conn_max_age=600,
-#         conn_health_checks=True,
-#     )
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
+#         'NAME': 'servidorEaata',          # nome do banco de dados MySQL
+#         'USER': 'remote',           # usuário do MySQL
+#         'PASSWORD': 'eaata360',         # senha do usuário
+#         'HOST': '0.tcp.sa.ngrok.io',                    # ou IP do servidor MySQL
+#         'PORT': '18925',                        # porta padrão do MySQL
+#     }
 # }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
