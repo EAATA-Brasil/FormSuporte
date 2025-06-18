@@ -33,7 +33,7 @@ class Veiculo(models.Model):
     ano = models.CharField(max_length=20, verbose_name='Ano')
 
     # Campos opcionais
-    sistema = models.CharField(max_length=100, blank=True, verbose_name='Sistema')
+    sistema = models.CharField(max_length=100, null=True, blank=True, verbose_name='Sistema')
     tipo_chave = models.CharField(max_length=100, blank=True, verbose_name='Tipo de Chave')
     transponder = models.CharField(max_length=100, blank=True, verbose_name='Transponder')
     immo_part_replacement = models.CharField(max_length=1000, blank=True, verbose_name='Substituição da Peça IMMO')

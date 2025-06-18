@@ -354,7 +354,7 @@ def subir_ocorrencia(request):
             problem_detected=problema,
         )
 
-        return JsonResponse({"status": "success", "message": "Cadastrado"}, status=201)
+        return HttpResponse("Cadastrado", status=201)
 
     return render(request, 'ocorrencia/subir_ocorrencia.html')
 

@@ -956,7 +956,6 @@
                 
             let valor_inicial = dado.getAttribute('data-initial-value')
             let valor_input = dado.value
-            
             if(valor_input !== valor_inicial) {
                 dado.classList.add('pending-save')
                 typingTimer = setTimeout(() => saveField(dado), doneTypingInterval);
