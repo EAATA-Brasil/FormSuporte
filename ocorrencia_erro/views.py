@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
-from django.db.models import Q, Count
-import json
+from django.db.models import Q
 from django.core.paginator import Paginator
-from .models import Record # Certifique-se que o modelo Record está importado corretamente
 from datetime import datetime, date
-from django.http import HttpResponse
 from django.contrib.auth import authenticate, login as login_django
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from collections import defaultdict
 from django.contrib import messages
+from .models import Record, CountryPermission
 from django.urls import reverse
+import json
 
-# Defina as colunas que são do tipo data (devem corresponder ao JS)
+# Constantes para datas e status
 DATE_COLUMNS = ["data", "deadline", "finished"] 
 STATUS_OCORRENCIA = {
-    # Mapeamento de status legível para status armazenado
     'Concluído':'DONE',
     'Atrasado':'LATE',
     'Em progresso':'PROGRESS',
@@ -25,228 +23,168 @@ STATUS_OCORRENCIA = {
 }
 STATUS_MAP_REVERSED = {v: k for k, v in STATUS_OCORRENCIA.items()}
 
-# Defina todas as colunas que podem ser ordenadas e filtradas
 ALLOWED_SORT_COLUMNS = [
     'feedback_manager', 'feedback_technical', 'problem_detected', 'area', 'brand', 
     'country', 'data', 'deadline', 'device', 'finished', 'model', 'responsible', 
     'serial', 'status', 'technical', 'version', 'year'
-] 
+]
 
-# Colunas para as quais queremos gerar opções de filtro dinâmicas
 FILTERABLE_COLUMNS_FOR_OPTIONS = [
     'technical', 'country', 'device', 'area', 'serial', 'brand', 
     'model', 'year', 'version', 'status', 'responsible', 
-    'data', 'deadline', 'finished' # Incluindo datas
+    'data', 'deadline', 'finished'
 ]
 
 URL_LOGIN = 'login_ocorrencias'
 
-# View principal
+
 @login_required(login_url=URL_LOGIN)
 def index(request):
     is_super = request.user.is_superuser
-    #print(f"--- View Index --- Usuário: {request.user.username}, É Superusuário? {is_super}") # DEBUG
+    permitted_countries = CountryPermission.objects.filter(user=request.user).values_list('country', flat=True)
     context = {
+        'user':request.user,
+        'paises_permitidos': permitted_countries,
         'has_full_permission': is_super
     }
     return render(request, 'ocorrencia/index.html', context)
 
-# View para filtrar e ordenar dados via AJAX
+
 @login_required(login_url=URL_LOGIN)
 def filter_data_view(request):
-    #print("\n--- filter_data_view INICIADA ---")
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             filters = data.get('filters', {})
             sort_info = data.get('sort', {'column': 'data', 'direction': 'asc'})
-            # print(f"Filtros recebidos: {filters}")
-            #print(f"Ordenação recebida: {sort_info}")
 
-            # Comece com todos os registros
             base_queryset = Record.objects.all()
-            #print(f"Contagem inicial do queryset: {base_queryset.count()}")
-            
-            # --- LÓGICA DE PERMISSÃO ---
             user = request.user
-            has_full_permission = user.is_superuser 
+            has_full_permission = user.is_superuser
             queryset = base_queryset
 
+            # Limitar registros por país se não for superuser
             if not has_full_permission:
-                #print(f"Usuário restrito detectado: {user.username}. Filtrando por país.")
-                queryset = queryset.filter(country__iexact=user.username) 
-                #print(f"Contagem após filtro de país: {queryset.count()}")
-            # else:
-            #     # print("Usuário com permissão total detectado.")
-            
-            # --- APLICA FILTROS DO FRONTEND --- 
-            q_objects = Q()
-            #print("Processando filtros do frontend...")
-            for column, values in filters.items():
-                #print(f"  Processando filtro para coluna: {column}, valores: {values}")
-                if column == 'country' and not has_full_permission:
-                    #print("    Ignorando filtro de país do frontend para usuário restrito.")
-                    continue
+                permitted_countries = CountryPermission.objects.filter(user=user).values_list('country', flat=True)
+                queryset = queryset.filter(country__in=permitted_countries)
 
-                if not isinstance(values, list):
-                    #print(f"    Ignorando filtro inválido (não é lista) para {column}: {values}")
+            # Aplica filtros
+            q_objects = Q()
+            for column, values in filters.items():
+                # Impede que usuários restritos filtrem países fora do permitido
+                if column == 'country' and not has_full_permission:
+                    permitted_countries = CountryPermission.objects.filter(user=user).values_list('country', flat=True)
+                    values = [v for v in values if v in permitted_countries]
+                    if not values:
+                        continue
+
+                if not isinstance(values, list) or not values:
                     continue
-                
-                if not values:
-                    #print(f"    Filtro vazio para {column}, ignorando.")
-                    continue 
 
                 column_q = Q()
-                # Trata valores vazios ("") como nulos ou strings vazias
-                has_empty_filter = '' in values 
+                has_empty_filter = '' in values
                 non_empty_values = [v for v in values if v != '']
-                #print(f"    Valores não vazios: {non_empty_values}, Filtro vazio presente: {has_empty_filter}")
-                
+
                 if non_empty_values:
                     if column == 'status':
-                        valid_status_keys = []
-                        for v in non_empty_values:
-                            # Compara com os valores legíveis (chaves do dicionário)
-                            if v in STATUS_OCORRENCIA:
-                                valid_status_keys.append(STATUS_OCORRENCIA[v])
+                        valid_status_keys = [STATUS_OCORRENCIA[v] for v in non_empty_values if v in STATUS_OCORRENCIA]
                         if valid_status_keys:
                             column_q |= Q(**{f'{column}__in': valid_status_keys})
-                            #print(f"      Adicionando Q para status: {column_q}")
                     elif column in DATE_COLUMNS:
-                        # Para datas, o frontend envia YYYY-MM-DD
                         valid_dates = []
                         for v in non_empty_values:
                             try:
-                                # Apenas valida o formato, a query usa o string
-                                datetime.strptime(v, '%Y-%m-%d') 
+                                datetime.strptime(v, '%Y-%m-%d')
                                 valid_dates.append(v)
                             except ValueError:
-                                print(f"      Ignorando formato de data inválido para {column}: {v}")
+                                pass
                         if valid_dates:
                             column_q |= Q(**{f'{column}__in': valid_dates})
-                            #print(f"      Adicionando Q para data: {column_q}")
                     else:
-                        # Para outras colunas, usa __in diretamente
                         column_q |= Q(**{f'{column}__in': non_empty_values})
-                        #print(f"      Adicionando Q para coluna normal: {column_q}")
 
                 if has_empty_filter:
-                    # Filtra por nulo OU string vazia
                     column_q |= Q(**{f'{column}__isnull': True}) | Q(**{f'{column}__exact': ''})
-                    #print(f"      Adicionando Q para filtro vazio: {column_q}")
-                
-                if column_q: # Só adiciona ao q_objects se alguma condição foi gerada
-                    #print(f"    Combinando Q para {column}: {column_q}")
-                    q_objects &= column_q
-                    #print(f"    q_objects atual: {q_objects}")
-                else:
-                    print(f"    Nenhuma condição Q gerada para {column}.")
 
-            #print(f"\nObjeto Q final combinado: {q_objects}")
-            # Aplica o filtro combinado ao queryset
+                q_objects &= column_q
+
             queryset = queryset.filter(q_objects)
-            #print(f"Contagem após aplicar filtros do frontend: {queryset.count()}")
 
-            # --- CALCULA OPÇÕES DE FILTRO DISPONÍVEIS --- 
-            # Fazemos isso *depois* de aplicar os filtros, para que as opções sejam relevantes
+            # Opções de filtro
             filter_options = defaultdict(list)
-            #print("\nCalculando opções de filtro disponíveis...")
-            # Determina colunas visíveis para o usuário atual
             visible_columns = list(ALLOWED_SORT_COLUMNS)
-            if not has_full_permission and 'country' in visible_columns:
-                visible_columns.remove('country')
-            
-            # Itera apenas sobre colunas que podem ter filtros e são visíveis
+
             for col in FILTERABLE_COLUMNS_FOR_OPTIONS:
                 if col not in visible_columns:
-                    continue # Pula colunas não visíveis (como 'country' para não superuser)
-                
-                #print(f"  Calculando opções para: {col}")
-                # Otimização: Usar values_list e distinct
-                # Trata valores nulos como strings vazias para consistência com o filtro
+                    continue
+
+                if col == 'country':
+                    if has_full_permission:
+                        current_col_options = base_queryset.values_list('country', flat=True).distinct()
+                    else:
+                        current_col_options = CountryPermission.objects.filter(user=user).values_list('country', flat=True).distinct()
+
+                    options_list = sorted([str(opt) if opt is not None else '' for opt in current_col_options])
+                    filter_options[col] = options_list
+                    continue
+
                 current_col_options = queryset.values_list(col, flat=True).distinct()
-                # Converte para string e trata None como ''
                 options_list = sorted([str(opt) if opt is not None else '' for opt in current_col_options])
 
-                # Formatação especial para status e datas
                 if col == 'status':
-                    # Mapeia de volta para os nomes legíveis
-                    filter_options[col] = list(set(sorted([STATUS_MAP_REVERSED.get(opt, opt) for opt in options_list if opt]))) # Ignora vazio aqui?
+                    filter_options[col] = list(set(sorted([STATUS_MAP_REVERSED.get(opt, opt) for opt in options_list if opt])))
                 elif col in DATE_COLUMNS:
-                    # Agrupa datas por ano/mês/dia para a árvore
                     date_tree = defaultdict(lambda: defaultdict(list))
                     for dt_str in options_list:
-                        if dt_str: # Ignora datas vazias/nulas
+                        if dt_str:
                             try:
                                 dt = datetime.strptime(dt_str, '%Y-%m-%d').date()
                                 year = str(dt.year)
-                                month = dt.strftime('%m') # Formato MM
-                                day = dt.strftime('%d') # Formato DD
+                                month = dt.strftime('%m')
+                                day = dt.strftime('%d')
                                 if day not in date_tree[year][month]:
-                                     date_tree[year][month].append(day)
+                                    date_tree[year][month].append(day)
                             except ValueError:
-                                print(f"Data inválida encontrada ao gerar opções para {col}: {dt_str}")
-                    # Ordena meses e dias
+                                pass
                     for year, months in date_tree.items():
                         for month, days in months.items():
                             months[month] = sorted(days)
                         date_tree[year] = dict(sorted(months.items()))
-                    filter_options[col] = dict(sorted(date_tree.items())) # Envia a árvore
+                    filter_options[col] = dict(sorted(date_tree.items()))
                 else:
                     filter_options[col] = list(set(options_list))
-                
-                #print(f"Opções para {col}: {filter_options[col]}")
 
-            # --- APLICA ORDENAÇÃO --- 
+            # Ordenação
             sort_column = sort_info.get('column', 'data')
             sort_direction = sort_info.get('direction', 'asc')
             sort_prefix = "-" if sort_direction == 'desc' else ""
 
-            if sort_column in ALLOWED_SORT_COLUMNS:
-                # Verifica se a coluna de ordenação é visível para o usuário
-                if sort_column in visible_columns:
-                    #print(f"Aplicando ordenação: {sort_prefix}{sort_column}")
-                    queryset = queryset.order_by(f"{sort_prefix}{sort_column}")
-                else:
-                    #print(f"Coluna de ordenação '{sort_column}' não visível. Usando ordenação padrão por 'data'.")
-                    queryset = queryset.order_by("data") # Ordenação padrão se a coluna não for visível
+            if sort_column in ALLOWED_SORT_COLUMNS and sort_column in visible_columns:
+                queryset = queryset.order_by(f"{sort_prefix}{sort_column}")
             else:
-                #print(f"Coluna de ordenação inválida: {sort_column}. Usando ordenação padrão por 'data'.")
                 queryset = queryset.order_by("data")
 
-            # --- PREPARA DADOS PARA RESPOSTA JSON --- 
-            #print(f"Campos a serem retornados: {visible_columns}")
             filtered_records = list(queryset.values(*visible_columns))
-            #print(f"Número final de registros a serem enviados: {len(filtered_records)}")
 
-            # Processa os registros para formatação final (status, datas)
-            num_index = 0
-            for record in filtered_records:
-                record['id'] = queryset[num_index].id
-                if len(queryset) > num_index:
-                    num_index += 1
+            # Ajusta os registros para JSON
+            for idx, record in enumerate(filtered_records):
+                record['id'] = queryset[idx].id
                 if 'status' in record and record['status'] in STATUS_MAP_REVERSED:
                     record['status'] = STATUS_MAP_REVERSED[record['status']]
-                
                 for date_col in DATE_COLUMNS:
                     if date_col in record:
                         if isinstance(record[date_col], (datetime, date)):
                             record[date_col] = record[date_col].strftime('%Y-%m-%d')
                         elif record[date_col] is None:
-                             record[date_col] = '' # Garante string vazia para None
-            
+                            record[date_col] = ''
 
-            paginator = Paginator(object_list=filtered_records, per_page=10)
+            paginator = Paginator(filtered_records, 10)
             page_number = data.get('page')
             page_obj = paginator.get_page(page_number)
 
-            records_list = list(page_obj.object_list)
-
-
-            #print("--- filter_data_view FINALIZADA COM SUCESSO ---")
             return JsonResponse({
-                'records': records_list,
-                'filter_options': filter_options, # Inclui as opções de filtro
+                'records': list(page_obj.object_list),
+                'filter_options': filter_options,
                 'has_full_permission': has_full_permission,
                 'num_pages': paginator.num_pages,
                 'current_page': page_obj.number,
@@ -255,36 +193,28 @@ def filter_data_view(request):
             })
 
         except json.JSONDecodeError:
-            #print("Erro: JSON inválido recebido.")
             return JsonResponse({'error': 'JSON inválido'}, status=400)
         except Exception as e:
-            #print(f"Erro interno ao processar requisição de filtro: {e}")
-            import traceback
-            #print(traceback.format_exc()) # Imprime traceback para debug
             print(e)
             return JsonResponse({'error': 'Erro interno do servidor'}, status=500)
 
-    #print("--- filter_data_view FINALIZADA - MÉTODO INVÁLIDO ---")
     return JsonResponse({'error': 'Método de requisição inválido, esperado POST'}, status=405)
 
-# --- Outras views (login, cadastrar_pais) --- 
-# (Mantidas como antes)
+
 def login(request):
     if request.method == "GET":
         next_url = request.GET.get('next', None)
         context = {'next': next_url} if next_url else {}
         return render(request, 'ocorrencia/login.html', context)
     else:
-        country_name = request.POST.get('country', '').strip().capitalize()
-        country_pass = request.POST.get('password', '')
+        name = request.POST.get('country', '').strip().capitalize()
+        password = request.POST.get('password', '')
         next_url = request.POST.get('next', None)
 
-        # Tenta autenticar com capitalizado
-        user = authenticate(request, username=country_name, password=country_pass)
+        user = authenticate(request, username=name, password=password)
 
-        # Se falhar, tenta com nome em maiúsculas
         if user is None:
-            user = authenticate(request, username=country_name.upper(), password=country_pass)
+            user = authenticate(request, username=name.upper(), password=password)
 
         if user is not None:
             login_django(request, user)
@@ -293,41 +223,61 @@ def login(request):
             messages.error(request, "Usuário ou senha inválidos.")
             return redirect(f"{reverse('login_ocorrencias')}?next={next_url}" if next_url else 'login_ocorrencias')
 
-def cadastrar_pais(request):
+
+@login_required(login_url=URL_LOGIN)
+def criar_usuario(request):
     if not request.user.is_superuser:
-        messages.error(request, "Você precisa ser superusuário para cadastrar um novo país.")
+        messages.error(request, "Você precisa ser superusuário para criar um usuário.")
         return redirect('/ocorrencia')
+
+    paises_existentes = Record.objects.values_list('country', flat=True).distinct().order_by('country')
 
     if request.method == "GET":
-        return render(request, 'ocorrencia/cadastrar.html')
+        context = {'paises': paises_existentes}
+        return render(request, 'ocorrencia/criar_usuario.html', context)
 
-    country_name = request.POST.get('country', '').upper().strip()
-    country_pass = request.POST.get('password', '')
+    if request.method == "POST":
+        username = request.POST.get('username', '').strip().upper()
+        password = request.POST.get('password', '')
+        paises_responsavel = request.POST.getlist('paises_responsavel')
 
-    if not country_name or not country_pass:
-        messages.error(request, "Nome do país e senha são obrigatórios.")
-        return redirect('cadastrar_pais')
+        if not username or not password:
+            messages.error(request, "Nome de usuário e senha são obrigatórios.")
+            return redirect('criar_usuario')
 
-    if User.objects.filter(username=country_name).exists():
-        messages.warning(request, "Esse país já está cadastrado.")
-        return redirect('cadastrar_pais')
+        if User.objects.filter(username=username).exists():
+            messages.warning(request, "Esse usuário já existe.")
+            return redirect('criar_usuario')
 
-    try:
-        User.objects.create_user(username=country_name, password=country_pass)
-        return redirect('/ocorrencia')
-    except Exception as e:
-        messages.error(request, f"Erro ao cadastrar país: {str(e)}")
-        return redirect('cadastrar_pais')
+        try:
+            user = User.objects.create_user(username=username, password=password)
+            CountryPermission.objects.filter(user=user).delete()
+            for pais in paises_responsavel:
+                CountryPermission.objects.create(user=user, country=pais)
+
+            print(request, f"Usuário {username} criado com sucesso.")
+            return redirect('/ocorrencia')
+
+        except Exception as e:
+            messages.error(request, f"Erro ao criar usuário: {str(e)}")
+            return redirect('criar_usuario')
+
 
 @login_required
 def subir_ocorrencia(request):
     has_full_permission = request.user.is_superuser
-    
+
+    if has_full_permission:
+        paises = Record.objects.values_list('country', flat=True).distinct().order_by('country')
+    else:
+        paises = CountryPermission.objects.filter(user=request.user).values_list('country', flat=True)
+
     if request.method == 'POST':
         if has_full_permission:
             country = request.POST.get("country")
         else:
-            country = request.user
+            country = list(paises)[0] if paises else None
+
         tecnico = request.POST.get("technical")
         responsavel = request.POST.get("responsible")
         equipamento = request.POST.get("device")
@@ -339,43 +289,48 @@ def subir_ocorrencia(request):
         versao = request.POST.get("version")
         problema = request.POST.get("problem_detected")
 
-        
-        ocorrencia = Record.objects.create(
-            technical = tecnico,
-            responsible= responsavel,
-            device= equipamento,
-            area= area,
-            serial= serial,
-            brand= marca,
-            model= modelo,
+        if not tecnico or not responsavel or not equipamento or not country:
+            return JsonResponse({"status": "error", "message": "Campos obrigatórios não preenchidos."}, status=400)
+
+        Record.objects.create(
+            technical=tecnico,
+            responsible=responsavel,
+            device=equipamento,
+            area=area,
+            serial=serial,
+            brand=marca,
+            model=modelo,
             year=ano,
-            country= country,
-            version= versao,
+            country=country,
+            version=versao,
             problem_detected=problema,
         )
+        return JsonResponse({"status": "success", "message": "Ocorrência cadastrada com sucesso."}, status=201)
 
-        return JsonResponse({"status": "success", "message": "Cadastrado"}, status=201)
+    return render(request, 'ocorrencia/subir_ocorrencia.html', {
+        'paises': paises,
+        'has_full_permission': has_full_permission,
+    })
 
-    return render(request, 'ocorrencia/subir_ocorrencia.html')
 
 @login_required(login_url=URL_LOGIN)
 def alterar_dados(request):
     if request.method == 'POST':
-        data = json.loads(request.body.decode('utf-8'))
-        field_name = data.get('field')
-        new_value = data.get('value')
-        if field_name in DATE_COLUMNS:
-            new_value = datetime.strptime(new_value, '%d/%m/%Y').date()
-        record = Record.objects.get(id=data.get('id'))
         try:
-            # Atualiza o campo dinamicamente
-            # print(field_name)
+            data = json.loads(request.body.decode('utf-8'))
+            field_name = data.get('field')
+            new_value = data.get('value')
+
+            if field_name in DATE_COLUMNS and new_value:
+                new_value = datetime.strptime(new_value, '%d/%m/%Y').date()
+
+            record = Record.objects.get(id=data.get('id'))
             setattr(record, field_name, new_value)
             record.save(update_fields=[field_name])
-            # print(record)
+
             return JsonResponse({
                 'status': 'success',
-                'new_display': new_value  # Ajuste conforme o campo
+                'new_display': new_value
             })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

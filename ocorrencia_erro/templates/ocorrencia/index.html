@@ -17,13 +17,7 @@
             <tr>
                 {% include 'ocorrencia/components/lineHead.html' with name='data' ID="data"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='technical' ID="technical"%}
-                {# Condicional para exibir a coluna País apenas para superusuários #}
-                {% if has_full_permission %}
-                    <!-- DEBUG: Bloco has_full_permission para header país RENDERIZADO -->
-                    {% include 'ocorrencia/components/lineHead.html' with name='país' ID="country"%}
-                {% else %}
-                    <!-- DEBUG: Bloco has_full_permission para header país NÃO RENDERIZADO -->
-                {% endif %}
+                {% include 'ocorrencia/components/lineHead.html' with name='país' ID="country"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='device' ID="device"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='area' ID="area"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='serial' ID="serial"%}

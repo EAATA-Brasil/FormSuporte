@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Criar Usuário Responsável</title>
   <style>
     :root {
       --primary: #0056b3;
@@ -20,22 +20,20 @@
       --error: #dc3545;
       --warning: #ffc107;
     }
-
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', sans-serif;
     }
-
     body {
       background-color: var(--gray);
       height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 1rem;
     }
-
     .login-form {
       background: var(--light);
       padding: 2rem;
@@ -45,13 +43,11 @@
       max-width: 360px;
       border: 1px solid var(--border-color);
     }
-
     .login-form h2 {
       text-align: center;
       color: var(--primary);
       margin-bottom: 1.5rem;
     }
-
     .login-form input[type="text"],
     .login-form input[type="password"] {
       width: 100%;
@@ -61,15 +57,14 @@
       border-radius: 8px;
       background-color: var(--gray);
       color: var(--text);
+      font-size: 1rem;
     }
-
     .login-form input[type="text"]:focus,
     .login-form input[type="password"]:focus {
       outline: none;
       border-color: var(--primary);
       background-color: var(--light);
     }
-
     .login-form input[type="submit"] {
       width: 100%;
       padding: 0.75rem;
@@ -79,18 +74,16 @@
       border-radius: 8px;
       cursor: pointer;
       transition: background-color 0.3s ease;
+      font-size: 1rem;
     }
-
     .login-form input[type="submit"]:hover {
       background-color: var(--primary-light);
     }
-
     .messages {
       list-style: none;
       padding: 0;
       margin-bottom: 1rem;
     }
-
     .messages li {
       padding: 0.75rem 1rem;
       border-radius: 8px;
@@ -98,30 +91,56 @@
       color: var(--light);
       font-size: 0.9rem;
     }
-
     .messages li.success {
       background-color: var(--success);
     }
-
     .messages li.error {
       background-color: var(--error);
     }
-
     .messages li.warning {
       background-color: var(--warning);
       color: var(--dark);
     }
+    .checkbox-group {
+      margin-bottom: 1rem;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      padding: 0.5rem;
+      border-radius: 8px;
+      background: var(--gray);
+      font-size: 0.9rem;
+    }
+    .checkbox-group label {
+      display: block;
+      margin-bottom: 0.25rem;
+      cursor: pointer;
+      color: var(--text);
+    }
   </style>
 </head>
 <body>
-  <div class="login-form">
-    <h2>Cadastro de paises</h2>
+  <div class="login-form" role="main" aria-label="Formulário para criação de usuário responsável">
+    <h2>Criar Usuário Responsável</h2>
 
-    <form action="{% url 'cadastrar_pais' %}" method="POST">
+    <form action="{% url 'criar_usuario' %}" method="POST" novalidate>
       {% csrf_token %}
-      <input type="text" name="country" placeholder="Country" required>
-      <input type="password" name="password" placeholder="******" required>
-      <input type="submit" value="Cadastrar">
+      <input type="text" name="username" placeholder="Nome de usuário" required aria-label="Nome de usuário">
+      <input type="password" name="password" placeholder="Senha" required aria-label="Senha">
+
+      <div class="checkbox-group" aria-labelledby="paises-label">
+        <strong id="paises-label">Países responsáveis:</strong><br />
+        {% for pais in paises %}
+          <label>
+            <input type="checkbox" name="paises_responsavel" value="{{ pais }}">
+            {{ pais }}
+          </label>
+        {% empty %}
+          <p>Nenhum país disponível.</p>
+        {% endfor %}
+      </div>
+
+      <input type="submit" value="Criar usuário" aria-label="Botão para criar usuário">
     </form>
   </div>
 </body>

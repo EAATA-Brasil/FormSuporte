@@ -2,7 +2,21 @@ from django.db import models
 from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.contrib.auth.models import User
 
+class CountryPermission(models.Model):
+    """Define quais países cada usuário pode visualizar nas ocorrências."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='country_permissions')
+    country = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f'{self.user.username} - {self.country.upper()}'
+
+    class Meta:
+        verbose_name = "Permissão de País"
+        verbose_name_plural = "Permissões de Países"
+        unique_together = ('user', 'country')
+        
 def default_deadline():
     """Retorna a data atual mais 5 meses como prazo padrão."""
     return timezone.now().date() + relativedelta(months=+5)

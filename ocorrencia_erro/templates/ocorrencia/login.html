@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -19,14 +19,12 @@
       --error-bg: #ffe5e5;
       --error-text: #b30000;
     }
-
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', sans-serif;
     }
-
     body {
       background-color: var(--gray);
       height: 100vh;
@@ -34,7 +32,6 @@
       align-items: center;
       justify-content: center;
     }
-
     .login-form {
       background: var(--light);
       padding: 2rem;
@@ -44,13 +41,11 @@
       max-width: 360px;
       border: 1px solid var(--border-color);
     }
-
     .login-form h2 {
       text-align: center;
       color: var(--primary);
       margin-bottom: 1.5rem;
     }
-
     .message-error {
       background-color: var(--error-bg);
       color: var(--error-text);
@@ -60,7 +55,6 @@
       font-size: 0.9rem;
       text-align: center;
     }
-
     .login-form input[type="text"],
     .login-form input[type="password"] {
       width: 100%;
@@ -71,14 +65,12 @@
       background-color: var(--gray);
       color: var(--text);
     }
-
     .login-form input[type="text"]:focus,
     .login-form input[type="password"]:focus {
       outline: none;
       border-color: var(--primary);
       background-color: var(--light);
     }
-
     .login-form input[type="submit"] {
       width: 100%;
       padding: 0.75rem;
@@ -89,7 +81,6 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
     }
-
     .login-form input[type="submit"]:hover {
       background-color: var(--primary-light);
     }
@@ -99,18 +90,10 @@
   <div class="login-form">
     <h2>Login</h2>
 
-    {% if messages %}
-      <div class="message-error">
-        {% for message in messages %}
-          {{ message }}
-        {% endfor %}
-      </div>
-    {% endif %}
-
     <form action="{% url 'login_ocorrencias' %}" method="POST">
       {% csrf_token %}
-      <input type="text" name="country" placeholder="Country" required>
-      <input type="password" name="password" placeholder="******" required>
+      <input type="text" name="country" placeholder="País" required>
+      <input type="password" name="password" placeholder="Senha" required>
       {% if next %}
         <input type="hidden" name="next" value="{{ next }}">
       {% endif %}

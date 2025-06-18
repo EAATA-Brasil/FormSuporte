@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-6u$z58nj9!@tqbyx5$f103&-jj3^%1ve=p@z@aomo89#ugn6wp'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
@@ -89,12 +89,8 @@ WSGI_APPLICATION = 'Form_Suporte.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
-        'NAME': 'servidorEaata',          # nome do banco de dados MySQL
-        'USER': 'remote',           # usuário do MySQL
-        'PASSWORD': 'eaata360',         # senha do usuário
-        'HOST': 'localhost',                    # ou IP do servidor MySQL
-        'PORT': '3306',                        # porta padrão do MySQL
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

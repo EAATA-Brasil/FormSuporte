@@ -17,14 +17,13 @@
       --border-color: #dee2e6;
       --hover-bg: #e9ecef;
     }
-
+    /* Reset e estilo básico */
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-
     body {
       background-color: var(--gray);
       color: var(--text);
@@ -34,7 +33,6 @@
       min-height: 100vh;
       padding: 2rem;
     }
-
     form {
       background-color: var(--light);
       padding: 2rem;
@@ -45,26 +43,27 @@
       display: grid;
       gap: 1rem;
     }
-
     form input[type="text"],
+    form textarea,
     form input[type="submit"] {
       padding: 0.75rem 1rem;
       border: 1px solid var(--border-color);
       border-radius: 4px;
       font-size: 1rem;
     }
-
-    form input[type="text"]:focus {
+    form textarea {
+      min-height: 80px;
+    }
+    form input[type="text"]:focus,
+    form textarea:focus {
       border-color: var(--primary);
       outline: none;
       background-color: #fdfdfd;
     }
-
     form input[readonly] {
       background-color: #f0f0f0;
       color: var(--text-light);
     }
-
     form input[type="submit"] {
       background-color: var(--primary);
       color: var(--light);
@@ -72,11 +71,9 @@
       cursor: pointer;
       transition: background 0.3s ease;
     }
-
     form input[type="submit"]:hover {
       background-color: var(--primary-light);
     }
-
     @media (max-width: 480px) {
       form {
         padding: 1rem;
@@ -86,23 +83,27 @@
 </head>
 <body>
 
-  <form id="form">
+  <form id="form" method="post" novalidate>
     {% csrf_token %}
-    <input type="text" id="technical" name="technical" placeholder="Técnico" />
-    <input type="text" id="device" name="device" placeholder="Dispositivo" />
+    <input type="text" id="technical" name="technical" placeholder="Técnico" required />
+    <input type="text" id="device" name="device" placeholder="Dispositivo" required />
     <input type="text" id="area" name="area" placeholder="Área" />
     <input type="text" id="serial" name="serial" placeholder="Serial" />
     <input type="text" id="brand" name="brand" placeholder="Marca" />
     <input type="text" id="model" name="model" placeholder="Modelo" />
     <input type="text" id="year" name="year" placeholder="Ano" />
     <input type="text" id="version" name="version" placeholder="Versão" />
-    <textarea name="problem_detected" id="problem_detected"  style="resize: vertical;"></textarea>
-    <input type="text" id="responsible" name="responsible" placeholder="Responsável"/>
+    <textarea name="problem_detected" id="problem_detected" placeholder="Problema Detectado" style="resize: vertical;"></textarea>
+    <input type="text" id="responsible" name="responsible" placeholder="Responsável" required />
+
     {% if request.user.is_superuser %}
-        <input type="text" id="country" name="country" placeholder="País" required/>
-        <input type="text" id="status" name="status" placeholder="Status" />
-        <input type="text" id="deadline" name="deadline" placeholder="Previsão de término" />
+      <input type="text" id="country" name="country" placeholder="País" required/>
+      <input type="text" id="status" name="status" placeholder="Status" />
+      <input type="text" id="deadline" name="deadline" placeholder="Previsão de término" />
+    {% else %}
+      <input type="text" id="country" name="country" value="{{ request.user.username }}" readonly />
     {% endif %}
+
     <input type="submit" value="Cadastrar Ocorrência" />
   </form>
 
@@ -110,50 +111,48 @@
   document.querySelector("#form").addEventListener('submit', function (e) {
     e.preventDefault();
 
-    const countryInput = document.querySelector("#country");
-    const country = countryInput ? countryInput.value : null;
-    console.log(document.querySelector("#problem_detected").value);
-    
     const data = {
-      technical: document.querySelector("#technical").value,
-      device: document.querySelector("#device").value,
-      area: document.querySelector("#area").value,
-      serial: document.querySelector("#serial").value,
-      brand: document.querySelector("#brand").value,
-      model: document.querySelector("#model").value,
-      year: document.querySelector("#year").value,
-      version: document.querySelector("#version").value,
-      problem_detected: document.querySelector("#problem_detected").value,
-      responsible: document.querySelector("#responsible").value,
-      country: country,
-      csrfmiddlewaretoken: '{{ csrf_token }}'
+      technical: document.querySelector("#technical").value.trim(),
+      device: document.querySelector("#device").value.trim(),
+      area: document.querySelector("#area").value.trim(),
+      serial: document.querySelector("#serial").value.trim(),
+      brand: document.querySelector("#brand").value.trim(),
+      model: document.querySelector("#model").value.trim(),
+      year: document.querySelector("#year").value.trim(),
+      version: document.querySelector("#version").value.trim(),
+      problem_detected: document.querySelector("#problem_detected").value.trim(),
+      responsible: document.querySelector("#responsible").value.trim(),
+      country: document.querySelector("#country").value.trim()
     };
 
-    fetch('{% url "cadastrar_ocorrencia" %}', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',  // Token CSRF no cabeçalho
-            'Content-Type': 'application/x-www-form-urlencoded', // Formato padrão do Django
-        },
-        body: new URLSearchParams(data) // Converte o objeto 'data' para FormData
+    fetch("{% url 'subir_ocorrencia' %}", {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(data)
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error('Erro ao cadastrar ocorrência');
-        }
-        return response.json(); // Supondo que a resposta seja JSON
+      if (!response.ok) {
+        throw new Error('Erro ao cadastrar ocorrência');
+      }
+      return response.json();
     })
-    .then(response => {
+    .then(json => {
+      if (json.status === 'success') {
         alert('Ocorrência cadastrada com sucesso!');
-        window.location.href = "{% url '/ocorrencia' %}";
+        window.location.href = "{% url 'index' %}";  // Ajuste para sua URL de listagem
+      } else {
+        alert('Erro: ' + (json.message || 'Erro desconhecido'));
+      }
     })
     .catch(error => {
-        alert('Erro ao cadastrar ocorrência');
-        console.error(error);
+      alert('Erro ao cadastrar ocorrência');
+      console.error(error);
     });
   });
 </script>
-
 
 </body>
 </html>
