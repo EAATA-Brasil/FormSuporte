@@ -549,6 +549,8 @@
                                 values: selectedValues,
                                 isApplied: true
                             };
+                            openFilterBox.parentNode.classList.add('filtered')
+                            
                         } else {
                             delete currentFilters[openColumnName];
                         }
@@ -559,11 +561,13 @@
                 const activeFiltersForBackend = {};
                 for (const colName in currentFilters) {
                     if (currentFilters[colName].isApplied) {
+                        // currentFilt:ers[colName].classList.add('filtered')
+                        
                         activeFiltersForBackend[colName] = currentFilters[colName].values;
                     }
                 }
 
-                // console.log("FILTROS ATIVOS:", activeFiltersForBackend); // Debug 
+                console.log("FILTROS ATIVOS:", activeFiltersForBackend); // Debug 
 
                 const filterData = {
                     filters: activeFiltersForBackend,
