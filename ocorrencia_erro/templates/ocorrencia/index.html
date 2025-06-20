@@ -51,6 +51,11 @@
     document.addEventListener("DOMContentLoaded", function () {
         "use strict";
 
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+        }
+
+
         var page_num = 1
         let buttons_paginator = document.querySelectorAll('.button-paginator')
         var total_pages
@@ -334,7 +339,26 @@
                 } else {
                     optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma data disponível.</p>';
                 }
-            } else {
+            } 
+            else if(columnName === "status"){
+                if (options.length > 0) {
+                    options.forEach((option, index) => {
+                        option = capitalize(option)
+                        console.log(option);
+                        
+                        const optionId = generateUniqueId(`filter_${columnName}`, option, index);
+                        const isChecked = savedFilter.isApplied && savedFilter.values.includes(option);
+                        optionsHTML += `<div class="filter-option">
+                                        <input type="checkbox" id="${optionId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${option}" ${isChecked ? 'checked' : ''}>
+                                        <label for="${optionId}">${option || '(Vazio)'}</label>
+                                      </div>`;
+                    });
+                } else {
+                     optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma opção disponível.</p>';
+                }
+            }
+            else {
+                
                 if (options.length > 0) {
                     options.forEach((option, index) => {
                         
