@@ -156,6 +156,7 @@ def filter_data_view(request):
             for record in page_obj.object_list:
                 record_data = {
                     'id': record.id,
+                    'data': record.data or '',
                     'technical': record.technical or '',
                     'country': record.country.name if record.country else '',
                     'device': record.device or '',
