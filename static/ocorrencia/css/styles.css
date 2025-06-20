@@ -207,6 +207,7 @@ body {
 }
 
 .filter-options {
+    text-align: left;
     max-height: 200px;
     overflow-y: auto;
     margin-bottom: 10px;

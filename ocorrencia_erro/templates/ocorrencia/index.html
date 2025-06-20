@@ -272,12 +272,6 @@
             filterBoxElement.style.top = `${headerRect.bottom - tableRect.top + window.scrollY + 2}px`;
             filterBoxElement.style.display = "block";
             const boxRect = filterBoxElement.getBoundingClientRect();
-            if (boxRect.right > window.innerWidth - 10) {
-                filterBoxElement.style.left = `${Math.max(0, window.innerWidth - boxRect.width - 10 - tableRect.left + window.scrollX)}px`;
-            }
-            if (boxRect.left < 0) {
-                filterBoxElement.style.left = "0px";
-            }
         }
 
         // *** FUNÇÃO CORRIGIDA: Criar a árvore de datas com IDs únicos ***
@@ -320,7 +314,14 @@
         // *** FUNÇÃO CORRIGIDA: Popular a caixa de filtro com IDs únicos ***
         function populateFilterBox(filterBoxElement, headerInfo) {
             const columnName = headerInfo.columnName;
-            const options = currentFilterOptions[columnName] || (headerInfo.isDateColumn ? {} : []);
+            let options = currentFilterOptions[columnName] || (headerInfo.isDateColumn ? {} : []);
+            try{
+                options = options.map(option => typeof option === "string" ? option.trim().toUpperCase() : option)
+                options = [... new Set(options)]
+            }
+            catch{
+                //
+            }
             const isDate = headerInfo.isDateColumn;
             const savedFilter = currentFilters[columnName] || { values: [], isApplied: false };
             
@@ -336,6 +337,7 @@
             } else {
                 if (options.length > 0) {
                     options.forEach((option, index) => {
+                        
                         const optionId = generateUniqueId(`filter_${columnName}`, option, index);
                         const isChecked = savedFilter.isApplied && savedFilter.values.includes(option);
                         optionsHTML += `<div class="filter-option">
@@ -643,11 +645,11 @@
                             value = formatDateToDisplay(value);
                         }
                         else{
-                            if(columnName == "deadline"){
-                                value = 'Não iniciado'
+                            if(columnName == 'finished'){
+                                value = "Não finalizado"
                             }
                             else{
-                                value = 'Não finalizado'
+                                value = 'Não definido'
                             }
                         }
                     }
