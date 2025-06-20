@@ -142,3 +142,5 @@ GitHub.sublime-settings
 !*/migrations/__init__.py
 
 staticfiles/
+
+*.sqlite3

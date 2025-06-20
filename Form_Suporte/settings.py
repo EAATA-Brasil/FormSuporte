@@ -87,23 +87,23 @@ WSGI_APPLICATION = 'Form_Suporte.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db2.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
-        'NAME': 'servidorEaata',          # nome do banco de dados MySQL
-        'USER': 'remote',           # usuário do MySQL
-        'PASSWORD': 'eaata360',         # senha do usuário
-        'HOST': 'localhost',                    # ou IP do servidor MySQL
-        'PORT': '3306',                        # porta padrão do MySQL
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db2.sqlite3',
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
+#         'NAME': 'servidorEaata',          # nome do banco de dados MySQL
+#         'USER': 'remote',           # usuário do MySQL
+#         'PASSWORD': 'eaata360',         # senha do usuário
+#         'HOST': 'localhost',                    # ou IP do servidor MySQL
+#         'PORT': '3306',                        # porta padrão do MySQL
+#     }
+# }
 
 
 # DATABASES = {
@@ -113,7 +113,7 @@ DATABASES = {
 #         'USER': 'remote',           # usuário do MySQL
 #         'PASSWORD': 'eaata360',         # senha do usuário
 #         'HOST': '0.tcp.sa.ngrok.io',                    # ou IP do servidor MySQL
-#         'PORT': '14451',                        # porta padrão do MySQL
+#         'PORT': '12065',                        # porta padrão do MySQL
 #     }
 # }
 
