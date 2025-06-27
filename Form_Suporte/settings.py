@@ -40,6 +40,7 @@ CSRF_TRUSTED_ORIGINS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,10 +51,18 @@ INSTALLED_APPS = [
     'situacao_veiculo',
     'ocorrencia_erro',
     'API',
-    'rest_framework'
+    'rest_framework',
+    'simulador'
 ]
 
+CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "https://meusitefrontend.com",
+# ]
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -98,7 +107,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
         'NAME': 'servidorEaata',          # nome do banco de dados MySQL
-        'USER': 'remote',           # usuário do MySQL
+        'USER': 'root',           # usuário do MySQL
         'PASSWORD': 'eaata360',         # senha do usuário
         'HOST': 'localhost',                    # ou IP do servidor MySQL
         'PORT': '3306',                        # porta padrão do MySQL
@@ -113,7 +122,7 @@ DATABASES = {
 #         'USER': 'remote',           # usuário do MySQL
 #         'PASSWORD': 'eaata360',         # senha do usuário
 #         'HOST': '0.tcp.sa.ngrok.io',                    # ou IP do servidor MySQL
-#         'PORT': '12065',                        # porta padrão do MySQL
+#         'PORT': '13024',                        # porta padrão do MySQL
 #     }
 # }
 

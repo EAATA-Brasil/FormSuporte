@@ -25,4 +25,5 @@ urlpatterns = [
     path("situacao/", include("situacao_veiculo.urls")),
     path("ocorrencia/", include("ocorrencia_erro.urls")),
     path("api/", include("API.urls")),
+    path("simulador/", include("simulador.urls")),
 ]
