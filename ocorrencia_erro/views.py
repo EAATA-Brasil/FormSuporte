@@ -89,6 +89,12 @@ def filter_data_view(request):
                 has_empty = '' in values
                 non_empty = [v for v in values if v != '']
 
+                TEXT_CASE_INSENSITIVE_COLUMNS = [
+                    'technical', 'device', 'area', 'serial', 'brand', 'model',
+                    'version', 'responsible', 'problem_detected', 'feedback_technical',
+                    'feedback_manager'
+                ]
+
                 # Filtros para valores não vazios
                 if non_empty:
                     if column == 'status':
@@ -108,18 +114,37 @@ def filter_data_view(request):
                         if dates:
                             column_q |= Q(**{f'{column}__in': dates})
                     elif column == 'country':
+                        # Para país, a busca é por nome, que pode ser case-insensitive
+                        # Mas como você já tem um filtro de permissão, vamos manter a lógica de permissão
+                        # e adicionar a case-insensitivity na busca pelo nome do país.
                         if has_full_permission:
-                            column_q |= Q(country__name__in=non_empty)
+                            # Usar __iexact para correspondência exata case-insensitive
+                            country_q_objects = Q()
+                            for val in non_empty:
+                                country_q_objects |= Q(country__name__iexact=val)
+                            column_q |= country_q_objects
                         else:
-                            # Verifica se os países filtrados estão nos permitidos
                             permitted = set(CountryPermission.objects.filter(
                                 user=user,
-                                country__name__in=non_empty
+                                country__name__in=non_empty # Isso aqui já pode ser um problema se o nome no DB for diferente da permissão
                             ).values_list('country__name', flat=True))
                             filtered = [v for v in non_empty if v in permitted]
                             if filtered:
-                                column_q |= Q(country__name__in=filtered)
+                                # Usar __iexact para correspondência exata case-insensitive
+                                country_q_objects = Q()
+                                for val in filtered:
+                                    country_q_objects |= Q(country__name__iexact=val)
+                                column_q |= country_q_objects
+                    elif column in TEXT_CASE_INSENSITIVE_COLUMNS:
+                        # Para colunas de texto, usar __iexact para correspondência exata case-insensitive
+                        # Ou __icontains se você quiser uma busca "contém" case-insensitive
+                        text_q_objects = Q()
+                        for val in non_empty:
+                            text_q_objects |= Q(**{f'{column}__iexact': val}) # Use __iexact para correspondência exata
+                            # Se preferir "contém", use: text_q_objects |= Q(**{f'{column}__icontains': val})
+                        column_q |= text_q_objects
                     else:
+                        # Para outras colunas, mantém o filtro padrão (case-sensitive)
                         column_q |= Q(**{f'{column}__in': non_empty})
 
                 # Filtro para valores vazios/nulos
@@ -142,6 +167,7 @@ def filter_data_view(request):
             
             if sort_column in ALLOWED_SORT_COLUMNS:
                 if sort_column == 'country':
+                    # Para ordenação de país, use country__name
                     order_field = f"{'-' if sort_direction == 'desc' else ''}country__name"
                 else:
                     order_field = f"{'-' if sort_direction == 'desc' else ''}{sort_column}"
@@ -187,7 +213,8 @@ def filter_data_view(request):
                         options = CountryPermission.objects.filter(
                             user=user
                         ).values_list('country__name', flat=True).distinct()
-                    filter_options[col] = sorted([opt for opt in options if opt])
+                    # Padroniza para maiúsculas para unicidade na lista de opções
+                    filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
                 elif col == 'status':
                     status_values = queryset.values_list('status', flat=True).distinct()
                     filter_options[col] = sorted(
@@ -218,7 +245,7 @@ def filter_data_view(request):
                     options = queryset.exclude(**{f'{col}__isnull': True}
                             ).exclude(**{f'{col}__exact': ''}
                             ).values_list(col, flat=True).distinct()
-                    filter_options[col] = sorted([opt for opt in options if opt is not None])
+                    filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt is not None])))
 
             return JsonResponse({
                 'records': records_data,

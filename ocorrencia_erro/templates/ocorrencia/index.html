@@ -553,18 +553,45 @@
         // *** FUNÇÃO CORRIGIDA E MELHORADA: Popular a caixa de filtro com IDs únicos e lógica de toggle ***
         function populateFilterBox(filterBoxElement, headerInfo) {
             const columnName = headerInfo.columnName;
-            let options = currentFilterOptions[columnName] || (headerInfo.isDateColumn ? {} : []);
+                        let options = currentFilterOptions[columnName] || (headerInfo.isDateColumn ? {} : []);
             
             // Para filtros não-data, garante que as opções sejam um array e únicas
             if (!headerInfo.isDateColumn) {
                 try {
-                    options = options.map(option => typeof option === "string" ? option.trim() : option);
-                    options = [...new Set(options)].sort(); // Ordena alfabeticamente
+                    // --- INÍCIO DA NOVA LÓGICA PARA PADRONIZAÇÃO E UNICIDADE CASE-INSENSITIVE ---
+                    const processedOptions = new Set(); // Usamos um Set para garantir unicidade
+                    const uniqueOptions = []; // Array para as opções finais, mantendo a ordem de inserção ou ordenando depois
+
+                    options.forEach(option => {
+                        if (typeof option === "string") {
+                            const trimmedUpper = option.trim().toUpperCase(); // Padroniza para maiúsculas
+                            if (!processedOptions.has(trimmedUpper)) {
+                                processedOptions.add(trimmedUpper);
+                                uniqueOptions.push(option.trim()); // Adiciona a versão original (trim) para exibição
+                            }
+                        } else {
+                            // Se não for string, adiciona como está (ex: números, booleanos)
+                            if (!processedOptions.has(option)) { // Verifica unicidade para não-strings também
+                                processedOptions.add(option);
+                                uniqueOptions.push(option);
+                            }
+                        }
+                    });
+                    options = uniqueOptions.sort((a, b) => {
+                        // Ordena as opções, tratando strings de forma case-insensitive
+                        if (typeof a === 'string' && typeof b === 'string') {
+                            return a.localeCompare(b, undefined, { sensitivity: 'base' });
+                        }
+                        return String(a).localeCompare(String(b)); // Para outros tipos, converte para string e compara
+                    });
+                    // --- FIM DA NOVA LÓGICA ---
+
                 } catch (e) {
                     console.error("Erro ao processar opções de filtro não-data:", e);
                     options = [];
                 }
             }
+
 
             const isDate = headerInfo.isDateColumn;
             const savedFilter = currentFilters[columnName] || { values: [], isApplied: false };
