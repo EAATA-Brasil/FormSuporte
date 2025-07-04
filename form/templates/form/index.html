@@ -94,9 +94,9 @@
             {% for veiculo in page_obj %}
             <tr>
                 <td>{{ veiculo.pais|default:"-" }}</td>
-                <td>{{ veiculo.brand|default:"-" }}</td>
-                <td>{{ veiculo.modelo|default:"-" }}</td>
-                <td>{{ veiculo.ano|default:"-" }}</td>
+                <td>{{ veiculo.brand|default:"-" | upper}}</td>
+                {% include 'form/components/line.html' with veiculo_id=veiculo.id field_name='modelo' display=veiculo.modelo|default:'-'%}
+                {% include 'form/components/line.html' with veiculo_id=veiculo.id field_name='ano' display=veiculo.ano|default:'-'%}
                 {% include 'form/components/line.html' with veiculo_id=veiculo.id field_name='sistema' display=veiculo.sistema|default:'Not defined'%}
                 <!-- Checkboxes -->
                 {% include 'form/components/checkbox_line.html' with veiculo_id=veiculo.id field_name='add_key' display=veiculo.get_add_key_display%}

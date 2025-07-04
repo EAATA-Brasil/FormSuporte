@@ -23,7 +23,7 @@ def cadastrar_veiculo(request):
 def index(request):
     filtros = Q()
     
-    # Filtros
+    # Filtros com ordenação
     if request.GET.get('pais'):
         filtros &= Q(pais__icontains=request.GET['pais'])
     if request.GET.get('brand'):
@@ -33,7 +33,7 @@ def index(request):
     if request.GET.get('ano'):
         filtros &= Q(ano__icontains=request.GET['ano'])
     
-    veiculos = Veiculo.objects.filter(filtros).order_by('pais','brand', 'modelo','ano')
+    veiculos = Veiculo.objects.filter(filtros).order_by('pais', 'brand', 'modelo', 'ano')
 
     # Paginação
     paginator = Paginator(object_list=veiculos, per_page=10)
@@ -46,7 +46,6 @@ def index(request):
     })
 
 def get_opcoes_filtro(request):
-
     pais = request.GET.get('pais', '')
     marca = request.GET.get('marca', '')
     
@@ -58,29 +57,26 @@ def get_opcoes_filtro(request):
         resultados = resultados.filter(brand__icontains=marca)
     
     data = {
-        'pais': list(resultados.values_list('pais', flat=True).distinct()),
-        'marcas': list(resultados.values_list('brand', flat=True).distinct()),
-        'modelos': list(resultados.values_list('modelo', flat=True).distinct()),
-        'anos': list(resultados.values_list('ano', flat=True).distinct()),
+        'pais': list(resultados.order_by('pais').values_list('pais', flat=True).distinct()),
+        'marcas': list(resultados.order_by('brand').values_list('brand', flat=True).distinct()),
+        'modelos': list(resultados.order_by('modelo').values_list('modelo', flat=True).distinct()),
+        'anos': list(resultados.order_by('ano').values_list('ano', flat=True).distinct()),
     }
     return JsonResponse(data)
 
 def update_vehicle(request):
     if request.method == 'POST':
-        veiculo = Veiculo.objects.get(id=request.POST.get('id'))
-        field_name = request.POST.get('field')
-        new_value = request.POST.get('value')
         try:
             veiculo = Veiculo.objects.get(id=request.POST.get('id'))
             field_name = request.POST.get('field')
             new_value = request.POST.get('value')
-            # Atualiza o campo dinamicamente
+            
             setattr(veiculo, field_name, new_value)
             veiculo.save()
-            # print(value)
+            
             return JsonResponse({
                 'status': 'success',
-                'new_display': new_value  # Ajuste conforme o campo
+                'new_display': new_value
             })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
@@ -91,16 +87,16 @@ def update_vehicle_field(request):
         veiculo_id = request.POST.get('id')
         field_name = request.POST.get('field')
         new_value = request.POST.get('value')
-        veiculo = Veiculo.objects.get(id=veiculo_id)
+        
         try:
+            veiculo = Veiculo.objects.get(id=veiculo_id)
             setattr(veiculo, field_name, new_value)
             veiculo.save(update_fields=[field_name])
 
-            # Resposta com possível valor de display
             response_data = {
-            'status': 'success',
-            'new_value': new_value,
-            'display_value': getattr(veiculo, f'get_{field_name}_display', lambda: None)()
+                'status': 'success',
+                'new_value': new_value,
+                'display_value': getattr(veiculo, f'get_{field_name}_display', lambda: None)()
             }
 
             return JsonResponse(response_data)
@@ -110,33 +106,3 @@ def update_vehicle_field(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
         
     return JsonResponse({'status': 'error'}, status=405)
-    # return JsonResponse({'status': 'success'}, status=200)
-    # try:
-    #     veiculo_id = request.POST.get('id')
-    #     field_name = request.POST.get('field')
-    #     new_value = request.POST.get('value')
-        
-    #     # Obtenha o objeto (adicione seu modelo específico)
-    #     veiculo = Veiculo.objects.get(id=veiculo_id, proprietario=request.user)
-        
-    #     # Verificação de segurança do campo
-    #     if field_name not in [f.name for f in Veiculo._meta.get_fields()]:
-    #         raise ValueError("Campo inválido")
-            
-    #     # Atualização dinâmica
-    #     setattr(veiculo, field_name, new_value)
-    #     veiculo.save(update_fields=[field_name])
-        
-    #     # Resposta com possível valor de display
-    #     response_data = {
-    #         'status': 'success',
-    #         'new_value': new_value,
-    #         'display_value': getattr(veiculo, f'get_{field_name}_display', lambda: None)()
-    #     }
-        
-    #     return JsonResponse(response_data)
-        
-    # except Veiculo.DoesNotExist:
-    #     return JsonResponse({'status': 'error', 'message': 'Veículo não encontrado'}, status=404)
-    # except Exception as e:
-    #     return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

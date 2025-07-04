@@ -20,11 +20,8 @@
                 {% include 'ocorrencia/components/lineHead.html' with name='país' ID="country"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='device' ID="device"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='area' ID="area"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='serial' ID="serial"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='brand' ID="brand"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='model' ID="model"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='year' ID="year"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='version' ID="version"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='Problem Detected' ID="problem_detected" checbox='false'%}
                 {% include 'ocorrencia/components/lineHead.html' with name='status' ID="status"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='deadline' ID="deadline"%}
@@ -39,22 +36,139 @@
         {# O corpo da tabela será preenchido via AJAX #}
         </tbody>
     </table>
+    
     <div id="paginate">
         <span class="button-paginator" id="last">Voltar</span>
         <span id="num_pages">
-
+            
         </span>
         <span class="button-paginator" id="next">Avançar</span>
     </div>
+    <a href="{% url 'subir_ocorrencia' %}" style="padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 0.3rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+    background-color: #157347;
+    color: var(--light);">
+        <i class="fas fa-plus"></i> Novo Ocorrência
+    </a>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function ( ) {
         "use strict";
 
         function capitalize(str) {
             return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
         }
 
+        // Função para mostrar pop-up com detalhes do problema
+        function showProblemDetails(record) {
+            const problemText = record.problem_detected || 'Nenhum problema detectado';
+            
+            // Cria o conteúdo HTML do pop-up com informações detalhadas
+            const popupContent = `
+                <div style="text-align: left;">
+                    <h3 style="color: #0056b3; margin-bottom: 20px;">Detalhes do Problema</h3>
+                    
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-top: 0; color: #333;">Problema Detectado:</h4>
+                        <p style="margin: 0; line-height: 1.6; word-wrap: break-word;">${problemText}</p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                        <div>
+                            <strong>Técnico:</strong><br>
+                            <span style="color: #666;">${record.technical || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>País:</strong><br>
+                            <span style="color: #666;">${record.country || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Dispositivo:</strong><br>
+                            <span style="color: #666;">${record.device || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Área:</strong><br>
+                            <span style="color: #666;">${record.area || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Serial:</strong><br>
+                            <span style="color: #666;">${record.serial || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Marca:</strong><br>
+                            <span style="color: #666;">${record.brand || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Modelo:</strong><br>
+                            <span style="color: #666;">${record.model || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Ano:</strong><br>
+                            <span style="color: #666;">${record.year || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Versão:</strong><br>
+                            <span style="color: #666;">${record.version || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Status:</strong><br>
+                            <span style="color: #666;">${record.status || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Responsável:</strong><br>
+                            <span style="color: #666;">${record.responsible || 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Data:</strong><br>
+                            <span style="color: #666;">${record.data ? formatDateToDisplay(record.data) : 'Não informado'}</span>
+                        </div>
+                        <div>
+                            <strong>Prazo:</strong><br>
+                            <span style="color: #666;">${record.deadline ? formatDateToDisplay(record.deadline) : 'Não definido'}</span>
+                        </div>
+                        <div>
+                            <strong>Finalizado:</strong><br>
+                            <span style="color: #666;">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
+                        </div>
+                    </div>
+                    
+                    ${record.feedback_technical ? `
+                        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; color: #0056b3;">Feedback Técnico:</h4>
+                            <p style="margin: 0; line-height: 1.6; word-wrap: break-word;">${record.feedback_technical}</p>
+                        </div>
+                    ` : ''}
+                    
+                    ${record.feedback_manager ? `
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px;">
+                            <h4 style="margin-top: 0; color: #856404;">Feedback do Gerente:</h4>
+                            <p style="margin: 0; line-height: 1.6; word-wrap: break-word;">${record.feedback_manager}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            Swal.fire({
+                title: 'Informações Detalhadas',
+                html: popupContent,
+                width: '80%',
+                maxWidth: '800px',
+                showCloseButton: true,
+                showConfirmButton: true,
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#0056b3',
+                customClass: {
+                    popup: 'problem-details-popup',
+                    content: 'problem-details-content'
+                }
+            });
+        }
 
         var page_num = 1
         let buttons_paginator = document.querySelectorAll('.button-paginator')
@@ -63,7 +177,7 @@
 
         buttons_paginator.forEach(button=>{
             button.addEventListener('click', (e)=>{
-                if(e.target.id == "next" && page_num < total_pages){
+                if(e.target.id == "next" && page_num <= total_pages){
                     page_num += 1
                 }
                 else if(e.target.id == "last" && page_num > 1){
@@ -279,59 +393,77 @@
             const boxRect = filterBoxElement.getBoundingClientRect();
         }
 
-        // *** FUNÇÃO CORRIGIDA: Criar a árvore de datas com IDs únicos ***
-        function createDateTreeHTML(columnName, dateTree, level = 0, parentPath = '') {
+        // *** FUNÇÃO CORRIGIDA E MELHORADA: Criar a árvore de datas hierárquica com toggles ***
+        function createDateTreeHTML(columnName, dateTree, level = 0) {
             let html = '';
-            const sortedYears = Object.keys(dateTree).sort();
+            const sortedYears = Object.keys(dateTree).sort((a, b) => parseInt(a) - parseInt(b)); // Ordena anos numericamente
 
-            sortedYears.forEach((year, yearIndex) => {
-                const yearPath = parentPath ? `${parentPath}-${year}` : year;
-                const yearId = generateUniqueId(`date_${columnName}_year`, year, yearIndex);
-                html += `<div class="filter-tree-node" style="margin-left: ${level * 15}px;">
-                           <input type="checkbox" id="${yearId}" data-filter-option="${columnName}" data-tree-level="year" value="${year}">
-                           <label for="${yearId}">${year}</label>
-                         </div>`;
-                
-                const sortedMonths = Object.keys(dateTree[year]).sort();
-                sortedMonths.forEach((month, monthIndex) => {
-                    const monthPath = `${yearPath}-${month}`;
-                    const monthId = generateUniqueId(`date_${columnName}_month`, `${year}_${month}`, monthIndex);
-                    html += `<div class="filter-tree-node" style="margin-left: ${(level + 1) * 15}px;">
-                               <input type="checkbox" id="${monthId}" data-filter-option="${columnName}" data-tree-level="month" value="${year}-${month}">
-                               <label for="${monthId}">${month}</label>
-                             </div>`;
+            sortedYears.forEach((year) => {
+                const yearId = generateUniqueId(`date_${columnName}_year`, year);
+                const yearToggleId = `toggle_${yearId}`;
+                const yearContentId = `content_${yearId}`;
 
-                    const sortedDays = dateTree[year][month].sort();
-                    sortedDays.forEach((day, dayIndex) => {
-                        const dayPath = `${monthPath}-${day}`;
-                        const dayId = generateUniqueId(`date_${columnName}_day`, `${year}_${month}_${day}`, dayIndex);
+                html += `
+                <div class="filter-tree-node" data-level="year">
+                    <div class="node-header">
+                        <span class="toggle-icon" id="${yearToggleId}">▶</span>
+                        <input type="checkbox" id="${yearId}" data-filter-option="${columnName}" data-tree-level="year" value="${year}">
+                        <label for="${yearId}">${year}</label>
+                    </div>
+                    <div class="node-content" id="${yearContentId}" style="display: none;">`; // Escondido por padrão
+
+                const sortedMonths = Object.keys(dateTree[year]).sort((a, b) => parseInt(a) - parseInt(b)); // Ordena meses numericamente
+                sortedMonths.forEach((month) => {
+                    const monthName = new Date(2000, parseInt(month) - 1, 1).toLocaleString('pt-BR', { month: 'long' });
+                    const monthId = generateUniqueId(`date_${columnName}_month`, `${year}_${month}`);
+                    const monthToggleId = `toggle_${monthId}`;
+                    const monthContentId = `content_${monthId}`;
+
+                    html += `
+                        <div class="filter-tree-node" data-level="month">
+                            <div class="node-header" style="margin-left: 20px;">
+                                <span class="toggle-icon" id="${monthToggleId}">▶</span>
+                                <input type="checkbox" id="${monthId}" data-filter-option="${columnName}" data-tree-level="month" value="${year}-${month}">
+                                <label for="${monthId}">${capitalize(monthName)}</label>
+                            </div>
+                            <div class="node-content" id="${monthContentId}" style="display: none;">`; // Escondido por padrão
+
+                    const sortedDays = dateTree[year][month].sort((a, b) => parseInt(a) - parseInt(b)); // Ordena dias numericamente
+                    sortedDays.forEach((day) => {
+                        const dayId = generateUniqueId(`date_${columnName}_day`, `${year}_${month}_${day}`);
                         const fullDateValue = `${year}-${month}-${day}`;
-                        html += `<div class="filter-tree-node" style="margin-left: ${(level + 2) * 15}px;">
-                                   <input type="checkbox" id="${dayId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${fullDateValue}">
-                                   <label for="${dayId}">${day}</label>
-                                 </div>`;
+                        html += `
+                            <div class="filter-tree-node" data-level="day" style="margin-left: 40px;">
+                                <input type="checkbox" id="${dayId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${fullDateValue}">
+                                <label for="${dayId}">${day}</label>
+                            </div>`;
                     });
+                    html += `</div></div>`; // Fecha node-content e filter-tree-node (month)
                 });
+                html += `</div></div>`; // Fecha node-content e filter-tree-node (year)
             });
             return html;
         }
 
-        // *** FUNÇÃO CORRIGIDA: Popular a caixa de filtro com IDs únicos ***
+        // *** FUNÇÃO CORRIGIDA E MELHORADA: Popular a caixa de filtro com IDs únicos e lógica de toggle ***
         function populateFilterBox(filterBoxElement, headerInfo) {
             const columnName = headerInfo.columnName;
             let options = currentFilterOptions[columnName] || (headerInfo.isDateColumn ? {} : []);
-            try{
-                options = options.map(option => typeof option === "string" ? option.trim().toUpperCase() : option)
-                options = [... new Set(options)]
+            
+            // Para filtros não-data, garante que as opções sejam um array e únicas
+            if (!headerInfo.isDateColumn) {
+                try {
+                    options = options.map(option => typeof option === "string" ? option.trim() : option);
+                    options = [...new Set(options)].sort(); // Ordena alfabeticamente
+                } catch (e) {
+                    console.error("Erro ao processar opções de filtro não-data:", e);
+                    options = [];
+                }
             }
-            catch{
-                //
-            }
+
             const isDate = headerInfo.isDateColumn;
             const savedFilter = currentFilters[columnName] || { values: [], isApplied: false };
             
-            //console.log(`Populando filtro para ${columnName}. Opções:`, options);
-
             let optionsHTML = '';
             if (isDate) {
                 if (Object.keys(options).length > 0) {
@@ -339,13 +471,9 @@
                 } else {
                     optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma data disponível.</p>';
                 }
-            } 
-            else if(columnName === "status"){
+            } else {
                 if (options.length > 0) {
                     options.forEach((option, index) => {
-                        option = capitalize(option)
-                        console.log(option);
-                        
                         const optionId = generateUniqueId(`filter_${columnName}`, option, index);
                         const isChecked = savedFilter.isApplied && savedFilter.values.includes(option);
                         optionsHTML += `<div class="filter-option">
@@ -354,34 +482,16 @@
                                       </div>`;
                     });
                 } else {
-                     optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma opção disponível.</p>';
-                }
-            }
-            else {
-                
-                if (options.length > 0) {
-                    options.forEach((option, index) => {
-                        
-                        const optionId = generateUniqueId(`filter_${columnName}`, option, index);
-                        const isChecked = savedFilter.isApplied && savedFilter.values.includes(option);
-                        optionsHTML += `<div class="filter-option">
-                                        <input type="checkbox" id="${optionId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${option}" ${isChecked ? 'checked' : ''}>
-                                        <label for="${optionId}">${option || '(Vazio)'}</label>
-                                      </div>`;
-                    });
-                } else {
-                     optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma opção disponível.</p>';
+                    optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma opção disponível.</p>';
                 }
             }
 
-            const selectAllId = generateUniqueId(`select_all`, columnName);
-            const hasOptions = (isDate && Object.keys(options).length > 0) || (!isDate && options.length > 0);
-            
             filterBoxElement.innerHTML = `
                 <div class="filter-header">
-                    ${hasOptions ? `<input type="checkbox" id="${selectAllId}" class="select-all-filter"><label for="${selectAllId}" style="color:#0a2e5a">Selecionar Tudo</label>` : ''}
-                    <input type="text" class="filter-search-input" placeholder="Buscar...">
+                    <input type="checkbox" id="select-all-${columnName}">
+                    <label for="select-all-${columnName}">Selecionar Todos</label>
                 </div>
+                ${!isDate ? `<input type="text" class="filter-search-input" placeholder="Buscar...">` : ''}
                 <div class="filter-options">${optionsHTML}</div>
                 <div class="filter-actions">
                     <button class="apply-filter-btn">Aplicar</button>
@@ -389,217 +499,158 @@
                 </div>
             `;
 
-            // Adiciona listeners aos botões e checkboxes recém-criados
-            const applyBtn = filterBoxElement.querySelector('.apply-filter-btn');
-            if(applyBtn) applyBtn.onclick = () => applyFiltersAndSort();
-            const clearBtn = filterBoxElement.querySelector('.clear-filter-btn');
-            if (clearBtn) {
-                clearBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    clearFilter(columnName);
-                };
-            }
-
+            const selectAllCheckbox = filterBoxElement.querySelector(`#select-all-${columnName}`);
             const searchInput = filterBoxElement.querySelector('.filter-search-input');
-            if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    const searchTerm = e.target.value.toLowerCase();
-                    filterBoxElement.querySelectorAll('.filter-options > div').forEach(div => {
-                        const label = div.querySelector('label');
-                        if (label) {
-                            div.style.display = label.textContent.toLowerCase().includes(searchTerm) ? '' : 'none';
-                        }
-                    });
-                });
-            }
+            const applyButton = filterBoxElement.querySelector('.apply-filter-btn');
+            const clearButton = filterBoxElement.querySelector('.clear-filter-btn');
+            const optionCheckboxes = filterBoxElement.querySelectorAll('input[type="checkbox"][data-filter-option]');
 
-            const selectAllCheckbox = filterBoxElement.querySelector(`#${selectAllId}`);
-            const optionCheckboxes = filterBoxElement.querySelectorAll(`input[data-filter-option="${columnName}"]`);
-            
             if (selectAllCheckbox) {
-                // Atualiza estado inicial do "Selecionar Tudo"
-                updateSelectAllState(selectAllCheckbox, optionCheckboxes);
-
-                selectAllCheckbox.addEventListener('change', (e) => {
-                    const isChecked = e.target.checked;
-                    optionCheckboxes.forEach(cb => {
-                        // Só altera checkboxes visíveis (considerando busca)
-                        if (cb.closest('div').style.display !== 'none') {
-                             cb.checked = isChecked;
-                        }
-                    });
-                });
-
-                optionCheckboxes.forEach(cb => {
-                    cb.addEventListener('change', () => {
-                        updateSelectAllState(selectAllCheckbox, optionCheckboxes);
+                selectAllCheckbox.addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    optionCheckboxes.forEach(checkbox => {
+                        checkbox.checked = isChecked;
                     });
                 });
             }
-            
-            // Adiciona listeners para a árvore de datas (se aplicável)
-            if (isDate) {
-                 filterBoxElement.querySelectorAll('input[data-tree-level="year"], input[data-tree-level="month"]').forEach(parentCb => {
-                    parentCb.addEventListener('change', (e) => {
-                        const isChecked = e.target.checked;
-                        const parentValue = e.target.value;
-                        
-                        // Para anos: encontra todos os meses e dias desse ano
-                        // Para meses: encontra todos os dias desse mês
-                        optionCheckboxes.forEach(leafCb => {
-                            if (leafCb.getAttribute('data-tree-level') === 'leaf') {
-                                const leafValue = leafCb.value;
-                                let shouldCheck = false;
-                                
-                                if (e.target.getAttribute('data-tree-level') === 'year') {
-                                    shouldCheck = leafValue.startsWith(parentValue + '-');
-                                } else if (e.target.getAttribute('data-tree-level') === 'month') {
-                                    shouldCheck = leafValue.startsWith(parentValue + '-');
-                                }
-                                
-                                if (shouldCheck && leafCb.closest('div').style.display !== 'none') {
-                                    leafCb.checked = isChecked;
-                                }
-                            }
-                        });
-                        
-                        // Atualiza estado do "Selecionar Tudo" geral
-                        if(selectAllCheckbox) updateSelectAllState(selectAllCheckbox, optionCheckboxes);
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    const filterOptions = filterBoxElement.querySelectorAll('.filter-option');
+                    
+                    filterOptions.forEach(option => {
+                        const label = option.querySelector('label');
+                        if (label) {
+                            const text = label.textContent.toLowerCase();
+                            option.style.display = text.includes(searchTerm) ? 'block' : 'none';
+                        }
                     });
                 });
+            }
+
+            if (applyButton) {
+                applyButton.addEventListener('click', function() {
+                    const selectedValues = [];
+                    optionCheckboxes.forEach(checkbox => {
+                        if (checkbox.checked) {
+                            selectedValues.push(checkbox.value);
+                        }
+                    });
+
+                    currentFilters[columnName] = {
+                        values: selectedValues,
+                        isApplied: selectedValues.length > 0
+                    };
+
+                    applyFiltersAndSort(true);
+                });
+            }
+
+            if (clearButton) {
+                clearButton.addEventListener('click', function() {
+                    currentFilters[columnName] = { values: [], isApplied: false };
+                    applyFiltersAndSort(true);
+                });
+            }
+
+            if (isDate) {
+                addDateHierarchyToggle(filterBoxElement, columnName);
             }
         }
-        
-        // *** FUNÇÃO MANTIDA: Atualizar o estado do checkbox "Selecionar Tudo" ***
-        function updateSelectAllState(selectAllCheckbox, optionCheckboxes) {
-            if (!selectAllCheckbox) return;
-            let allChecked = true;
-            let noneChecked = true;
-            let visibleOptionCount = 0;
 
-            optionCheckboxes.forEach(cb => {
-                 // Considera apenas checkboxes folha e visíveis
-                if (cb.getAttribute('data-tree-level') === 'leaf' && cb.closest('div').style.display !== 'none') {
-                    visibleOptionCount++;
-                    if (cb.checked) {
-                        noneChecked = false;
-                    } else {
-                        allChecked = false;
+        // *** NOVA FUNÇÃO: Adicionar funcionalidade de toggle hierárquico para datas e sincronização de checkboxes ***
+        function addDateHierarchyToggle(filterBoxElement, columnName) {
+            const toggleIcons = filterBoxElement.querySelectorAll('.toggle-icon');
+            
+            toggleIcons.forEach(icon => {
+                icon.addEventListener('click', function() {
+                    const contentId = `content_${this.id.replace('toggle_', '')}`;
+                    const contentElement = filterBoxElement.querySelector(`#${contentId}`);
+                    if (contentElement) {
+                        if (contentElement.style.display === 'none') {
+                            contentElement.style.display = 'block';
+                            this.textContent = '▼'; // Seta para baixo
+                        } else {
+                            contentElement.style.display = 'none';
+                            this.textContent = '▶'; // Seta para a direita
+                        }
+                    }
+                });
+            });
+
+            // Sincronização de checkboxes
+            filterBoxElement.addEventListener('change', function(event) {
+                const target = event.target;
+                if (target.type === 'checkbox' && target.dataset.filterOption === columnName) {
+                    const level = target.dataset.treeLevel;
+                    const value = target.value;
+                    const isChecked = target.checked;
+
+                    if (level === 'year') {
+                        // Se um ano é marcado/desmarcado, afeta todos os meses e dias abaixo dele
+                        filterBoxElement.querySelectorAll(`input[data-tree-level="month"][value^="${value}-"], input[data-tree-level="leaf"][value^="${value}-"]`).forEach(checkbox => {
+                            checkbox.checked = isChecked;
+                        });
+                    } else if (level === 'month') {
+                        // Se um mês é marcado/desmarcado, afeta todos os dias abaixo dele
+                        filterBoxElement.querySelectorAll(`input[data-tree-level="leaf"][value^="${value}-"]`).forEach(checkbox => {
+                            checkbox.checked = isChecked;
+                        });
+
+                        // Verifica o estado do ano pai
+                        const year = value.split('-')[0];
+                        const yearCheckbox = filterBoxElement.querySelector(`input[data-tree-level="year"][value="${year}"]`);
+                        if (yearCheckbox) {
+                            const allMonthsOfYear = filterBoxElement.querySelectorAll(`input[data-tree-level="month"][value^="${year}-"]`);
+                            const checkedMonthsOfYear = filterBoxElement.querySelectorAll(`input[data-tree-level="month"][value^="${year}-"]:checked`);
+                            yearCheckbox.checked = allMonthsOfYear.length === checkedMonthsOfYear.length;
+                        }
+                    } else if (level === 'leaf') {
+                        // Se um dia é marcado/desmarcado, verifica o estado do mês pai
+                        const yearMonth = value.substring(0, value.lastIndexOf('-')); // Ex: "2023-01"
+                        const monthCheckbox = filterBoxElement.querySelector(`input[data-tree-level="month"][value="${yearMonth}"]`);
+                        if (monthCheckbox) {
+                            const allDaysOfMonth = filterBoxElement.querySelectorAll(`input[data-tree-level="leaf"][value^="${yearMonth}-"]`);
+                            const checkedDaysOfMonth = filterBoxElement.querySelectorAll(`input[data-tree-level="leaf"][value^="${yearMonth}-"]:checked`);
+                            monthCheckbox.checked = allDaysOfMonth.length === checkedDaysOfMonth.length;
+                        }
+
+                        // E também verifica o estado do ano pai
+                        const year = value.split('-')[0];
+                        const yearCheckbox = filterBoxElement.querySelector(`input[data-tree-level="year"][value="${year}"]`);
+                        if (yearCheckbox) {
+                            const allMonthsOfYear = filterBoxElement.querySelectorAll(`input[data-tree-level="month"][value^="${year}-"]`);
+                            const checkedMonthsOfYear = filterBoxElement.querySelectorAll(`input[data-tree-level="month"][value^="${year}-"]:checked`);
+                            yearCheckbox.checked = allMonthsOfYear.length === checkedMonthsOfYear.length;
+                        }
                     }
                 }
             });
-
-            if (visibleOptionCount === 0) { // Nenhuma opção visível
-                 selectAllCheckbox.checked = false;
-                 selectAllCheckbox.indeterminate = false;
-                 selectAllCheckbox.disabled = true;
-            } else if (allChecked) {
-                selectAllCheckbox.checked = true;
-                selectAllCheckbox.indeterminate = false;
-                selectAllCheckbox.disabled = false;
-            } else if (noneChecked) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-                selectAllCheckbox.disabled = false;
-            } else {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = true;
-                selectAllCheckbox.disabled = false;
-            }
         }
 
-        // --- Lógica de Filtragem e Ordenação (Comunicação com Backend) ---
-        function applySort(columnName, direction) { 
-            currentSort = { column: columnName, direction: direction };
-            applyFiltersAndSort(false);
-        }
-        
-        function clearFilter(columnName) {
-            // console.log("Limpando filtro para:", columnName); // Debug
-            
-            // 1. Remover o filtro do objeto currentFilters
-            if (currentFilters[columnName]) {
-                delete currentFilters[columnName];
-            }
-            
-            // 2. Remover a classe 'filtered' do cabeçalho
-            const headerInfo = headerData.find((h) => h.columnName === columnName);
-            if (headerInfo && headerInfo.element) {
-                headerInfo.element.classList.remove("filtered");
-            }
-            
-            // 3. Desmarcar todos os checkboxes no filtro aberto
-            if (openFilterBox) {
-                const checkboxes = openFilterBox.querySelectorAll(
-                    `input[data-filter-option="${columnName}"]`
-                );
-                checkboxes.forEach(checkbox => {
-                    checkbox.checked = false;
-                });
-                
-                // Atualizar o estado do "Selecionar Tudo"
-                const selectAllCheckbox = openFilterBox.querySelector('.select-all-filter');
-                if (selectAllCheckbox) {
-                    selectAllCheckbox.checked = false;
-                    selectAllCheckbox.indeterminate = false;
-                }
-                openFilterBox.style.display = "none";
-                openFilterBox = null;
-                
-            }
-            
-
-            // 4. Aplicar a remoção do filtro
-            applyFiltersAndSort(false); // Não fechar a caixa de filtro
-        }
-
-        function applyFiltersAndSort(closeBox = true) {
-                // 1. Coletar filtros da caixa aberta (se existir)
-                if (openFilterBox) {
-                    const openColumnName = openFilterBox.parentElement.getAttribute("data-column");
-                    const optionsContainer = openFilterBox.querySelector(".filter-options");
-                    
-                    if (optionsContainer && openColumnName) {
-                        const selectedValues = [];
-                        
-                        // Coletar valores selecionados (incluindo hierarquia de datas)
-                        optionsContainer.querySelectorAll(
-                            `input[data-filter-option="${openColumnName}"][data-tree-level="leaf"]:checked`
-                        ).forEach((checkbox) => {
-                            selectedValues.push(checkbox.value);
-                        });
-
-                        // Atualizar currentFilters
-                        if (selectedValues.length > 0) {
-                            currentFilters[openColumnName] = {
-                                values: selectedValues,
-                                isApplied: true
-                            };
-                            openFilterBox.parentNode.classList.add('filtered')
-                            
-                        } else {
-                            delete currentFilters[openColumnName];
-                        }
-                    }
-                }
-
-                // 2. Preparar dados para enviar
-                const activeFiltersForBackend = {};
-                for (const colName in currentFilters) {
-                    if (currentFilters[colName].isApplied) {
-                        // currentFilt:ers[colName].classList.add('filtered')
-                        
-                        activeFiltersForBackend[colName] = currentFilters[colName].values;
-                    }
-                }
-
-                // console.log("FILTROS ATIVOS:", activeFiltersForBackend); // Debug 
-
+        // --- Lógica de Filtragem e Ordenação ---
+        function applyFiltersAndSort(closeBox = false) {
+                // 1. Preparar dados de filtro
                 const filterData = {
-                    filters: activeFiltersForBackend,
+                    filters: {},
                     sort: currentSort,
                     page: page_num
                 };
+
+                // 2. Processar filtros ativos
+                Object.keys(currentFilters).forEach(columnName => {
+                    const filter = currentFilters[columnName];
+                    if (filter.isApplied && filter.values.length > 0) {
+                        const headerInfo = headerData.find(h => h.columnName === columnName);
+                        if (headerInfo?.isDateColumn) {
+                            // Para datas, converter para ISO
+                            filterData.filters[columnName] = filter.values.map(parseDateToISO);
+                        } else {
+                            filterData.filters[columnName] = filter.values;
+                        }
+                    }
+                });
 
                 // 3. Enviar para o backend
                 fetch("{% url 'filter_data' %}", {
@@ -678,11 +729,54 @@
                         }
                     }
                     
+                    // *** MODIFICAÇÃO PRINCIPAL: Adicionar botão para Problem Detected ***
                     if(columnName == 'problem_detected'){
                         cell.classList.add("no-cursor")
-                        // cell.title = "Clique duas vezes para copiar o texto"
+                        
+                        // Criar container para o conteúdo
+                        const container = document.createElement('div');
+                        container.style.display = 'flex';
+                        container.style.alignItems = 'center';
+                        container.style.justifyContent = 'center';
+                        
+                        
+                        // Botão para abrir detalhes
+                        const detailsButton = document.createElement('button');
+                        detailsButton.innerHTML = '👁️ Ver Detalhes';
+                        detailsButton.style.cssText = `
+                            background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
+                            color: white;
+                            border: none;
+                            padding: 6px 12px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 0.8rem;
+                            font-weight: 600
+                        `;
+                        
+                        detailsButton.addEventListener('mouseenter', function() {
+                            this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
+                            this.style.transform = 'translateY(-1px)';
+                            this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
+                        });
+                        
+                        detailsButton.addEventListener('mouseleave', function() {
+                            this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
+                            this.style.transform = 'translateY(0)';
+                            this.style.boxShadow = 'none';
+                        });
+                        
+                        detailsButton.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            showProblemDetails(record);
+                        });
+                        
+                        container.appendChild(detailsButton);
+                        cell.appendChild(container);
+                        
+                        // Manter funcionalidade de duplo clique para copiar
                         cell.addEventListener('dblclick', (e)=>{
-                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
+                            navigator.clipboard.writeText(record.problem_detected || 'Nenhum problema detectado')
                             Swal.fire({
                                 title:"Texto copiado",
                                 text: 'Problema copiado para área de transferência',
@@ -693,12 +787,9 @@
                     }
                     
 
-                    if (columnName == 'status'){
-                        var data_deadline= record['deadline'] ? `${record['deadline'].split('-')[1]}/${record['deadline'].split('-')[2]}/${record['deadline'].split('-')[0]}` : null
-                        var data_finished= record['finished'] ? `${record['finished'].split('-')[1]}/${record['finished'].split('-')[2]}/${record['finished'].split('-')[0]}` : null
-                        
-                        data_deadline = record['deadline'] ? new Date(data_deadline) : null
-                        data_finished = record['finished'] ? new Date(data_finished) : null
+                    else if (columnName == 'status'){
+                        const data_deadline = record['deadline'] ? new Date(record['deadline'].split('/').reverse().join('-')) : null
+                        const data_finished = record['finished'] ? new Date(record['finished'].split('/').reverse().join('-')) : null
                         
                         
 
@@ -713,37 +804,35 @@
                             if(data_finished){
                                 statu.value = 'Concluído'
                                 saveField(statu)
-                                location.reload()
+
                             }
                             else if(!data_deadline && valor_inicial != 'Requisitado'){
                                 statu.value = 'Requisitado'
                                 saveField(statu)
-                                location.reload()
                                 record['finished'].disabled = true
-                                
 
                             }
-                            else if(today  < data_deadline && valor_inicial != 'Em progresso'){
+                            else if(data_deadline && today  < data_deadline && valor_inicial != 'Em progresso'){
+                                console.log(valor_inicial);
                                 statu.value = 'Em progresso'
                                 saveField(statu)
-                                location.reload()
+
                             }
-                            else if(today  > data_deadline && valor_inicial == 'Em progresso'){
+                            else if(data_deadline && today  > data_deadline && valor_inicial == 'Em progresso'){
                                 statu.value = 'Atrasado'
                                 saveField(statu)
-                                location.reload()
+
                             }
-                            else{
-                                // console.log(today);
-                                // console.log(data_deadline);
-                                
-                            
+                            else if(data_deadline && today  > data_deadline && valor_inicial == 'Requisitado'){
+                                statu.value = 'Atrasado'
+                                saveField(statu)
+
                             }
                         }
                         
                     }
 
-                    if( (columnName == 'deadline' && '{{has_full_permission}}' === 'True') || columnName == 'finished' ) {
+                    else if( (columnName == 'deadline' && '{{has_full_permission}}' === 'True') || columnName == 'finished' ) {
                         cell.id = `${columnName}${record.id}`
                         cell.classList.add('editable-field-container')
                         cell.classList.add('date-input-container')  
@@ -1000,7 +1089,8 @@
                 body: JSON.stringify({
                     id: reportID,
                     field: fieldName,
-                    value: newValue
+                    value: newValue,
+                    page_num: page_num
                 })
             })
             .then(response => {
@@ -1021,7 +1111,8 @@
                         inputElement.dataset.initialValue = data.display_value;
                     }
                 }
-                location.reload();
+                // location.reload();
+                page_num = data.page_num
                 setTimeout(() => inputElement.classList.remove('success'), 5000);
             })
             .catch(error => {

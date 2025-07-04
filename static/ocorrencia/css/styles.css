@@ -47,7 +47,7 @@ body {
 }
 
 .table th, .table td {
-    padding: 15px 12px;
+    padding: 15px 8px;
     border: 1px solid var(--border-color);
     text-align: center;
     vertical-align: middle;
@@ -79,7 +79,6 @@ body {
 
 /* Responsive text for Problem Detected column */
 .table td[data-column="problem_detected"] {
-    min-width: 339px;
     overflow-wrap: break-word;
     cursor: pointer;
     white-space: normal;
@@ -255,17 +254,98 @@ body {
     background-color: var(--dark);
 }
 
-/* Estilos para a árvore de datas */
+/* Estilos para a árvore de datas hierárquica */
 .filter-tree-node {
     margin-bottom: 5px;
+    position: relative;
 }
 
-.filter-tree-node label {
+.filter-tree-node .node-header {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.filter-tree-node .node-header:hover {
+    color: var(--primary);
+}
+
+.filter-tree-node .node-header input[type="checkbox"] {
+    margin-right: 6px;
+    transform: scale(1.05);
+}
+
+.filter-tree-node .node-header label {
+    cursor: pointer;
+    flex-grow: 1; /* Permite que o label ocupe o espaço restante */
+}
+
+.filter-tree-node .toggle-icon {
+    margin-right: 5px;
+    font-size: 0.7em;
+    width: 15px; /* Garante largura fixa para o ícone */
+    text-align: center;
+    transition: transform 0.2s ease;
+    color: #0056b3;
+    user-select: none;
+}
+
+/* Estilos específicos para diferentes níveis da árvore */
+.filter-tree-node[data-level="year"] .node-header {
+    font-weight: 600;
+    color: var(--secondary);
+    font-size: 0.95rem;
+}
+
+.filter-tree-node[data-level="month"] .node-header {
+    font-weight: 500;
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+.filter-tree-node[data-level="day"] { /* Para o nó folha (dia), não há header separado */
+    font-weight: 400;
+    color: var(--text);
+    font-size: 0.85rem;
+    display: flex; /* Para alinhar checkbox e label */
+    align-items: center;
+    padding: 2px 0;
+}
+
+.filter-tree-node[data-level="day"] label {
     cursor: pointer;
 }
 
-.filter-tree-node input[type="checkbox"] {
-    margin-right: 5px;
+.filter-tree-node[data-level="day"] input[type="checkbox"] {
+    margin-right: 6px;
+    transform: scale(1.05);
+}
+
+/* Indicadores visuais para checkboxes hierárquicos */
+.filter-tree-node input[data-tree-level="year"]:checked + label {
+    background-color: rgba(10, 46, 90, 0.1);
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+.filter-tree-node input[data-tree-level="month"]:checked + label {
+    background-color: rgba(0, 86, 179, 0.1);
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+.filter-tree-node input[data-tree-level="leaf"]:checked + label {
+    background-color: rgba(0, 86, 179, 0.05);
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+/* Estilos para o conteúdo dos nós (meses e dias) */
+.filter-tree-node .node-content {
+    overflow: hidden; /* Para transições suaves de altura */
+    transition: all 0.3s ease-out;
 }
 
 /* Responsividade avançada para tabelas */
@@ -487,28 +567,6 @@ body {
     background: linear-gradient(135deg, var(--dark) 0%, var(--secondary) 100%);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(26, 26, 26, 0.3);
-}
-
-/* Estilos para a árvore de datas */
-.filter-tree-node {
-    margin-bottom: 6px;
-    padding: 3px 0;
-}
-
-.filter-tree-node label {
-    cursor: pointer;
-    font-size: 0.85rem;
-    color: var(--text);
-    transition: color 0.2s ease;
-}
-
-.filter-tree-node label:hover {
-    color: var(--primary);
-}
-
-.filter-tree-node input[type="checkbox"] {
-    margin-right: 6px;
-    transform: scale(1.05);
 }
 
 /* Indicadores visuais para filtros ativos */
@@ -754,61 +812,87 @@ body {
 }
 
 .table td[data-column="status"][data-initial-value="Requisitado"] {
-    background-color: var(--primary-light) !important;
+    background-color: var(--primary) !important;
     color: white !important;
 }
 
+/* Estilos específicos para o pop-up de detalhes do problema */
+.problem-details-popup {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+.problem-details-content {
+    text-align: left !important;
+}
+
+/* Estilos para o botão "Ver Detalhes" na coluna Problem Detected */
+.table td[data-column="problem_detected"] button {
+    white-space: nowrap;
+    min-width: 120px;
+}
+
+/* Responsividade para o botão em mobile */
+@media (max-width: 768px) {
+    .table td[data-column="problem_detected"] div {
+        flex-direction: column !important;
+    }
+    
+    .table td[data-column="problem_detected"] button {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+/* Melhorias para a paginação */
 #paginate {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
-    margin: 20px 0;
-    font-family: system-ui, sans-serif;
+    gap: 15px;
+    margin-top: 20px;
+    padding: 20px 0;
 }
 
 .button-paginator {
-    padding: 8px 16px;
-    background-color: var(--light);
-    color: var(--primary);
-    border: 1px solid var(--border-color);
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: var(--light);
+    border: none;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .button-paginator:hover {
-    background-color: var(--hover-bg);
-    border-color: var(--primary-light);
-    box-shadow: 0 2px 4px var(--shadow-hover);
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
 }
 
 #num_pages {
     display: flex;
-    gap: 6px;
+    gap: 5px;
 }
 
-#num_pages .page-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    height: 36px;
-    padding: 0 8px;
+.page-item {
+    padding: 8px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 14px;
-    transition: all 0.2s ease;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: var(--light);
 }
 
-#num_pages .page-item.active {
+.page-item:hover {
+    background-color: var(--primary-light);
+    color: var(--light);
+}
+
+.page-item.active {
     background-color: var(--primary);
     color: var(--light);
     border-color: var(--primary);
-    font-weight: 500;
-}
-
-.no-cursor{
-    cursor: pointer !important;
 }

@@ -353,13 +353,29 @@ def alterar_dados(request):
                 new_value = datetime.strptime(new_value, '%d/%m/%Y').date()
                 setattr(record, field_name, new_value)
                 new_display = new_value.strftime('%Y-%m-%d')
+            elif field_name == 'status':
+                if record.deadline:
+                    if record.finished:
+                        new_value = 'Concluído'
+                    else:
+                        if record.deadline < date.today():
+                            new_value = 'Atrasado'
+                        else:
+                            new_value = "Em progresso"
+                else:
+                    new_value = 'Requisitado'
+                new_display = new_value
+                new_value = STATUS_OCORRENCIA.get(new_value)
+                setattr(record, field_name, new_value)
+
             else:
                 setattr(record, field_name, new_value)
                 new_display = new_value
-
+            
             record.save(update_fields=[field_name])
+            print(record)
+            return JsonResponse({'status': 'success', 'new_display': new_display, 'page_num': data.get("page_num")})
 
-            return JsonResponse({'status': 'success', 'new_display': new_display})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
