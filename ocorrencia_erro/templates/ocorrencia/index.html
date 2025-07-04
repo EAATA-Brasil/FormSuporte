@@ -643,6 +643,7 @@
                     const filter = currentFilters[columnName];
                     if (filter.isApplied && filter.values.length > 0) {
                         const headerInfo = headerData.find(h => h.columnName === columnName);
+                        
                         if (headerInfo?.isDateColumn) {
                             // Para datas, converter para ISO
                             filterData.filters[columnName] = filter.values.map(parseDateToISO);
@@ -670,6 +671,25 @@
                     
                     total_pages = data.num_pages;
                     paginate(data.has_previous, data.has_next);
+
+                    // --- INÍCIO DA NOVA LÓGICA PARA FEEDBACK VISUAL DE FILTRO ---
+                    // Remove a classe 'filtered' de todos os cabeçalhos primeiro
+                    headers.forEach(header => {
+                        header.classList.remove('filtered');
+                    });
+
+                    // Adiciona a classe 'filtered' aos cabeçalhos com filtros ativos
+                    Object.keys(currentFilters).forEach(columnName => {
+                        const filter = currentFilters[columnName];
+                        if (filter.isApplied && filter.values.length > 0) {
+                            const headerInfo = headerData.find(h => h.columnName === columnName);
+                            if (headerInfo && headerInfo.element) {
+                                headerInfo.element.classList.add('filtered');
+                            }
+                        }
+                    });
+                    // --- FIM DA NOVA LÓGICA PARA FEEDBACK VISUAL DE FILTRO ---
+
                 })
                 .catch(error => {
                     console.error("Erro ao filtrar:", error);
