@@ -66,91 +66,108 @@
         }
 
         // Função para mostrar pop-up com detalhes do problema
+                // Função para mostrar pop-up com detalhes do problema
         function showProblemDetails(record) {
-            const problemText = record.problem_detected || 'Nenhum problema detectado';
+            // Assegura que os valores sejam strings vazias se forem null/undefined
+            const problemDetectedValue = record.problem_detected || '';
+            const feedbackTechnicalValue = record.feedback_technical || '';
+            const feedbackManagerValue = record.feedback_manager || '';
+
+            // Gera um ID único para cada textarea para evitar conflitos
+            const problemDetectedId = `problem_detected_${record.id}`;
+            const feedbackTechnicalId = `feedback_technical_${record.id}`;
+            const feedbackManagerId = `feedback_manager_${record.id}`;
             
-            // Cria o conteúdo HTML do pop-up com informações detalhadas
+            // Cria o conteúdo HTML do pop-up com informações detalhadas e textareas editáveis
             const popupContent = `
                 <div style="text-align: left;">
-                    <h3 style="color: #0056b3; margin-bottom: 20px;">Detalhes do Problema</h3>
+                    <h3 style="color: var(--primary); margin-bottom: 20px;">Detalhes da Ocorrência</h3>
                     
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h4 style="margin-top: 0; color: #333;">Problema Detectado:</h4>
-                        <p style="margin: 0; line-height: 1.6; word-wrap: break-word;">${problemText}</p>
+                    <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-top: 0; color: var(--text);">Problema Detectado:</h4>
+                        <textarea id="${problemDetectedId}" 
+                                  data-record-id="${record.id}" 
+                                  data-field-name="problem_detected" 
+                                  data-initial-value="${problemDetectedValue}"
+                                  style="width: 100%; min-height: 100px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${problemDetectedValue}</textarea>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                         <div>
                             <strong>Técnico:</strong><br>
-                            <span style="color: #666;">${record.technical || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.technical || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>País:</strong><br>
-                            <span style="color: #666;">${record.country || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.country || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Dispositivo:</strong><br>
-                            <span style="color: #666;">${record.device || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.device || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Área:</strong><br>
-                            <span style="color: #666;">${record.area || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.area || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Serial:</strong><br>
-                            <span style="color: #666;">${record.serial || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.serial || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Marca:</strong><br>
-                            <span style="color: #666;">${record.brand || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.brand || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Modelo:</strong><br>
-                            <span style="color: #666;">${record.model || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.model || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Ano:</strong><br>
-                            <span style="color: #666;">${record.year || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.year || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Versão:</strong><br>
-                            <span style="color: #666;">${record.version || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.version || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Status:</strong><br>
-                            <span style="color: #666;">${record.status || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.status || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Responsável:</strong><br>
-                            <span style="color: #666;">${record.responsible || 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.responsible || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Data:</strong><br>
-                            <span style="color: #666;">${record.data ? formatDateToDisplay(record.data) : 'Não informado'}</span>
+                            <span style="color: var(--text-light);">${record.data ? formatDateToDisplay(record.data) : 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Prazo:</strong><br>
-                            <span style="color: #666;">${record.deadline ? formatDateToDisplay(record.deadline) : 'Não definido'}</span>
+                            <span style="color: var(--text-light);">${record.deadline ? formatDateToDisplay(record.deadline) : 'Não definido'}</span>
                         </div>
                         <div>
                             <strong>Finalizado:</strong><br>
-                            <span style="color: #666;">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
+                            <span style="color: var(--text-light);">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
                         </div>
                     </div>
                     
-                    ${record.feedback_technical ? `
-                        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                            <h4 style="margin-top: 0; color: #0056b3;">Feedback Técnico:</h4>
-                            <p style="margin: 0; line-height: 1.6; word-wrap: break-word;">${record.feedback_technical}</p>
-                        </div>
-                    ` : ''}
+                    <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="margin-top: 0; color: var(--primary);">Feedback Técnico:</h4>
+                        <textarea id="${feedbackTechnicalId}" 
+                                  data-record-id="${record.id}" 
+                                  data-field-name="feedback_technical" 
+                                  data-initial-value="${feedbackTechnicalValue}"
+                                  style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${feedbackTechnicalValue}</textarea>
+                    </div>
                     
-                    ${record.feedback_manager ? `
-                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px;">
-                            <h4 style="margin-top: 0; color: #856404;">Feedback do Gerente:</h4>
-                            <p style="margin: 0; line-height: 1.6; word-wrap: break-word;">${record.feedback_manager}</p>
-                        </div>
-                    ` : ''}
+                    <div style="background: var(--gray); padding: 15px; border-radius: 8px;">
+                        <h4 style="margin-top: 0; color: var(--warning);">Feedback do Gerente:</h4>
+                        <textarea id="${feedbackManagerId}" 
+                                  data-record-id="${record.id}" 
+                                  data-field-name="feedback_manager" 
+                                  data-initial-value="${feedbackManagerValue}"
+                                  style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${feedbackManagerValue}</textarea>
+                    </div>
                 </div>
             `;
 
@@ -166,9 +183,97 @@
                 customClass: {
                     popup: 'problem-details-popup',
                     content: 'problem-details-content'
+                },
+                didOpen: () => {
+                    // Adiciona event listeners para os textareas após o SweetAlert ser aberto
+                    const problemDetectedTextarea = document.getElementById(problemDetectedId);
+                    const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);
+                    const feedbackManagerTextarea = document.getElementById(feedbackManagerId);
+
+                    if (problemDetectedTextarea) {
+                        problemDetectedTextarea.addEventListener('input', (e) => {
+                            atualizarDadosPopup(e.target);
+                        });
+                    }
+                    if (feedbackTechnicalTextarea) {
+                        feedbackTechnicalTextarea.addEventListener('input', (e) => {
+                            atualizarDadosPopup(e.target);
+                        });
+                    }
+                    if (feedbackManagerTextarea) {
+                        feedbackManagerTextarea.addEventListener('input', (e) => {
+                            atualizarDadosPopup(e.target);
+                        });
+                    }
                 }
             });
         }
+
+        // Nova função para lidar com a atualização de dados no pop-up
+        let typingTimerPopup;
+        const doneTypingIntervalPopup = 1500; // Tempo menor para salvar no pop-up, se desejar
+
+        function atualizarDadosPopup(inputElement) {
+            clearTimeout(typingTimerPopup);
+            const initialValue = inputElement.getAttribute('data-initial-value');
+            const currentValue = inputElement.value;
+
+            if (currentValue !== initialValue) {
+                inputElement.classList.add('pending-save');
+                typingTimerPopup = setTimeout(() => saveFieldPopup(inputElement), doneTypingIntervalPopup);
+            }
+        }
+
+        function saveFieldPopup(inputElement) {
+            const recordID = inputElement.getAttribute('data-record-id');
+            const fieldName = inputElement.getAttribute('data-field-name');
+            const newValue = inputElement.value;
+
+            inputElement.classList.remove('pending-save');
+            inputElement.classList.add('saving'); // Opcional: Adicionar uma classe para indicar salvamento
+
+            fetch('{% url "update_ocorrencia/" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN // Use o CSRF_TOKEN já definido
+                },
+                body: JSON.stringify({
+                    id: recordID,
+                    field: fieldName,
+                    value: newValue,
+                    // Não precisa de page_num aqui, a menos que a atualização afete a paginação
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na requisição');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    inputElement.classList.remove('saving');
+                    inputElement.classList.add('success');
+                    inputElement.setAttribute('data-initial-value', newValue); // Atualiza o valor inicial
+                    
+                    // Opcional: Atualizar a tabela principal para refletir a mudança imediatamente
+                    // Isso pode ser feito chamando applyFiltersAndSort() ou atualizando a célula específica
+                    // Se você quiser que a tabela principal reflita a mudança, chame applyFiltersAndSort()
+                    // applyFiltersAndSort(); 
+                } else {
+                    throw new Error(data.message || 'Erro desconhecido');
+                }
+                setTimeout(() => inputElement.classList.remove('success'), 2000); // Remove a classe 'success' após 2s
+            })
+            .catch(error => {
+                console.error('Erro ao salvar no pop-up:', error.message);
+                inputElement.classList.remove('saving');
+                inputElement.classList.add('error');
+                setTimeout(() => inputElement.classList.remove('error'), 5000);
+            });
+        }
+
 
         var page_num = 1
         let buttons_paginator = document.querySelectorAll('.button-paginator')
@@ -794,16 +899,7 @@
                         container.appendChild(detailsButton);
                         cell.appendChild(container);
                         
-                        // Manter funcionalidade de duplo clique para copiar
-                        cell.addEventListener('dblclick', (e)=>{
-                            navigator.clipboard.writeText(record.problem_detected || 'Nenhum problema detectado')
-                            Swal.fire({
-                                title:"Texto copiado",
-                                text: 'Problema copiado para área de transferência',
-                                showCloseButton: true,
-                                icon:'success'
-                            })
-                        })
+                        
                     }
                     
 
