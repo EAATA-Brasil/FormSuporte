@@ -5,7 +5,7 @@ from datetime import datetime, date
 def buscar_serial(request):
     context = {}
     if request.method == 'POST':
-        serial = request.POST.get('serial')
+        serial = request.POST.get('serial', '').strip()
         context['serial_digitado'] = serial
         try:
             cliente = Cliente.objects.get(serial=serial)
