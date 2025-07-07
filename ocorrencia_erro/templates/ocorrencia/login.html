@@ -92,7 +92,7 @@
 
     <form action="{% url 'login_ocorrencias' %}" method="POST">
       {% csrf_token %}
-      <input type="text" name="country" placeholder="País" required>
+      <input type="text" name="country" placeholder="Usuário" required>
       <input type="password" name="password" placeholder="Senha" required>
       {% if next %}
         <input type="hidden" name="next" value="{{ next }}">

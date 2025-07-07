@@ -6,95 +6,209 @@
   <title>Formulário de Ocorrência</title>
   <style>
     :root {
-      --primary: #0056b3;
-      --primary-light: #3a7bc8;
-      --secondary: #0a2e5a;
-      --dark: #1a1a1a;
-      --light: #ffffff;
-      --gray: #f5f7fa;
-      --text: #333333;
-      --text-light: #6b7280;
-      --border-color: #dee2e6;
-      --hover-bg: #e9ecef;
-    }
-    /* Reset e estilo básico */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    body {
-      background-color: var(--gray);
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      padding: 2rem;
-    }
-    form {
-      background-color: var(--light);
-      padding: 2rem;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      max-width: 600px;
-      width: 100%;
-      display: grid;
-      gap: 1rem;
-    }
-    form input[type="text"],
-    form textarea,
-    form input[type="submit"] {
-      padding: 0.75rem 1rem;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      font-size: 1rem;
-    }
-    form textarea {
-      min-height: 80px;
-    }
-    form input[type="text"]:focus,
-    form textarea:focus {
-      border-color: var(--primary);
-      outline: none;
-      background-color: #fdfdfd;
-    }
-    form input[readonly] {
-      background-color: #f0f0f0;
-      color: var(--text-light);
-    }
-    form input[type="submit"] {
-      background-color: var(--primary);
-      color: var(--light);
-      border: none;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    form input[type="submit"]:hover {
-      background-color: var(--primary-light);
-    }
-    @media (max-width: 480px) {
-      form {
-        padding: 1rem;
-      }
-    }
-      form select {
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 1rem;
+  --primary: #1a73e8;        /* Azul profissional */
+  --primary-dark: #155ab6;
+  --primary-light: #3a8ee6;
+  --secondary: #5f6368;      /* Cinza neutro */
+  --background: #f9fafb;
+  --text-primary: #202124;
+  --text-secondary: #5f6368;
+  --border-color: #dfe1e5;
+  --shadow-light: rgba(60, 64, 67, 0.15);
+  --shadow-hover: rgba(26, 115, 232, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-primary);
+}
+
+body {
+  background-color: var(--background);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  flex-direction: column;
+}
+
+/* Container dos botões */
+#actions_log {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 16px;
+  z-index: 1000;
+}
+
+/* Botões: base */
+.buttons_log {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px var(--shadow-light);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  letter-spacing: 0.03em;
+}
+
+/* Hover suave */
+.buttons_log:hover {
+  background-color: var(--primary-dark);
+  box-shadow: 0 4px 14px var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* Focus acessível */
+.buttons_log:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+/* Botão Criar Usuário (verde sóbrio) */
+.new_user {
+  background-color: #2e7d32;
+  box-shadow: 0 2px 6px rgba(46, 125, 50, 0.2);
+}
+
+.new_user:hover {
+  background-color: #27632a;
+  box-shadow: 0 4px 14px rgba(46, 125, 50, 0.4);
+}
+
+/* Botão Logout (vermelho elegante) */
+.logout {
+  background-color: #b00020;
+  box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
+}
+
+.logout:hover {
+  background-color: #7a0015;
+  box-shadow: 0 4px 14px rgba(176, 0, 32, 0.4);
+}
+
+/* Botão Login (azul padrão) */
+.login {
+  background-color: var(--primary);
+  box-shadow: 0 2px 6px var(--shadow-light);
+}
+
+.login:hover {
+  background-color: var(--primary-dark);
+  box-shadow: 0 4px 14px var(--shadow-hover);
+}
+
+/* Formulário com layout limpo */
+form {
+  background-color: white;
+  padding: 2.5rem 3rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(32, 33, 36, 0.08);
+  max-width: 600px;
+  width: 100%;
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* Inputs e selects limpos */
+form input[type="text"],
+form textarea,
+form select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  color: var(--text-primary);
+  transition: border-color 0.2s ease;
+  background-color: white;
+}
+
+form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+form input[type="text"]:focus,
+form textarea:focus,
+form select:focus {
+  border-color: var(--primary);
+  outline: none;
+  background-color: #fff;
+  box-shadow: 0 0 4px var(--primary-light);
+}
+
+form input[readonly] {
+  background-color: #f3f4f6;
+  color: var(--text-secondary);
+}
+
+form input[type="submit"] {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 0;
+  font-weight: 700;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 3px 10px var(--shadow-light);
+}
+
+form input[type="submit"]:hover {
+  background-color: var(--primary-dark);
+  box-shadow: 0 5px 18px var(--shadow-hover);
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+  form {
+    padding: 1.5rem 1.5rem;
   }
-  form select:focus {
-    border-color: var(--primary);
-    outline: none;
-    background-color: #fdfdfd;
+
+  #actions_log {
+    position: static;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 1rem;
   }
+
+  .buttons_log {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 6px;
+  }
+}
+
   </style>
-  
 </head>
 <body>
+  <div id="actions_log">
+    {%if has_full_permission%}
+      <button class="new_user buttons_log" onclick="newUser()">Criar novo usuário</button>
+    {%endif%}
 
+    {%if user.is_authenticated%}
+      <button class="logout buttons_log" onclick="logOut()">Logout</button>
+    {%else%}
+      <button class="login buttons_log" onclick="handleLogin()">Login</button>
+    {%endif%}
+  </div>
+
+  
   <form method="POST" id="form-ocorrencia">
     {% csrf_token %}
 
@@ -106,7 +220,7 @@
               <option value="{{ pais.id }}">{{ pais.name }}</option>
           {% endfor %}
       </select>
-      {% else %}
+    {% else %}
       <label for="country">País</label>
       {% if paises %}
           <select id="country" name="country" required>
@@ -124,7 +238,12 @@
     <input type="text" id="technical" name="technical" required />
 
     <label for="responsible">Responsável *</label>
-    <input type="text" id="responsible" name="responsible" required />
+    <select id="responsible" name="responsible" required>
+      <option value="">-- Selecione o responsável --</option>
+      {% for responsavel in todos_responsaveis_raw %}
+          <option value="{{ responsavel.name }}">{{ responsavel.name }}</option>
+      {% endfor %}
+    </select>
 
     <label for="device">Equipamento *</label>
     <input type="text" id="device" name="device" required />
@@ -148,32 +267,155 @@
     <input type="text" id="version" name="version" />
 
     {% if has_full_permission %}
-
       <label for="deadline">Deadline</label>
       <input type="text" id="deadline" name="deadline" />
 
       <label for="status">Status</label>
-      <select id="staus" name="status">
+      <select id="status" name="status">
         <option value="">-- Estado da ocorrência --</option>
-            <option value="Requisitado">Requisitado</option>
-            <option value="Concluído">Concluído</option>
-            <option value="Em progresso">Em progresso</option>
-            <option value="Atrasado">Atrasado</option>
+        <option value="Requisitado">Requisitado</option>
+        <option value="Concluído">Concluído</option>
+        <option value="Em progresso">Em progresso</option>
+        <option value="Atrasado">Atrasado</option>
       </select>
-
     {% else %}
-
       <input type="hidden" name="status" value="Requisitado" />
-
-    {%endif%}
+    {% endif %}
 
     <label for="problem_detected">Problema Detectado</label>
     <textarea id="problem_detected" name="problem_detected"></textarea>
 
     <input type="submit" value="Cadastrar Ocorrência" />
-</form>
+  </form>
 
 <script>
+  // Dados do backend - responsáveis por país (baseado no modelo CountryPermission)
+  const responsaveisPorPais = {{ responsaveis_por_pais|safe }};
+  const todosResponsaveis = {{ todos_responsaveis|safe }};
+  
+  // Criar mapeamento reverso: responsável -> países
+  const paisesPorResponsavel = {};
+  Object.keys(responsaveisPorPais).forEach(paisId => {
+    responsaveisPorPais[paisId].forEach(responsavel => {
+      if (!paisesPorResponsavel[responsavel.name]) {
+        paisesPorResponsavel[responsavel.name] = [];
+      }
+      paisesPorResponsavel[responsavel.name].push(parseInt(paisId));
+    });
+  });
+
+  // Elementos do DOM
+  const countrySelect = document.getElementById('country');
+  const responsibleSelect = document.getElementById('responsible');
+
+  // Função para popular o select de responsáveis baseado no país selecionado
+  function filterResponsiblesByCountry(countryId) {
+    // Salvar seleção atual
+    const currentResponsible = responsibleSelect.value;
+    
+    // Limpar opções existentes (exceto a primeira)
+    responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
+    
+    let responsaveisParaMostrar = [];
+    
+    if (!countryId) {
+      // Se nenhum país selecionado, mostrar todos os responsáveis
+      responsaveisParaMostrar = todosResponsaveis;
+    } else {
+      // Mostrar apenas responsáveis do país selecionado
+      responsaveisParaMostrar = responsaveisPorPais[countryId] || [];
+    }
+    
+    responsaveisParaMostrar.forEach(responsavel => {
+      const option = document.createElement('option');
+      option.value = responsavel.name;
+      option.textContent = responsavel.name;
+      responsibleSelect.appendChild(option);
+    });
+    
+    // Restaurar seleção se ainda for válida
+    if (currentResponsible && responsaveisParaMostrar.some(r => r.name === currentResponsible)) {
+      responsibleSelect.value = currentResponsible;
+    }
+  }
+
+  // Função para filtrar países baseado no responsável selecionado
+  function filterCountriesByResponsible(responsibleName) {
+    if (!responsibleName) {
+      // Se nenhum responsável selecionado, mostrar todos os países
+      Array.from(countrySelect.options).forEach(option => {
+        option.style.display = 'block';
+      });
+      return;
+    }
+
+    const paisesDoResponsavel = paisesPorResponsavel[responsibleName] || [];
+    
+    // Mostrar/ocultar países baseado no responsável
+    Array.from(countrySelect.options).forEach(option => {
+      if (option.value === '') return; // Pular a opção padrão
+      
+      const paisId = parseInt(option.value);
+      if (!paisesDoResponsavel.includes(paisId)) {
+        option.style.display = 'none';
+      } else {
+        option.style.display = 'block';
+      }
+    });
+  }
+
+  // Função para verificar se uma combinação é válida
+  function isValidCombination(countryId, responsibleName) {
+    if (!countryId || !responsibleName) return true;
+    
+    const responsaveisValidosParaPais = responsaveisPorPais[countryId] || [];
+    return responsaveisValidosParaPais.some(resp => resp.name === responsibleName);
+  }
+
+  // Event listeners para os selects
+  countrySelect.addEventListener('change', function() {
+    const selectedCountryId = this.value;
+    const currentResponsibleName = responsibleSelect.value;
+    
+    // Verificar se a combinação atual é válida
+    if (currentResponsibleName && !isValidCombination(selectedCountryId, currentResponsibleName)) {
+      // Se a combinação não é válida, limpar o responsável
+      responsibleSelect.value = '';
+    }
+    
+    // Resetar visibilidade de todos os países
+    Array.from(countrySelect.options).forEach(option => {
+      option.style.display = 'block';
+    });
+    
+    filterResponsiblesByCountry(selectedCountryId);
+  });
+
+  responsibleSelect.addEventListener('change', function() {
+    const selectedResponsibleName = this.value;
+    const currentCountryId = countrySelect.value;
+    
+    // Verificar se a combinação atual é válida
+    if (currentCountryId && !isValidCombination(currentCountryId, selectedResponsibleName)) {
+      // Se a combinação não é válida, limpar o país
+      countrySelect.value = '';
+    }
+    
+    filterCountriesByResponsible(selectedResponsibleName);
+  });
+
+  // Função para lidar com o login
+  function newUser(){
+    window.location.href = '/criar_usuario'
+  }
+  function logOut(){
+    window.location.href = '/logout'
+  }
+  function handleLogin() {
+    window.location.href = '/login';
+  }
+
+  // Event listener para o formulário
   document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -181,8 +423,15 @@
     const data = new FormData(form);
 
     const countrySelect = form.querySelector('#country');
+    const responsibleSelect = form.querySelector('#responsible');
+    
     if (countrySelect && countrySelect.value === "") {
         alert('Por favor, selecione um país.');
+        return;
+    }
+    
+    if (responsibleSelect && responsibleSelect.value === "") {
+        alert('Por favor, selecione um responsável.');
         return;
     }
 
@@ -204,14 +453,26 @@
         if (result.status === "success") {
             alert(result.message);
             form.reset();
+            // Reinicializar os selects após reset
+            filterResponsiblesByCountry('');
+            Array.from(countrySelect.options).forEach(option => {
+              option.style.display = 'block';
+            });
         } else {
             alert("Erro: " + result.message);
         }
     } catch (error) {
         alert("Erro inesperado: " + error.message);
     }
-});
+  });
+
+  // Inicializar quando a página carregar
+  document.addEventListener('DOMContentLoaded', function() {
+    filterResponsiblesByCountry('');
+  });
+  console.log('{{user}}')
 </script>
 
 </body>
 </html>
+

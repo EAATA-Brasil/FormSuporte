@@ -25,7 +25,9 @@
                 {% include 'ocorrencia/components/lineHead.html' with name='Detalhes' ID="problem_detected" checbox='false'%}
                 {% include 'ocorrencia/components/lineHead.html' with name='status' ID="status"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='prazo' ID="deadline"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='responsável' ID="responsible"%}
+                {% if has_full_permission%}
+                    {% include 'ocorrencia/components/lineHead.html' with name='responsável' ID="responsible"%}
+                {%endif%}
                 {% include 'ocorrencia/components/lineHead.html' with name='finalizado' ID="finished"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='Feedback Technical' ID="feedback_technical" checbox='false'%}
             </tr>
@@ -53,8 +55,22 @@
     display: inline-block;
     background-color: #157347;
     color: var(--light);">
-        <i class="fas fa-plus"></i> Novo Ocorrência
+        <i class="fas fa-plus"></i> Nova Ocorrência
     </a>
+    {%if has_full_permission%}
+        <a href="{% url 'criar_usuario' %}" style="padding: 0.6rem 1.2rem;
+        font-size: 1rem;
+        border: none;
+        border-radius: 0.3rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        text-decoration: none;
+        display: inline-block;
+        background-color:rgb(17, 90, 226);
+        color: var(--light);">
+            <i class="fas fa-plus"></i> Criar novo responsável
+        </a>
+    {%endif%}
 
 <script>
     document.addEventListener("DOMContentLoaded", function ( ) {
@@ -816,6 +832,10 @@
                     sort: currentSort,
                     page: page_num
                 };
+                if('{{has_full_permission}}' == 'False'){
+                    filterData.filters['responsible'] = []
+                    filterData.filters['responsible'].push('{{user}}'.toUpperCase())
+                }
 
                 // 2. Processar filtros ativos
                 Object.keys(currentFilters).forEach(columnName => {

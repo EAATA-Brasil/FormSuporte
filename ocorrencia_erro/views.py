@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.urls import reverse
-from django.contrib.auth import authenticate, login as login_django
+from django.contrib.auth import authenticate, login as login_django, logout as logout_django
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -37,7 +37,7 @@ FILTERABLE_COLUMNS_FOR_OPTIONS = [
     'data', 'deadline', 'finished'
 ]
 
-URL_LOGIN = 'login_ocorrencias'
+URL_LOGIN = 'subir_ocorrencia'
 
 @login_required(login_url=URL_LOGIN)
 def index(request):
@@ -70,15 +70,7 @@ def filter_data_view(request):
             user = request.user
             has_full_permission = user.is_superuser
 
-            # Restrição por país para usuários não admin
-            if not has_full_permission:
-                permitted_countries = CountryPermission.objects.filter(
-                    user=user
-                ).values_list('country', flat=True)
-                queryset = base_queryset.filter(country__in=permitted_countries)
-            else:
-                queryset = base_queryset
-
+            queryset = base_queryset
             # Construção dos filtros
             q_objects = Q()
             for column, values in filters.items():
@@ -262,7 +254,13 @@ def filter_data_view(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Método inválido'}, status=405)
-def login(request):
+
+def logout_view(request):
+    logout_django(request)
+    return redirect('subir_ocorrencia')
+
+
+def login_view(request):
     if request.method == "GET":
         next_url = request.GET.get('next', None)
         context = {'next': next_url} if next_url else {}
@@ -321,19 +319,56 @@ def criar_usuario(request):
         return redirect('/ocorrencia')
 
 
-@login_required(login_url=URL_LOGIN)
 def subir_ocorrencia(request):
     has_full_permission = request.user.is_superuser
-
-    if has_full_permission:
-        paises = Country.objects.all().order_by('name')
-    else:
-        paises = Country.objects.filter(
-            id__in=CountryPermission.objects.filter(user=request.user).values_list('country_id', flat=True)
-        ).order_by('name')
+    paises = Country.objects.all().order_by('name')
+    
+    # Buscar responsáveis baseado no modelo CountryPermission
+    # Criar mapeamento de responsáveis por país
+    responsaveis_por_pais = {}
+    todos_responsaveis = []
+    
+    # Buscar todos os usuários que têm permissões de país (são responsáveis)
+    usuarios_com_permissao = User.objects.filter(
+        country_permissions__isnull=False
+    ).distinct().values('id', 'first_name', 'last_name', 'username')
+    
+    # Criar lista de todos os responsáveis
+    responsaveis_dict = {}
+    for user in usuarios_com_permissao:
+        nome_completo = f"{user['first_name']} {user['last_name']}".strip()
+        if not nome_completo:
+            nome_completo = user['username']
+        
+        responsavel_data = {
+            'id': user['id'],
+            'name': nome_completo
+        }
+        
+        todos_responsaveis.append(responsavel_data)
+        responsaveis_dict[user['id']] = responsavel_data
+    
+    # Mapear responsáveis por país usando CountryPermission
+    for pais in paises:
+        # Buscar usuários que têm permissão neste país
+        permissoes = CountryPermission.objects.filter(country=pais).select_related('user')
+        
+        responsaveis_por_pais[pais.id] = []
+        for permissao in permissoes:
+            user = permissao.user
+            nome_completo = f"{user.first_name} {user.last_name}".strip()
+            if not nome_completo:
+                nome_completo = user.username
+            
+            responsaveis_por_pais[pais.id].append({
+                'id': user.id,
+                'name': nome_completo
+            })
+    
     if request.method == 'POST':
         country_id = request.POST.get("country")
         country = get_object_or_404(Country, id=country_id) if has_full_permission else paises.first()
+        
         record_data = {
             'technical': request.POST.get("technical"),
             'responsible': request.POST.get("responsible"),
@@ -346,8 +381,20 @@ def subir_ocorrencia(request):
             'country': country,
             'version': request.POST.get("version"),
             'problem_detected': request.POST.get("problem_detected"),
-            'status': STATUS_OCORRENCIA.get(f'{request.POST.get("status", "Requisitado")}','REQUESTED')
+            'status': Record.STATUS_OCORRENCIA.REQUESTED  # Usando o enum correto
         }
+
+        # Processar status se fornecido
+        status_mapping = {
+            'Requisitado': Record.STATUS_OCORRENCIA.REQUESTED,
+            'Concluído': Record.STATUS_OCORRENCIA.DONE,
+            'Em progresso': Record.STATUS_OCORRENCIA.PROGRESS,
+            'Atrasado': Record.STATUS_OCORRENCIA.LATE,
+        }
+        
+        status_input = request.POST.get("status", "Requisitado")
+        if status_input in status_mapping:
+            record_data['status'] = status_mapping[status_input]
 
         # Adiciona 'deadline' apenas se existir no POST e não for vazio
         if request.POST.get("deadline"):
@@ -357,11 +404,91 @@ def subir_ocorrencia(request):
         Record.objects.create(**record_data)
         return JsonResponse({"status": "success", "message": "Ocorrência cadastrada com sucesso."}, status=201)
 
+    # Converter para JSON para uso no template
+    responsaveis_por_pais_json = json.dumps(responsaveis_por_pais)
+    todos_responsaveis_json = json.dumps(todos_responsaveis)
+
     return render(request, 'ocorrencia/subir_ocorrencia.html', {
         'paises': paises,
         'has_full_permission': has_full_permission,
+        'responsaveis_por_pais': responsaveis_por_pais_json,
+        'todos_responsaveis': todos_responsaveis_json,
+        'responsaveis_por_pais_raw': responsaveis_por_pais,  # Para debug se necessário
+        'todos_responsaveis_raw': todos_responsaveis,  # Para debug se necessário
     })
 
+
+# Views auxiliares para AJAX (opcionais)
+def get_responsaveis_por_pais(request):
+    """
+    View para retornar responsáveis filtrados por país via AJAX
+    """
+    country_id = request.GET.get('country_id')
+    
+    if country_id:
+        try:
+            country = Country.objects.get(id=country_id)
+            # Buscar responsáveis que têm permissão neste país
+            permissoes = CountryPermission.objects.filter(country=country).select_related('user')
+            
+            responsaveis_list = []
+            for permissao in permissoes:
+                user = permissao.user
+                nome_completo = f"{user.first_name} {user.last_name}".strip()
+                if not nome_completo:
+                    nome_completo = user.username
+                
+                responsaveis_list.append({
+                    'id': user.id,
+                    'name': nome_completo
+                })
+        except Country.DoesNotExist:
+            responsaveis_list = []
+    else:
+        # Retornar todos os responsáveis
+        usuarios_com_permissao = User.objects.filter(
+            country_permissions__isnull=False
+        ).distinct().values('id', 'first_name', 'last_name', 'username')
+        
+        responsaveis_list = []
+        for user in usuarios_com_permissao:
+            nome_completo = f"{user['first_name']} {user['last_name']}".strip()
+            if not nome_completo:
+                nome_completo = user['username']
+            
+            responsaveis_list.append({
+                'id': user['id'],
+                'name': nome_completo
+            })
+    
+    return JsonResponse({'responsaveis': responsaveis_list})
+
+
+def get_paises_por_responsavel(request):
+    """
+    View para retornar países filtrados por responsável via AJAX
+    """
+    responsavel_id = request.GET.get('responsavel_id')
+    
+    if responsavel_id:
+        try:
+            user = User.objects.get(id=responsavel_id)
+            # Buscar países para os quais este usuário tem permissão
+            permissoes = CountryPermission.objects.filter(user=user).select_related('country')
+            
+            paises_list = []
+            for permissao in permissoes:
+                paises_list.append({
+                    'id': permissao.country.id,
+                    'name': permissao.country.name
+                })
+        except User.DoesNotExist:
+            paises_list = []
+    else:
+        # Retornar todos os países
+        paises_list = list(Country.objects.all().values('id', 'name'))
+    
+    return JsonResponse({'paises': paises_list})
 
 @login_required(login_url=URL_LOGIN)
 def alterar_dados(request):
