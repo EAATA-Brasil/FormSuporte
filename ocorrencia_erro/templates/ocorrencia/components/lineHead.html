@@ -1,6 +1,6 @@
 {% if not ID %}
     {% with ID=name %}
-    <th data-column="{{ID}}">
+    <th data-column="{{ID}}" style="position:sticky; top:0; z-index:10; border-spacing:0; border:none; padding:15px 10px;">
         {{name}}
         {%if checbox != 'false'%}
             <span class="filter-icon">▼</span>
@@ -9,7 +9,7 @@
     </th>
     {% endwith %}
 {%else%}
-    <th data-column="{{ID}}">
+    <th data-column="{{ID}}" style="position:sticky; top:0; z-index:10; border-spacing:0; border:none; padding:15px 10px;">
         {{name}}
         {%if checbox != 'false'%}
             <span class="filter-icon">▼</span>

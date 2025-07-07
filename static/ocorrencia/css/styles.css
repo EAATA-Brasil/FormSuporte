@@ -731,8 +731,7 @@ body {
 /* Melhorias para inputs editáveis na tabela */
 .table input[type="text"],
 .table textarea {
-    width: 100%;
-    min-width: 180px;
+    width: 90px;
     background: #fff;
     padding: 4px 8px;
     border-radius: 4px;

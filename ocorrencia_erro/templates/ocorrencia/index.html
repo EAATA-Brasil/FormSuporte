@@ -14,21 +14,20 @@
 
     <table id="data-table" class="table">
         <thead>
-            <tr>
+            <tr style="background-color: #0459B5;">
                 {% include 'ocorrencia/components/lineHead.html' with name='data' ID="data"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='technical' ID="technical"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='Técnico' ID="technical"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='país' ID="country"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='device' ID="device"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='dispositivo' ID="device"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='area' ID="area"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='brand' ID="brand"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='model' ID="model"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='Problem Detected' ID="problem_detected" checbox='false'%}
+                {% include 'ocorrencia/components/lineHead.html' with name='marca' ID="brand"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='modelo' ID="model"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='Detalhes' ID="problem_detected" checbox='false'%}
                 {% include 'ocorrencia/components/lineHead.html' with name='status' ID="status"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='deadline' ID="deadline"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='responsible' ID="responsible"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='finished' ID="finished"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='prazo' ID="deadline"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='responsável' ID="responsible"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='finalizado' ID="finished"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='Feedback Technical' ID="feedback_technical" checbox='false'%}
-                {% include 'ocorrencia/components/lineHead.html' with name='Feedback Manager' ID="feedback_manager" checbox='false'%}
             </tr>
             
         </thead>
@@ -205,6 +204,54 @@
                             atualizarDadosPopup(e.target);
                         });
                     }
+                }
+            });
+        }
+
+        function generateFeedback(record){
+            const feedbackTechnicalValue = record.feedback_technical || '';
+
+            // Gera um ID único para cada textarea para evitar conflitos
+            const feedbackTechnicalId = `feedback_technical_${record.id}`;
+            
+            // Cria o conteúdo HTML do pop-up com informações detalhadas e textareas editáveis
+            const popupContent = `
+                <div style="text-align: left;">
+                    
+                    
+                    <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <textarea id="${feedbackTechnicalId}" 
+                                  data-record-id="${record.id}" 
+                                  data-field-name="feedback_technical" 
+                                  data-initial-value="${feedbackTechnicalValue}"
+                                  style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${feedbackTechnicalValue}</textarea>
+                    </div>
+                    
+                </div>
+            `;
+            Swal.fire({
+                title: 'Escreva seu feedback técnico',
+                html: popupContent,
+                width: '80%',
+                maxWidth: '800px',
+                showCloseButton: true,
+                showConfirmButton: true,
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#0056b3',
+                customClass: {
+                    popup: 'feedback-technical-popup',
+                    content: 'feedback-technical-content'
+                },
+                didOpen: () => {
+                    // Adiciona event listeners para os textareas após o SweetAlert ser aberto
+                    const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);
+
+                    if (feedbackTechnicalTextarea) {
+                        feedbackTechnicalTextarea.addEventListener('input', (e) => {
+                            atualizarDadosPopup(e.target);
+                        });
+                    }
+                    
                 }
             });
         }
@@ -894,7 +941,7 @@
                         
                         // Botão para abrir detalhes
                         const detailsButton = document.createElement('button');
-                        detailsButton.innerHTML = '👁️ Ver Detalhes';
+                        detailsButton.innerHTML = 'Ver Detalhes';
                         detailsButton.style.cssText = `
                             background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
                             color: white;
@@ -928,7 +975,52 @@
                         
                         
                     }
-                    
+                    else if(columnName == 'feedback_technical'){
+                         cell.classList.add("no-cursor")
+                        
+                        // Criar container para o conteúdo
+                        const container = document.createElement('div');
+                        container.style.display = 'flex';
+                        container.style.alignItems = 'center';
+                        container.style.justifyContent = 'center';
+                        
+                        
+                        // Botão para abrir detalhes
+                        const detailsButton = document.createElement('button');
+                        detailsButton.innerHTML = 'Gerenciar feedback';
+                        detailsButton.style.cssText = `
+                            background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
+                            color: white;
+                            border: none;
+                            padding: 6px 12px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 0.8rem;
+                            font-weight: 600
+                        `;
+                        
+                        detailsButton.addEventListener('mouseenter', function() {
+                            this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
+                            this.style.transform = 'translateY(-1px)';
+                            this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
+                        });
+                        
+                        detailsButton.addEventListener('mouseleave', function() {
+                            this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
+                            this.style.transform = 'translateY(0)';
+                            this.style.boxShadow = 'none';
+                        });
+                        
+                        detailsButton.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            generateFeedback(record);
+                        });
+                        
+                        container.appendChild(detailsButton);
+                        cell.appendChild(container);
+                        
+                        
+                    }
 
                     else if (columnName == 'status'){
                         const data_deadline = record['deadline'] ? new Date(record['deadline'].split('/').reverse().join('-')) : null

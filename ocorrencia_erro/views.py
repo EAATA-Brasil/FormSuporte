@@ -174,7 +174,7 @@ def filter_data_view(request):
                 queryset = queryset.order_by(order_field)
 
             # Paginação
-            paginator = Paginator(queryset, 10)
+            paginator = Paginator(queryset, 11)
             page_obj = paginator.get_page(page_number)
 
             # Prepara os dados para resposta
