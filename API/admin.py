@@ -33,6 +33,9 @@ class EquipamentoAdmin(admin.ModelAdmin):
         ('Informações Básicas', {
             'fields': ('nome', 'marca', 'grupo', 'disponibilidade')
         }),
+        ('Configurações', {
+            'fields': ('entrada_sp_cnpj', 'entrada_outros_cnpj', 'entrada_outros_cpf', 'parcelas')
+        }),
         ('Valores', {
             'fields': ('custo', 'custo_geral', 'custo_cnpj', 'custo_cpf')
         }),
