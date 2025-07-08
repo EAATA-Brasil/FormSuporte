@@ -1,8 +1,8 @@
 from django.contrib import admin
-from .models import Equipamentos, TipoEquipamento, MarcaEquipamento
 from django import forms
-import re
+from .models import Equipamentos, MarcaEquipamento, TipoEquipamento
 
+# Formulário personalizado para estilizar campos longos
 class EquipamentoForm(forms.ModelForm):
     class Meta:
         model = Equipamentos
@@ -12,24 +12,23 @@ class EquipamentoForm(forms.ModelForm):
                 'style': 'height: 200px; width: 80%;',
                 'placeholder': 'Use *negrito*, _itálico_, ~tachado~, `código`'
             }),
+            'detalhes_sp': forms.Textarea(attrs={
+                'style': 'height: 200px; width: 80%;',
+                'placeholder': 'Use *negrito*, _itálico_, ~tachado~, `código`'
+            }),
         }
 
-@admin.register(TipoEquipamento)
-class GrupoEquipamentoAdmin(admin.ModelAdmin):
-    list_display = ('nome',)
-    search_fields = ('nome',)
-
-@admin.register(MarcaEquipamento)
-class MarcaEquipamentoAdmin(admin.ModelAdmin):
-    list_display = ('nome',)
-    search_fields = ('nome',)
-
+# Registro do modelo Equipamentos com personalização completa
 @admin.register(Equipamentos)
 class EquipamentoAdmin(admin.ModelAdmin):
+    form = EquipamentoForm
+
     list_display = ('nome', 'marca', 'grupo', 'disponibilidade')
     list_filter = ('grupo__nome', 'disponibilidade', 'marca__nome')
     search_fields = ('nome', 'marca__nome', 'grupo__nome')
-    
+
+    readonly_fields = ('detalhes_html', 'detalhes_sp_html')
+
     fieldsets = (
         ('Informações Básicas', {
             'fields': ('nome', 'marca', 'grupo', 'disponibilidade')
@@ -37,10 +36,23 @@ class EquipamentoAdmin(admin.ModelAdmin):
         ('Valores', {
             'fields': ('custo', 'custo_geral', 'custo_cnpj', 'custo_cpf')
         }),
-        ('Detalhes', {
+        ('Detalhes Gerais', {
             'fields': ('detalhes', 'detalhes_html'),
-            'description': 'Use formatação WhatsApp: *negrito*, _itálico_, ~tachado~, `código`'
+            'description': 'Use *negrito*, _itálico_, ~tachado~, `código`, ou links completos (https://...)'
+        }),
+        ('Detalhes SP', {
+            'fields': ('detalhes_sp', 'detalhes_sp_html'),
+            'description': 'Versão alternativa para São Paulo. Mesmo formato do campo anterior.'
         }),
     )
-    
-    readonly_fields = ('detalhes_html',)
+
+# Registro auxiliar (sem customização, apenas visibilidade no admin)
+@admin.register(MarcaEquipamento)
+class MarcaEquipamentoAdmin(admin.ModelAdmin):
+    list_display = ('nome',)
+    search_fields = ('nome',)
+
+@admin.register(TipoEquipamento)
+class TipoEquipamentoAdmin(admin.ModelAdmin):
+    list_display = ('nome',)
+    search_fields = ('nome',)
