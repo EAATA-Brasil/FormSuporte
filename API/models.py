@@ -40,6 +40,11 @@ class Equipamentos(models.Model):
     custo_cnpj = models.FloatField(verbose_name='Valor do equipamento para CNPJ fora de SP')
     custo_cpf = models.FloatField(verbose_name='Valor do equipamento para CPF fora de SP')
 
+    entrada_sp_cnpj = models.FloatField(verbose_name='Entrada para São Paulo com CNPJ (padrão)')
+    entrada_outros_cnpj = models.FloatField(verbose_name='Entrada para outros estados com CNPJ (padrão)')
+    entrada_outros_cpf = models.FloatField(verbose_name='Entrada para outros estados com CPF (padrão)')
+    parcelas = models.FloatField(verbose_name='Quantidade de parcelas padrão')
+
     disponibilidade = models.BooleanField(default=True, verbose_name='Equipamento disponível')
 
     detalhes = models.TextField(verbose_name='Detalhes do equipamento', blank=True, null=True)
