@@ -35,7 +35,7 @@ class Equipamentos(models.Model):
         verbose_name='Tipo do equipamento'
     )
 
-    custo = models.FloatField(verbose_name='Custo do equipamento')
+    custo = models.FloatField(verbose_name='Custo do equipamento', blank=True, null=True)
     custo_geral = models.FloatField(verbose_name='Valor do equipamento dentro de SP')
     custo_cnpj = models.FloatField(verbose_name='Valor do equipamento para CNPJ fora de SP')
     custo_cpf = models.FloatField(verbose_name='Valor do equipamento para CPF fora de SP')
