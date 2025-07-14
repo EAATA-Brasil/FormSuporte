@@ -94,6 +94,14 @@ body {
   background-color: #b00020;
   box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
 }
+.redirecionar {
+  background-color: #525252ff;
+  box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
+}
+.redirecionar:hover {
+  background-color: #3f3f3fff;
+  box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
+}
 
 .logout:hover {
   background-color: #7a0015;
@@ -203,6 +211,7 @@ form input[type="submit"]:hover {
 
     {%if user.is_authenticated%}
       <button class="logout buttons_log" onclick="logOut()">Logout</button>
+      <button class="redirecionar buttons_log" onclick="redirecionar()">Voltar para tabela</button>
     {%else%}
       <button class="login buttons_log" onclick="handleLogin()">Login</button>
     {%endif%}
@@ -407,6 +416,9 @@ form input[type="submit"]:hover {
   // Função para lidar com o login
   function newUser(){
     window.location.href = '/criar_usuario'
+  }
+  function redirecionar(){
+    window.location.href = '/'
   }
   function logOut(){
     window.location.href = '/logout'
