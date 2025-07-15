@@ -9,6 +9,10 @@ class Country(models.Model):
 
     def __str__(self):
         return self.name
+class Device(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    def __str__(self):
+        return self.name
 
 class CountryPermission(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='country_permissions')
@@ -57,15 +61,18 @@ class Record(models.Model):
     )
 
     # Campos do equipamento
-    device = models.CharField(
-        max_length=100, 
-        default="N/A", 
+    device = models.ForeignKey(
+        Device, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
         verbose_name='Equipamento'
     )
     area = models.CharField(
         max_length=20, 
         default="N/A", 
-        verbose_name='Área'
+        verbose_name='Área',
+        
     )
     serial = models.CharField(
         max_length=20, 
@@ -150,6 +157,12 @@ class Record(models.Model):
             self.status = self.STATUS_OCORRENCIA.DONE
         elif self.status != self.STATUS_OCORRENCIA.DONE and self.finished:
             self.finished = None
+
+        
+        self.area = self.area.upper() if self.area else ''
+        self.brand = self.brand.upper() if self.brand else ''
+        self.model = self.model.upper() if self.model else ''
+        self.technical = self.technical.capitalize() if self.technical else ''
 
         # Validações de data
         if self.finished:

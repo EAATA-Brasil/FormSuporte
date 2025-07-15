@@ -180,7 +180,37 @@ form input[type="submit"]:hover {
   background-color: var(--primary-dark);
   box-shadow: 0 5px 18px var(--shadow-hover);
 }
+.area{
+  display:flex;
+  flex-direction:row;
+  justify-content:space-between;
+}
+.area span{
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+ input[type="radio"] {
+       appearance: none; /* Remove a aparência padrão */
+       -webkit-appearance: none; /* Remove a aparência padrão para navegadores WebKit */
+       width: 20px;
+       height: 20px;
+       border: 2px solid #ccc;
+       border-radius: 50%; /* Torna o botão redondo */
+       outline: none; /* Remove o contorno padrão */
+       background-color: #fff;
+       transition: background-color 0.2s ease; /* Adiciona uma transição suave */
+   }
 
+   input[type="radio"]:checked {
+       background-color: #009EE0; /* Cor quando selecionado */
+       border: 2px solid #009EE0;
+   }
+
+   input[type="radio"]:hover {
+       cursor: pointer; /* Muda o cursor para um ponteiro */
+       border: 2px solid #15446D;
+   }
 /* Responsividade */
 @media (max-width: 480px) {
   form {
@@ -202,6 +232,8 @@ form input[type="submit"]:hover {
 }
 
   </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
 <body>
   <div id="actions_log">
@@ -254,11 +286,30 @@ form input[type="submit"]:hover {
       {% endfor %}
     </select>
 
-    <label for="device">Equipamento *</label>
-    <input type="text" id="device" name="device" required />
+    <label for="device">Equipamentos *</label>
+    <select id="device" name="device" required>
+      <option value="">-- Selecione o responsável --</option>
+      {% for device in todos_equipamentos_raw %}
+          
+          <option value="{{ device.id }}">{{ device.name }}</option>
+      {% endfor %}
+    </select>
 
-    <label for="area">Área</label>
-    <input type="text" id="area" name="area" />
+    <label for="area">Área *</label>
+    <span class="area">
+      <span>
+        <input type="radio" name="area_radio" id="IMMO" value="IMMO" required>
+        <label for="IMMO">IMMO</label>
+      </span>
+      <span>
+        <input type="radio" name="area_radio" id="Diagnosis" value="Diagnosis">
+        <label for="Diagnosis">Diagnosis</label>
+      </span>
+      <span>
+        <input type="radio" name="area_radio" id="Device" value="Device">
+        <label for="Device">Device</label>
+      </span>
+    </span>
 
     <label for="serial">Serial</label>
     <input type="text" id="serial" name="serial" />
@@ -292,12 +343,13 @@ form input[type="submit"]:hover {
     {% endif %}
 
     <label for="problem_detected">Problema Detectado</label>
-    <textarea id="problem_detected" name="problem_detected"></textarea>
+    <textarea id="problem_detected" name="problem_detected" required></textarea>
 
-    <input type="submit" value="Cadastrar Ocorrência" />
+    <input type="submit" value="Cadastrar Ocorrência" required/>
   </form>
 
 <script>
+  flatpickr('#deadline', {'allowInput':false, 'dateFormat':'d/m/Y', 'minDate':'today'})
   // Dados do backend - responsáveis por país (baseado no modelo CountryPermission)
   const responsaveisPorPais = {{ responsaveis_por_pais|safe }};
   const todosResponsaveis = {{ todos_responsaveis|safe }};
@@ -482,7 +534,6 @@ form input[type="submit"]:hover {
   document.addEventListener('DOMContentLoaded', function() {
     filterResponsiblesByCountry('');
   });
-  console.log('{{user}}')
 </script>
 
 </body>

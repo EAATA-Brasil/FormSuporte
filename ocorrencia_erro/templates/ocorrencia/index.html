@@ -274,7 +274,7 @@
 
         // Nova função para lidar com a atualização de dados no pop-up
         let typingTimerPopup;
-        const doneTypingIntervalPopup = 1500; // Tempo menor para salvar no pop-up, se desejar
+        const doneTypingIntervalPopup = 100; // Tempo menor para salvar no pop-up, se desejar
 
         function atualizarDadosPopup(inputElement) {
             clearTimeout(typingTimerPopup);
@@ -323,7 +323,7 @@
                     // Opcional: Atualizar a tabela principal para refletir a mudança imediatamente
                     // Isso pode ser feito chamando applyFiltersAndSort() ou atualizando a célula específica
                     // Se você quiser que a tabela principal reflita a mudança, chame applyFiltersAndSort()
-                    // applyFiltersAndSort(); 
+                    applyFiltersAndSort(); 
                 } else {
                     throw new Error(data.message || 'Erro desconhecido');
                 }
@@ -478,7 +478,7 @@
 
         let openFilterBox = null;
         let currentFilters = {}; 
-        let currentSort = { column: "data", direction: "asc" };
+        let currentSort = { column: "data", direction: "desc" };
         let currentFilterOptions = {}; // Armazena as opções de filtro recebidas do backend
         const CSRF_TOKEN = getCookie("csrftoken");
 
@@ -1050,8 +1050,9 @@
 
                         cell.id = `${columnName}${record.id}`
                         cell.classList.add('field-container')
+                        cell.textContent = value
                         let statu = document.querySelector(`#${columnName}${record.id}`)
-                        statu.setAttribute('data-initial-value', value)
+                        statu.setAttribute('data-initial-value', cell.textContent)
 
                         let valor_inicial = statu.getAttribute('data-initial-value')
 
@@ -1059,7 +1060,6 @@
                             if(data_finished){
                                 statu.value = 'Concluído'
                                 saveField(statu)
-
                             }
                             else if(!data_deadline && valor_inicial != 'Requisitado'){
                                 statu.value = 'Requisitado'
@@ -1067,22 +1067,16 @@
                                 record['finished'].disabled = true
 
                             }
-                            else if(data_deadline && today  < data_deadline && valor_inicial != 'Em progresso'){
-                                console.log(valor_inicial);
+                            else if(data_deadline && today  < new Date(data_deadline.setDate(data_deadline.getDate()+1))){
                                 statu.value = 'Em progresso'
                                 saveField(statu)
 
                             }
-                            else if(data_deadline && today  > data_deadline && valor_inicial == 'Em progresso'){
+                            else if(data_deadline && today  > new Date(data_deadline.setDate(data_deadline.getDate()+1))){
                                 statu.value = 'Atrasado'
                                 saveField(statu)
-
                             }
-                            else if(data_deadline && today  > data_deadline && valor_inicial == 'Requisitado'){
-                                statu.value = 'Atrasado'
-                                saveField(statu)
-
-                            }
+                            
                         }
                         
                     }
@@ -1145,8 +1139,8 @@
                                 }
                                 else{
                                     
-                                    var deadline_data = new Date(record['deadline'])
-                                    var input_data = new Date(`${value.split('/')[1]}/${value.split('/')[0]}/${value.split('/')[2]}`)
+                                    var deadline_data = new Date(`${record['deadline'].split('/')[2]}-${record['deadline'].split('/')[1]}-${record['deadline'].split('/')[0]}`)
+                                    var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
                                     
                                     if(input_data < deadline_data){
                                         e.target.classList.add("erro")
@@ -1168,10 +1162,9 @@
                                     e.target.classList.remove("success")
                                 }
                                 else{
-                                    var finished = new Date(record['finished'])
+                                    var finished = new Date(`${record['finished'].split('/')[2]}-${record['finished'].split('/')[1]}-${record['finished'].split('/')[0]}`)
                                     var data = new Date(record['data'])
-                                    var input_data = new Date(`${value.split('/')[1]}/${value.split('/')[0]}/${value.split('/')[2]}`)
-                                    
+                                    var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
                                     if(input_data < data){
                                         e.target.classList.add("erro")
                                         e.target.classList.remove("success")
@@ -1314,7 +1307,7 @@
         applyFiltersAndSort(false); 
 
         let typingTimer;
-        const doneTypingInterval = 2000;
+        const doneTypingInterval = 100;
 
         function atualizarDados(e){   
             clearTimeout(typingTimer);   

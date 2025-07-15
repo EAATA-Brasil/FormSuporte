@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Record, CountryPermission, Country
+from .models import Record, CountryPermission, Country, Device
 
 # Admin para Record
 @admin.register(Record)
@@ -34,5 +34,10 @@ admin.site.register(User, CustomUserAdmin)
 # Opcional: admin para Country (pra facilitar adicionar países via admin)
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+    
+@admin.register(Device)
+class DeviceAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)

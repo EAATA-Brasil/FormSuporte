@@ -13,7 +13,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
-from .models import Record, Country, CountryPermission
+from .models import Record, Country, CountryPermission, Device
 
 # Constantes
 DATE_COLUMNS = ["data", "deadline", "finished"]
@@ -82,7 +82,7 @@ def filter_data_view(request):
                 non_empty = [v for v in values if v != '']
 
                 TEXT_CASE_INSENSITIVE_COLUMNS = [
-                    'technical', 'device', 'area', 'serial', 'brand', 'model',
+                    'technical', 'area', 'serial', 'brand', 'model',
                     'version', 'responsible', 'problem_detected', 'feedback_technical',
                     'feedback_manager'
                 ]
@@ -127,6 +127,17 @@ def filter_data_view(request):
                                 for val in filtered:
                                     country_q_objects |= Q(country__name__iexact=val)
                                 column_q |= country_q_objects
+                    elif column == 'device':
+                        # Para país, a busca é por nome, que pode ser case-insensitive
+                        # Mas como você já tem um filtro de permissão, vamos manter a lógica de permissão
+                        # e adicionar a case-insensitivity na busca pelo nome do país.
+                        if has_full_permission:
+                            # Usar __iexact para correspondência exata case-insensitive
+                            device_q_objects = Q()
+                            for val in non_empty:
+                                device_q_objects |= Q(device__name__iexact=val)
+                            column_q |= device_q_objects
+
                     elif column in TEXT_CASE_INSENSITIVE_COLUMNS:
                         # Para colunas de texto, usar __iexact para correspondência exata case-insensitive
                         # Ou __icontains se você quiser uma busca "contém" case-insensitive
@@ -143,6 +154,8 @@ def filter_data_view(request):
                 if has_empty:
                     if column == 'country':
                         column_q |= Q(country__isnull=True)
+                    elif column == 'device':
+                        column_q |= Q(device__isnull=True)
                     else:
                         column_q |= Q(**{f'{column}__isnull': True}) | Q(**{f'{column}__exact': ''})
 
@@ -161,6 +174,9 @@ def filter_data_view(request):
                 if sort_column == 'country':
                     # Para ordenação de país, use country__name
                     order_field = f"{'-' if sort_direction == 'desc' else ''}country__name"
+                if sort_column == 'device':
+                    # Para ordenação de país, use country__name
+                    order_field = f"{'-' if sort_direction == 'desc' else ''}device__name"
                 else:
                     order_field = f"{'-' if sort_direction == 'desc' else ''}{sort_column}"
                 queryset = queryset.order_by(order_field)
@@ -177,7 +193,7 @@ def filter_data_view(request):
                     'data': record.data or '',
                     'technical': record.technical or '',
                     'country': record.country.name if record.country else '',
-                    'device': record.device or '',
+                    'device': record.device.name if record.device else '',
                     'area': record.area or '',
                     'serial': record.serial or '',
                     'brand': record.brand or '',
@@ -205,6 +221,16 @@ def filter_data_view(request):
                         options = CountryPermission.objects.filter(
                             user=user
                         ).values_list('country__name', flat=True).distinct()
+                    # Padroniza para maiúsculas para unicidade na lista de opções
+                    filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
+                elif col == 'device':
+                    if has_full_permission:
+                        options = base_queryset.exclude(device__isnull=True
+                                ).values_list('device__name', flat=True).distinct()
+                    else:
+                        options = CountryPermission.objects.filter(
+                            user=user
+                        ).values_list('device__name', flat=True).distinct()
                     # Padroniza para maiúsculas para unicidade na lista de opções
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
                 elif col == 'status':
@@ -327,12 +353,15 @@ def subir_ocorrencia(request):
     # Criar mapeamento de responsáveis por país
     responsaveis_por_pais = {}
     todos_responsaveis = []
+    todos_equipamentos = []
     
     # Buscar todos os usuários que têm permissões de país (são responsáveis)
     usuarios_com_permissao = User.objects.filter(
         country_permissions__isnull=False
     ).distinct().values('id', 'first_name', 'last_name', 'username')
     
+    equipamentos_possiveis = Device.objects.all().values('id','name')
+
     # Criar lista de todos os responsáveis
     responsaveis_dict = {}
     for user in usuarios_com_permissao:
@@ -347,7 +376,16 @@ def subir_ocorrencia(request):
         
         todos_responsaveis.append(responsavel_data)
         responsaveis_dict[user['id']] = responsavel_data
-    
+
+    equipamento_dict = {}
+    for equipamento in equipamentos_possiveis:
+        equipamento_data ={
+            'id': equipamento['id'],
+            'name': equipamento['name']
+        }
+        todos_equipamentos.append(equipamento_data)
+        equipamento_dict[equipamento['id']]=equipamento_data
+            
     # Mapear responsáveis por país usando CountryPermission
     for pais in paises:
         # Buscar usuários que têm permissão neste país
@@ -368,12 +406,15 @@ def subir_ocorrencia(request):
     if request.method == 'POST':
         country_id = request.POST.get("country")
         country = get_object_or_404(Country, id=country_id) if has_full_permission else paises.first()
-        
+        device_id = request.POST.get("device")
+        device = get_object_or_404(Device, id=device_id) 
+
+
         record_data = {
             'technical': request.POST.get("technical"),
             'responsible': request.POST.get("responsible"),
-            'device': request.POST.get("device"),
-            'area': request.POST.get("area"),
+            'device': device,
+            'area': request.POST.get("area_radio"),
             'serial': request.POST.get("serial"),
             'brand': request.POST.get("brand"),
             'model': request.POST.get("model"),
@@ -398,7 +439,11 @@ def subir_ocorrencia(request):
 
         # Adiciona 'deadline' apenas se existir no POST e não for vazio
         if request.POST.get("deadline"):
-            record_data['deadline'] = request.POST.get("deadline")
+            try:
+                record_data['deadline'] = datetime.strptime(request.POST.get("deadline"), '%d/%m/%Y').date()
+            except Exception as e:
+                print(e)
+                record_data['deadline'] = request.POST.get("deadline")
 
         # Cria o registro
         Record.objects.create(**record_data)
@@ -407,6 +452,7 @@ def subir_ocorrencia(request):
     # Converter para JSON para uso no template
     responsaveis_por_pais_json = json.dumps(responsaveis_por_pais)
     todos_responsaveis_json = json.dumps(todos_responsaveis)
+    todos_equipamentos_json = json.dumps(todos_equipamentos)
 
     return render(request, 'ocorrencia/subir_ocorrencia.html', {
         'paises': paises,
@@ -415,6 +461,7 @@ def subir_ocorrencia(request):
         'todos_responsaveis': todos_responsaveis_json,
         'responsaveis_por_pais_raw': responsaveis_por_pais,  # Para debug se necessário
         'todos_responsaveis_raw': todos_responsaveis,  # Para debug se necessário
+        'todos_equipamentos_raw': todos_equipamentos,  # Para debug se necessário
     })
 
 
@@ -498,7 +545,6 @@ def alterar_dados(request):
             record = Record.objects.get(id=data.get('id'))
             field_name = data.get('field')
             new_value = data.get('value')
-
             if field_name == 'country':
                 new_value = get_object_or_404(Country, id=new_value)
                 setattr(record, field_name, new_value)
@@ -527,7 +573,6 @@ def alterar_dados(request):
                 new_display = new_value
             
             record.save(update_fields=[field_name])
-            print(record)
             return JsonResponse({'status': 'success', 'new_display': new_display, 'page_num': data.get("page_num")})
 
         except Exception as e:
