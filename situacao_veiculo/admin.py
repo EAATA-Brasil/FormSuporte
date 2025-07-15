@@ -3,5 +3,5 @@ from .models import Cliente
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('serial', 'nome')
+    list_display = ('serial', 'nome', 'vencimento')
     search_fields = ('serial','nome')
