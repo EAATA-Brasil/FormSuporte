@@ -227,10 +227,6 @@ def filter_data_view(request):
                     if has_full_permission:
                         options = base_queryset.exclude(device__isnull=True
                                 ).values_list('device__name', flat=True).distinct()
-                    else:
-                        options = CountryPermission.objects.filter(
-                            user=user
-                        ).values_list('device__name', flat=True).distinct()
                     # Padroniza para maiúsculas para unicidade na lista de opções
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
                 elif col == 'status':
