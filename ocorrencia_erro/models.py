@@ -5,11 +5,18 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 class Country(models.Model):
+    class Meta:
+        verbose_name = "País"
+        verbose_name_plural = "Países"
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
+    
 class Device(models.Model):
+    class Meta:
+        verbose_name = "Equipamento"
+        verbose_name_plural = "Equipamentos"
     name = models.CharField(max_length=100, unique=True)
     def __str__(self):
         return self.name

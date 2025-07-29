@@ -29,7 +29,6 @@ class VeiculoAdmin(admin.ModelAdmin):
         }),
         ('Detalhes Técnicos', {
             'fields': ('sistema', 'tipo_chave', 'transponder', 'frequencia'),
-            'classes': ('collapse',)
         }),
         ('Métodos de Programação', {
             'fields': ('add_key', 'read_password', 'remote_learning', 'key_lost'),

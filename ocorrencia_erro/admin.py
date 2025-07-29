@@ -7,7 +7,9 @@ from .models import Record, CountryPermission, Country, Device
 @admin.register(Record)
 class RecordAdmin(admin.ModelAdmin):
     list_display = ('status', 'data', 'responsible', 'device', 'country')
-    search_fields = ('responsible', 'device', 'country__name')  # Buscando por nome do país
+    search_fields = ('responsible', 'device__name', 'country__name')  # Buscando por nome do país
+    list_filter = ('status','responsible', 'country__name')
+    
 
 # Inline para mostrar os países associados ao usuário
 class CountryPermissionInline(admin.TabularInline):
@@ -36,7 +38,9 @@ admin.site.register(User, CustomUserAdmin)
 class CountryAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
-    
+    verbose_name = "País de responsabilidade"
+    verbose_name_plural = "Países de responsabilidade"
+
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):
     list_display = ('name',)
