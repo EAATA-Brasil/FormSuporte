@@ -64,7 +64,9 @@ class Record(models.Model):
     responsible = models.CharField(
         max_length=100, 
         default="Não identificado", 
-        verbose_name='Responsável'
+        verbose_name='Responsável',
+        null=True,
+        blank=True
     )
 
     # Campos do equipamento

@@ -278,19 +278,20 @@ form input[type="submit"]:hover {
     <label for="technical">Técnico *</label>
     <input type="text" id="technical" name="technical" required />
 
-    <label for="responsible">Responsável *</label>
-    <select id="responsible" name="responsible" required>
-      <option value="">-- Selecione o responsável --</option>
-      {% for responsavel in todos_responsaveis_raw %}
-          <option value="{{ responsavel.name }}">{{ responsavel.name }}</option>
-      {% endfor %}
-    </select>
+    {% if has_full_permission %}
+      <label for="responsible">Responsável </label>
+      <select id="responsible" name="responsible">
+        <option value="">-- Selecione o responsável --</option>
+        {% for responsavel in todos_responsaveis_raw %}
+            <option value="{{ responsavel.name }}">{{ responsavel.name }}</option>
+        {% endfor %}
+      </select>
+    {% endif %}
 
     <label for="device">Equipamentos *</label>
     <select id="device" name="device" required>
       <option value="">-- Selecione o responsável --</option>
       {% for device in todos_equipamentos_raw %}
-          
           <option value="{{ device.id }}">{{ device.name }}</option>
       {% endfor %}
     </select>
@@ -436,34 +437,39 @@ form input[type="submit"]:hover {
   // Event listeners para os selects
   countrySelect.addEventListener('change', function() {
     const selectedCountryId = this.value;
-    const currentResponsibleName = responsibleSelect.value;
     
     // Verificar se a combinação atual é válida
-    if (currentResponsibleName && !isValidCombination(selectedCountryId, currentResponsibleName)) {
-      // Se a combinação não é válida, limpar o responsável
-      responsibleSelect.value = '';
+    if('{{has_full_permission}}' == 'True'){
+      const currentResponsibleName = responsibleSelect.value;
+      if (currentResponsibleName && !isValidCombination(selectedCountryId, currentResponsibleName)) {
+        // Se a combinação não é válida, limpar o responsável
+        responsibleSelect.value = '';
+      }
     }
     
     // Resetar visibilidade de todos os países
     Array.from(countrySelect.options).forEach(option => {
       option.style.display = 'block';
     });
-    
-    filterResponsiblesByCountry(selectedCountryId);
+    if('{{has_full_permission}}' == 'True'){
+      filterResponsiblesByCountry(selectedCountryId);
+    }
   });
 
-  responsibleSelect.addEventListener('change', function() {
-    const selectedResponsibleName = this.value;
-    const currentCountryId = countrySelect.value;
-    
-    // Verificar se a combinação atual é válida
-    if (currentCountryId && !isValidCombination(currentCountryId, selectedResponsibleName)) {
-      // Se a combinação não é válida, limpar o país
-      countrySelect.value = '';
-    }
-    
-    filterCountriesByResponsible(selectedResponsibleName);
-  });
+  if('{{has_full_permission}}' == 'True'){
+    responsibleSelect.addEventListener('change', function() {
+      const selectedResponsibleName = this.value;
+      const currentCountryId = countrySelect.value;
+      
+      // Verificar se a combinação atual é válida
+      if (currentCountryId && !isValidCombination(currentCountryId, selectedResponsibleName)) {
+        // Se a combinação não é válida, limpar o país
+        countrySelect.value = '';
+      }
+      
+      filterCountriesByResponsible(selectedResponsibleName);
+    });
+  }
 
   // Função para lidar com o login
   function newUser(){
@@ -493,11 +499,7 @@ form input[type="submit"]:hover {
         alert('Por favor, selecione um país.');
         return;
     }
-    
-    if (responsibleSelect && responsibleSelect.value === "") {
-        alert('Por favor, selecione um responsável.');
-        return;
-    }
+
 
     try {
         const response = await fetch("", {
@@ -518,7 +520,9 @@ form input[type="submit"]:hover {
             alert(result.message);
             form.reset();
             // Reinicializar os selects após reset
-            filterResponsiblesByCountry('');
+            if('{{has_full_permission}}' == 'True'){
+              filterResponsiblesByCountry('');
+            }
             Array.from(countrySelect.options).forEach(option => {
               option.style.display = 'block';
             });
@@ -532,7 +536,9 @@ form input[type="submit"]:hover {
 
   // Inicializar quando a página carregar
   document.addEventListener('DOMContentLoaded', function() {
-    filterResponsiblesByCountry('');
+    if('{{has_full_permission}}' == 'True'){
+      filterResponsiblesByCountry('');
+    }
   });
 </script>
 

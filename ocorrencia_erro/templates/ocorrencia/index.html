@@ -73,6 +73,24 @@
     {%endif%}
 
 <script>
+    function capitalizeFirstLetter(str) {
+        str = str.toLowerCase()
+        if (typeof str !== 'string' || str.length === 0) {
+            return str; // Return as-is if not a string or empty
+        }
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+    const responsaveisPorPais = {{ responsaveis_por_pais|safe }};
+    const todosResponsaveis = {{ todos_responsaveis|safe }};
+    const paisesPorResponsavel = {};
+    Object.keys(responsaveisPorPais).forEach(paisId => {
+        responsaveisPorPais[paisId].forEach(responsavel => {
+        if (!paisesPorResponsavel[responsavel.name]) {
+            paisesPorResponsavel[responsavel.name] = [];
+        }
+        paisesPorResponsavel[responsavel.name].push(parseInt(paisId));
+        });
+    });
     document.addEventListener("DOMContentLoaded", function ( ) {
         "use strict";
 
@@ -1192,30 +1210,43 @@
                             let teste = flatpickr('.date-text-input', {'allowInput':true, 'dateFormat':'d/m/Y', 'minDate':'today'})
                         }
                     }
-                    else if((columnName == 'responsible' && '{{has_full_permission}}' === 'True')){
-                        cell.id = `${columnName}${record.id}`
-                        cell.classList.add('editable-field-container')
-                        cell.classList.add('date-input-container')
+                    else if ((columnName == 'responsible' && '{{has_full_permission}}' === 'True')) {
+                        cell.id = `${columnName}${record.id}`;
+                        cell.classList.add('editable-field-container');
+                        cell.classList.add('date-input-container');
 
-                        let input = document.createElement('input')
-                            input.setAttribute('data-initial-value', value)
-                            input.rows = 5
-                            input.cols = 20
-                            input.placeholder = value
-                            // input.title="Clique duas vezes para copiar o texto"
-                            input.id = `${columnName}${record.id}`
-                            input.addEventListener('input', (e)=>atualizarDados(e))
-                            input.addEventListener('dblclick', (e)=>{
-                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
-                            Swal.fire({
-                                title:"Texto copiado",
-                                text: 'Feedback copiado para área de transferência',
-                                showCloseButton: true,
-                                icon:'success'
-                            })
-                        })
-                        cell.appendChild(input)
-                    }
+                        const select = document.createElement('select');
+                        select.setAttribute('data-initial-value', value);
+                        select.placeholder = value;
+                        select.id = `${columnName}${record.id}`;
+
+                        // Adiciona evento para atualizar valor
+                        select.addEventListener('change', (e) => atualizarDados(e));
+
+                        // Placeholder temporário até carregar os responsáveis
+                        const optionPlaceholder = document.createElement('option');
+                        optionPlaceholder.textContent = '-- Selecione o responsável --';
+                        optionPlaceholder.disabled = true;
+                        optionPlaceholder.selected = true;
+                        select.appendChild(optionPlaceholder);
+
+                        // Adiciona o select na célula
+                        cell.appendChild(select);
+
+                        // Buscar responsáveis via AJAX com base no país
+                        const responsaveis = responsaveisPorPais[record.country]
+                        
+                        for(let responsavel in responsaveis){
+                            const opt = document.createElement('option');
+                            opt.textContent = capitalizeFirstLetter(responsaveis[responsavel].name)
+                            opt.value = responsaveis[responsavel].name
+                            if (responsaveis[responsavel].name.toUpperCase() === select.getAttribute('data-initial-value').toUpperCase()) {
+                                opt.selected = true;
+                            }
+                            select.appendChild(opt);
+                        }
+                        }
+
                     
                     else if(headerInfo.isTextAreaColumn){
                         cell.id = `${columnName}${record.id}`

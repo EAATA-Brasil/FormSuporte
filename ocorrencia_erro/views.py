@@ -39,8 +39,56 @@ FILTERABLE_COLUMNS_FOR_OPTIONS = [
 
 URL_LOGIN = 'subir_ocorrencia'
 
+def get_responsaveis():
+    paises = Country.objects.all().order_by('name')
+    responsaveis_por_pais = {}
+    todos_responsaveis = []
+    
+    # Buscar todos os usuários que têm permissões de país (são responsáveis)
+    usuarios_com_permissao = User.objects.filter(
+        country_permissions__isnull=False
+    ).distinct().values('id', 'first_name', 'last_name', 'username')
+    
+
+    # Criar lista de todos os responsáveis
+    responsaveis_dict = {}
+    for user in usuarios_com_permissao:
+        nome_completo = f"{user['first_name']} {user['last_name']}".strip()
+        if not nome_completo:
+            nome_completo = user['username']
+        
+        responsavel_data = {
+            'id': user['id'],
+            'name': nome_completo
+        }
+        
+        todos_responsaveis.append(responsavel_data)
+        responsaveis_dict[user['id']] = responsavel_data
+            
+    # Mapear responsáveis por país usando CountryPermission
+    for pais in paises:
+        # Buscar usuários que têm permissão neste país
+        permissoes = CountryPermission.objects.filter(country=pais).select_related('user')
+        
+        responsaveis_por_pais[pais.name] = []
+        for permissao in permissoes:
+            user = permissao.user
+            nome_completo = f"{user.first_name} {user.last_name}".strip()
+            if not nome_completo:
+                nome_completo = user.username
+            
+            responsaveis_por_pais[pais.name].append({
+                'name': nome_completo,
+            })
+    responsaveis_por_pais_json = json.dumps(responsaveis_por_pais)
+    todos_responsaveis_json = json.dumps(todos_responsaveis)
+    return(responsaveis_por_pais_json, todos_responsaveis_json)
+
+
 @login_required(login_url=URL_LOGIN)
 def index(request):
+    responsaveis_por_pais_json, todos_responsaveis_json = get_responsaveis()
+    
     is_super = request.user.is_superuser
     permitted_countries = Country.objects.filter(
         countrypermission__user=request.user
@@ -49,7 +97,9 @@ def index(request):
     context = {
         'user': request.user,
         'paises_permitidos': permitted_countries,
-        'has_full_permission': is_super
+        'has_full_permission': is_super,
+        'responsaveis_por_pais': responsaveis_por_pais_json,
+        'todos_responsaveis': todos_responsaveis_json,
     }
     return render(request, 'ocorrencia/index.html', context)
 
@@ -317,7 +367,7 @@ def criar_usuario(request):
         return render(request, 'ocorrencia/criar_usuario.html', {'paises': paises_existentes})
 
     if request.method == "POST":
-        username = request.POST.get('username', '').strip().upper()
+        username = request.POST.get('username', '').strip().capitalize()
         password = request.POST.get('password', '')
         paises_responsavel = request.POST.getlist('paises_responsavel')
 
@@ -565,13 +615,15 @@ def alterar_dados(request):
                 setattr(record, field_name, new_value)
 
             else:
-                setattr(record, field_name, new_value)
-                new_display = new_value
+                print(record, field_name, new_value.capitalize())
+                setattr(record, field_name, new_value.capitalize())
+                new_display = new_value.capitalize()
             
             record.save(update_fields=[field_name])
             return JsonResponse({'status': 'success', 'new_display': new_display, 'page_num': data.get("page_num")})
 
         except Exception as e:
+            print(e)
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
     return JsonResponse({'status': 'error'}, status=405)
