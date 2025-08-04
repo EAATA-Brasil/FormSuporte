@@ -32,7 +32,7 @@ ALLOWED_SORT_COLUMNS = [
 ]
 
 FILTERABLE_COLUMNS_FOR_OPTIONS = [
-    'technical', 'country', 'device', 'area', 'serial', 'brand',
+    'id','technical', 'country', 'device', 'area', 'serial', 'brand',
     'model', 'year', 'version', 'status', 'responsible',
     'data', 'deadline', 'finished'
 ]
@@ -132,7 +132,7 @@ def filter_data_view(request):
                 non_empty = [v for v in values if v != '']
 
                 TEXT_CASE_INSENSITIVE_COLUMNS = [
-                    'technical', 'area', 'serial', 'brand', 'model',
+                    'id','technical', 'area', 'serial', 'brand', 'model',
                     'version', 'responsible', 'problem_detected', 'feedback_technical',
                     'feedback_manager'
                 ]
@@ -305,6 +305,9 @@ def filter_data_view(request):
                             date_tree[year][month] = sorted(date_tree[year][month])
                         date_tree[year] = dict(sorted(date_tree[year].items()))
                     filter_options[col] = dict(sorted(date_tree.items()))
+                elif col == 'id':
+                    options = queryset.values_list(col, flat=True).distinct()
+                    filter_options[col] = sorted(list(set([opt for opt in options if opt is not None])))
                 else:
                     options = queryset.exclude(**{f'{col}__isnull': True}
                             ).exclude(**{f'{col}__exact': ''}
