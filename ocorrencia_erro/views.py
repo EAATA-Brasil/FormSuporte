@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, date
 from collections import defaultdict
-import json
 import os
+import json
+import mimetypes
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.urls import reverse
@@ -27,13 +28,13 @@ STATUS_OCORRENCIA = {
 STATUS_MAP_REVERSED = {v: k for k, v in STATUS_OCORRENCIA.items()}
 
 ALLOWED_SORT_COLUMNS = [
-    'codigo_externo', 'feedback_manager', 'feedback_technical', 'problem_detected', 
-    'area', 'brand', 'country', 'data', 'deadline', 'device', 'finished', 
-    'model', 'responsible', 'serial', 'status', 'technical', 'version', 'year'
+    'feedback_manager', 'feedback_technical', 'problem_detected', 'area', 'brand',
+    'country', 'data', 'deadline', 'device', 'finished', 'model', 'responsible',
+    'serial', 'status', 'technical', 'version', 'year'
 ]
 
 FILTERABLE_COLUMNS_FOR_OPTIONS = [
-    'codigo_externo', 'technical', 'country', 'device', 'area', 'serial', 'brand',
+    'id','technical', 'country', 'device', 'area', 'serial', 'brand',
     'model', 'year', 'version', 'status', 'responsible',
     'data', 'deadline', 'finished'
 ]
@@ -45,10 +46,13 @@ def get_responsaveis():
     responsaveis_por_pais = {}
     todos_responsaveis = []
     
+    # Buscar todos os usuários que têm permissões de país (são responsáveis)
     usuarios_com_permissao = User.objects.filter(
         country_permissions__isnull=False
     ).distinct().values('id', 'first_name', 'last_name', 'username')
     
+
+    # Criar lista de todos os responsáveis
     responsaveis_dict = {}
     for user in usuarios_com_permissao:
         nome_completo = f"{user['first_name']} {user['last_name']}".strip()
@@ -63,7 +67,9 @@ def get_responsaveis():
         todos_responsaveis.append(responsavel_data)
         responsaveis_dict[user['id']] = responsavel_data
             
+    # Mapear responsáveis por país usando CountryPermission
     for pais in paises:
+        # Buscar usuários que têm permissão neste país
         permissoes = CountryPermission.objects.filter(country=pais).select_related('user')
         
         responsaveis_por_pais[pais.name] = []
@@ -78,7 +84,8 @@ def get_responsaveis():
             })
     responsaveis_por_pais_json = json.dumps(responsaveis_por_pais)
     todos_responsaveis_json = json.dumps(todos_responsaveis)
-    return (responsaveis_por_pais_json, todos_responsaveis_json)
+    return(responsaveis_por_pais_json, todos_responsaveis_json)
+
 
 @login_required(login_url=URL_LOGIN)
 def index(request):
@@ -107,11 +114,13 @@ def filter_data_view(request):
             sort_info = data.get('sort', {'column': 'data', 'direction': 'asc'})
             page_number = data.get('page', 1)
 
+            # Consulta base otimizada
             base_queryset = Record.objects.select_related('country').all()
             user = request.user
             has_full_permission = user.is_superuser
 
             queryset = base_queryset
+            # Construção dos filtros
             q_objects = Q()
             for column, values in filters.items():
                 if not isinstance(values, list) or not values:
@@ -127,6 +136,7 @@ def filter_data_view(request):
                     'feedback_manager'
                 ]
 
+                # Filtros para valores não vazios
                 if non_empty:
                     if column == 'status':
                         status_values = [STATUS_OCORRENCIA.get(v, v) for v in non_empty]
@@ -135,9 +145,9 @@ def filter_data_view(request):
                         dates = []
                         for v in non_empty:
                             try:
-                                if '/' in v:
+                                if '/' in v:  # Formato DD/MM/YYYY
                                     dt = datetime.strptime(v, '%d/%m/%Y').date()
-                                else:
+                                else:  # Formato YYYY-MM-DD
                                     dt = datetime.strptime(v, '%Y-%m-%d').date()
                                 dates.append(dt)
                             except:
@@ -175,6 +185,7 @@ def filter_data_view(request):
                     else:
                         column_q |= Q(**{f'{column}__in': non_empty})
 
+                # Filtro para valores vazios/nulos
                 if has_empty:
                     if column == 'country':
                         column_q |= Q(country__isnull=True)
@@ -191,6 +202,7 @@ def filter_data_view(request):
             if q_objects:
                 queryset = queryset.filter(q_objects)
 
+            # Ordenação (mantida igual)
             sort_column = sort_info.get('column', 'data')
             sort_direction = sort_info.get('direction', 'asc')
             
@@ -203,14 +215,15 @@ def filter_data_view(request):
                     order_field = f"{'-' if sort_direction == 'desc' else ''}{sort_column}"
                 queryset = queryset.order_by(order_field)
 
+            # Paginação
             paginator = Paginator(queryset, 11)
             page_obj = paginator.get_page(page_number)
 
+            # Prepara os dados para resposta
             records_data = []
             for record in page_obj.object_list:
                 record_data = {
-                    'codigo_externo': record.codigo_externo or str(record.id),
-                    'id': record.codigo_externo or str(record.id),
+                    'id': record.codigo_externo or str(record.id),  # Usar codigo_externo ou id como fallback
                     'data': record.data or '',
                     'technical': record.technical or '',
                     'country': record.country.name if record.country else '',
@@ -239,6 +252,13 @@ def filter_data_view(request):
                     ],
                 }
                 records_data.append(record_data)
+
+            # Atualizar FILTERABLE_COLUMNS_FOR_OPTIONS para incluir codigo_externo
+            FILTERABLE_COLUMNS_FOR_OPTIONS = [
+                'codigo_externo', 'technical', 'country', 'device', 'area', 'serial', 'brand',
+                'model', 'year', 'version', 'status', 'responsible',
+                'data', 'deadline', 'finished'
+            ]
 
             filter_options = {}
             for col in FILTERABLE_COLUMNS_FOR_OPTIONS:
@@ -311,6 +331,7 @@ def logout_view(request):
     logout_django(request)
     return redirect('subir_ocorrencia')
 
+
 def login_view(request):
     if request.method == "GET":
         next_url = request.GET.get('next', None)
@@ -332,6 +353,7 @@ def login_view(request):
         else:
             messages.error(request, "Usuário ou senha inválidos.")
             return redirect(reverse('login_ocorrencias'))
+
 
 @login_required(login_url=URL_LOGIN)
 def criar_usuario(request):
@@ -368,6 +390,7 @@ def criar_usuario(request):
         messages.success(request, f"Usuário {username} criado com sucesso.")
         return redirect('/ocorrencia')
 
+# @login_required(login_url='subir_ocorrencia')
 def subir_ocorrencia(request):
     has_full_permission = request.user.is_superuser
     paises = Country.objects.all().order_by('name')
@@ -376,6 +399,7 @@ def subir_ocorrencia(request):
     todos_responsaveis = []
     todos_equipamentos = []
 
+    # Responsáveis
     usuarios_com_permissao = User.objects.filter(
         country_permissions__isnull=False
     ).distinct().values('id', 'first_name', 'last_name', 'username')
@@ -412,6 +436,7 @@ def subir_ocorrencia(request):
         country = get_object_or_404(Country, id=country_id) if has_full_permission else paises.first()
         device = get_object_or_404(Device, id=device_id)
 
+        # Montar dados do Record
         record_data = {
             'technical': request.POST.get("technical"),
             'responsible': request.POST.get("responsible"),
@@ -427,6 +452,7 @@ def subir_ocorrencia(request):
             'status': Record.STATUS_OCORRENCIA.REQUESTED
         }
 
+        # Status opcional
         status_mapping = {
             'Requisitado': Record.STATUS_OCORRENCIA.REQUESTED,
             'Concluído': Record.STATUS_OCORRENCIA.DONE,
@@ -437,23 +463,34 @@ def subir_ocorrencia(request):
         if status_input in status_mapping:
             record_data['status'] = status_mapping[status_input]
 
+        # Deadline
         if request.POST.get("deadline"):
             try:
                 record_data['deadline'] = datetime.strptime(request.POST.get("deadline"), '%d/%m/%Y').date()
             except Exception as e:
                 print("Erro no deadline:", e)
 
+        # Criar ocorrência
         record = Record.objects.create(**record_data)
 
+        # Salvar arquivos múltiplos
+        
         for file in request.FILES.getlist("arquivo"):
-            ext = os.path.splitext(file.name)[1]
+            print(file)
+            # Extrai a extensão do arquivo original
+            ext = os.path.splitext(file.name)[1]  # inclui o ponto, ex: ".jpg"
+
+            # Define o novo nome do arquivo
             novo_nome = f"image_relatorio_{record.id}{ext}"
+
+            # Opcional: definir o nome dentro do arquivo UploadedFile (não obrigatório para salvar)
             file.name = novo_nome
 
+            # Cria o registro no banco
             ArquivoOcorrencia.objects.create(
                 record=record,
                 arquivo=file,
-                nome_original=novo_nome
+                nome_original=novo_nome  # ou mantenha file.name se preferir
             )
 
         return JsonResponse({"status": "success", "message": "Ocorrência cadastrada com sucesso."}, status=201)
@@ -468,12 +505,17 @@ def subir_ocorrencia(request):
         'todos_equipamentos_raw': todos_equipamentos,
     })
 
+# Views auxiliares para AJAX (opcionais)
 def get_responsaveis_por_pais(request):
+    """
+    View para retornar responsáveis filtrados por país via AJAX
+    """
     country_id = request.GET.get('country_id')
     
     if country_id:
         try:
             country = Country.objects.get(id=country_id)
+            # Buscar responsáveis que têm permissão neste país
             permissoes = CountryPermission.objects.filter(country=country).select_related('user')
             
             responsaveis_list = []
@@ -490,6 +532,7 @@ def get_responsaveis_por_pais(request):
         except Country.DoesNotExist:
             responsaveis_list = []
     else:
+        # Retornar todos os responsáveis
         usuarios_com_permissao = User.objects.filter(
             country_permissions__isnull=False
         ).distinct().values('id', 'first_name', 'last_name', 'username')
@@ -507,12 +550,17 @@ def get_responsaveis_por_pais(request):
     
     return JsonResponse({'responsaveis': responsaveis_list})
 
+
 def get_paises_por_responsavel(request):
+    """
+    View para retornar países filtrados por responsável via AJAX
+    """
     responsavel_id = request.GET.get('responsavel_id')
     
     if responsavel_id:
         try:
             user = User.objects.get(id=responsavel_id)
+            # Buscar países para os quais este usuário tem permissão
             permissoes = CountryPermission.objects.filter(user=user).select_related('country')
             
             paises_list = []
@@ -524,6 +572,7 @@ def get_paises_por_responsavel(request):
         except User.DoesNotExist:
             paises_list = []
     else:
+        # Retornar todos os países
         paises_list = list(Country.objects.all().values('id', 'name'))
     
     return JsonResponse({'paises': paises_list})
@@ -533,19 +582,9 @@ def alterar_dados(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body.decode('utf-8'))
-            codigo = data.get('id')
-            
-            try:
-                record = Record.objects.get(codigo_externo=codigo)
-            except Record.DoesNotExist:
-                try:
-                    record = Record.objects.get(id=codigo)
-                except Record.DoesNotExist:
-                    return JsonResponse({'status': 'error', 'message': 'Registro não encontrado'}, status=404)
-            
+            record = Record.objects.get(id=data.get('id'))
             field_name = data.get('field')
             new_value = data.get('value')
-            
             if field_name == 'country':
                 new_value = get_object_or_404(Country, id=new_value)
                 setattr(record, field_name, new_value)
@@ -568,17 +607,14 @@ def alterar_dados(request):
                 new_display = new_value
                 new_value = STATUS_OCORRENCIA.get(new_value)
                 setattr(record, field_name, new_value)
+
             else:
+                print(record, field_name, new_value.capitalize())
                 setattr(record, field_name, new_value.capitalize())
                 new_display = new_value.capitalize()
             
             record.save(update_fields=[field_name])
-            return JsonResponse({
-                'status': 'success', 
-                'new_display': new_display, 
-                'page_num': data.get("page_num"),
-                'id': record.codigo_externo or str(record.id)
-            })
+            return JsonResponse({'status': 'success', 'new_display': new_display, 'page_num': data.get("page_num")})
 
         except Exception as e:
             print(e)
@@ -586,20 +622,25 @@ def alterar_dados(request):
 
     return JsonResponse({'status': 'error'}, status=405)
 
+# Alias para compatibilidade com URLs existentes
 update_record_view = alterar_dados
-
-from django.http import HttpResponse, Http404
-from django.conf import settings
-import mimetypes
 
 @login_required(login_url=URL_LOGIN)
 def download_arquivo(request, arquivo_id):
+    """
+    View para download seguro de arquivos anexados às ocorrências
+    """
     try:
+        # Busca o arquivo no banco de dados
         arquivo = get_object_or_404(ArquivoOcorrencia, id=arquivo_id)
+        
+        # Verifica se o usuário tem permissão para acessar este arquivo
+        # (baseado nas permissões de país da ocorrência)
         record = arquivo.record
         user = request.user
         
         if not user.is_superuser:
+            # Verifica se o usuário tem permissão para o país da ocorrência
             if record.country:
                 has_permission = CountryPermission.objects.filter(
                     user=user,
@@ -608,18 +649,23 @@ def download_arquivo(request, arquivo_id):
                 if not has_permission:
                     raise Http404("Arquivo não encontrado ou sem permissão")
         
+        # Caminho completo do arquivo
         file_path = arquivo.arquivo.path
         
+        # Verifica se o arquivo existe fisicamente
         if not os.path.exists(file_path):
             raise Http404("Arquivo não encontrado no sistema")
         
+        # Determina o tipo MIME do arquivo
         content_type, _ = mimetypes.guess_type(file_path)
         if content_type is None:
             content_type = 'application/octet-stream'
         
+        # Lê o arquivo
         with open(file_path, 'rb') as f:
             response = HttpResponse(f.read(), content_type=content_type)
         
+        # Define o cabeçalho para forçar download
         filename = arquivo.nome_original or os.path.basename(file_path)
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         
@@ -628,5 +674,7 @@ def download_arquivo(request, arquivo_id):
     except ArquivoOcorrencia.DoesNotExist:
         raise Http404("Arquivo não encontrado")
     except Exception as e:
+        # Log do erro (em produção, usar logging adequado)
         print(f"Erro no download do arquivo {arquivo_id}: {str(e)}")
         raise Http404("Erro ao processar download")
+
