@@ -250,7 +250,8 @@ form input[type="submit"]:hover {
   </div>
 
   
-  <form method="POST" id="form-ocorrencia">
+  <form method="POST" enctype="multipart/form-data" id="form-ocorrencia">
+
     {% csrf_token %}
 
     {% if has_full_permission %}
@@ -264,7 +265,7 @@ form input[type="submit"]:hover {
     {% else %}
       <label for="country">País</label>
       {% if paises %}
-          <select id="country" name="country" required>
+          <select id="country" name="country">
             <option value="">-- Selecione o país --</option>
             {% for pais in paises %}
                 <option value="{{ pais.id }}">{{ pais.name }}</option>
@@ -275,12 +276,14 @@ form input[type="submit"]:hover {
       {% endif %}
     {% endif %}
 
+    
+
     <label for="technical">Técnico *</label>
     <input type="text" id="technical" name="technical" required />
 
     {% if has_full_permission %}
       <label for="responsible">Responsável </label>
-      <select id="responsible" name="responsible">
+      <select id="responsible" name="responsible" >
         <option value="">-- Selecione o responsável --</option>
         {% for responsavel in todos_responsaveis_raw %}
             <option value="{{ responsavel.name }}">{{ responsavel.name }}</option>
@@ -313,26 +316,26 @@ form input[type="submit"]:hover {
     </span>
 
     <label for="serial">Serial</label>
-    <input type="text" id="serial" name="serial" />
+    <input type="text" id="serial" name="serial" required/>
 
     <label for="brand">Marca</label>
-    <input type="text" id="brand" name="brand" />
+    <input type="text" id="brand" name="brand" required/>
 
     <label for="model">Modelo</label>
-    <input type="text" id="model" name="model" />
+    <input type="text" id="model" name="model" required/>
 
     <label for="year">Ano</label>
-    <input type="text" id="year" name="year" />
+    <input type="text" id="year" name="year" required/>
 
     <label for="version">Versão</label>
-    <input type="text" id="version" name="version" />
+    <input type="text" id="version" name="version" required/>
 
     {% if has_full_permission %}
       <label for="deadline">Deadline</label>
-      <input type="text" id="deadline" name="deadline" />
+      <input type="text" id="deadline" name="deadline" required/>
 
       <label for="status">Status</label>
-      <select id="status" name="status">
+      <select id="status" name="status" >
         <option value="">-- Estado da ocorrência --</option>
         <option value="Requisitado">Requisitado</option>
         <option value="Concluído">Concluído</option>
@@ -345,6 +348,10 @@ form input[type="submit"]:hover {
 
     <label for="problem_detected">Problema Detectado</label>
     <textarea id="problem_detected" name="problem_detected" required></textarea>
+
+    <label for="arquivo">Anexar Arquivo</label>
+    <input type="file" id="arquivo" name="arquivo" multiple />
+
 
     <input type="submit" value="Cadastrar Ocorrência" required/>
   </form>

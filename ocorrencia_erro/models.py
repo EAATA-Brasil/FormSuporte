@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.auth.models import User
+import uuid
 
 class Country(models.Model):
     class Meta:
@@ -28,6 +29,14 @@ class CountryPermission(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.country.name}"
 
+import random
+import string
+from django.db import models
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+
+def gerar_codigo_espanha():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
 class Record(models.Model):
     class STATUS_OCORRENCIA(models.TextChoices):
@@ -36,130 +45,133 @@ class Record(models.Model):
         PROGRESS = "PROGRESS", "Em progresso"
         REQUESTED = "REQUESTED", "Requisitado"
 
-    # Campos de data
+    # ID padrão autoincremental
+    id = models.AutoField(primary_key=True)
+
+    # Novo campo código externo
+    codigo_externo = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        unique=True
+    )
+
     data = models.DateField(
-        verbose_name='Data de reporte', 
-        default=timezone.now,  # Usando a referência da função, não a chamada
+        verbose_name='Data de reporte',
+        default=timezone.now,
         help_text="Data em que o problema foi reportado"
     )
     deadline = models.DateField(
         verbose_name='Prazo',
-        blank=True, 
+        blank=True,
         null=True,
         help_text="Prazo para resolução do problema"
     )
     finished = models.DateField(
         verbose_name='Concluído em',
-        blank=True, 
+        blank=True,
         null=True,
         help_text="Data em que o problema foi resolvido"
     )
 
-    # Campos de responsáveis
+    arquivo = models.FileField(upload_to='uploads/', null=True, blank=True)
+
     technical = models.CharField(
-        max_length=100, 
-        default="Não identificado", 
+        max_length=100,
+        default="Não identificado",
         verbose_name='Técnico'
     )
     responsible = models.CharField(
-        max_length=100, 
-        default="Não identificado", 
+        max_length=100,
+        default="Não identificado",
         verbose_name='Responsável',
         null=True,
         blank=True
     )
 
-    # Campos do equipamento
     device = models.ForeignKey(
-        Device, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        'Device',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         verbose_name='Equipamento'
     )
     area = models.CharField(
-        max_length=20, 
-        default="N/A", 
-        verbose_name='Área',
-        
+        max_length=20,
+        default="N/A",
+        verbose_name='Área'
     )
     serial = models.CharField(
-        max_length=20, 
-        blank=True, 
-        null=True, 
-        default="N/A", 
+        max_length=20,
+        blank=True,
+        null=True,
+        default="N/A",
         verbose_name='Serial'
     )
     brand = models.CharField(
-        max_length=100, 
-        blank=True, 
-        null=True, 
-        default="N/A", 
+        max_length=100,
+        blank=True,
+        null=True,
+        default="N/A",
         verbose_name='Marca'
     )
     model = models.CharField(
-        max_length=100, 
-        blank=True, 
-        null=True, 
-        default="N/A", 
+        max_length=100,
+        blank=True,
+        null=True,
+        default="N/A",
         verbose_name='Modelo'
     )
-
-    # Campos adicionais
     year = models.CharField(
-        max_length=100, 
-        blank=True, 
-        null=True, 
-        default='N/A', 
+        max_length=100,
+        blank=True,
+        null=True,
+        default='N/A',
         verbose_name='Ano'
     )
     country = models.ForeignKey(
-        Country, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        'Country',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         verbose_name='País'
     )
     version = models.CharField(
-        max_length=100, 
-        blank=True, 
-        null=True, 
-        default="N/A", 
+        max_length=100,
+        blank=True,
+        null=True,
+        default="N/A",
         verbose_name='Versão'
     )
 
-    # Campos de descrição
     problem_detected = models.TextField(
-        default="Não identificado", 
+        default="Não identificado",
         verbose_name="Problema detectado"
     )
     status = models.CharField(
         max_length=20,
-        choices=STATUS_OCORRENCIA.choices, 
+        choices=STATUS_OCORRENCIA.choices,
         default=STATUS_OCORRENCIA.REQUESTED
     )
 
-    # Feedbacks
     feedback_technical = models.TextField(
-        blank=True, 
-        null=True, 
-        default="Não identificado", 
+        blank=True,
+        null=True,
+        default="Não identificado",
         verbose_name="Feedback Técnico"
     )
     feedback_manager = models.TextField(
-        blank=True, 
-        null=True, 
-        default="Não identificado", 
+        blank=True,
+        null=True,
+        default="Não identificado",
         verbose_name="Feedback Manager"
     )
 
     def clean(self):
-        """Validações e ajustes automáticos dos dados"""
         super().clean()
 
         today = timezone.now().date()
 
-        # Ajustes baseados no status
         if self.status == self.STATUS_OCORRENCIA.DONE and not self.finished:
             self.finished = today
         elif self.finished and self.status != self.STATUS_OCORRENCIA.DONE:
@@ -167,13 +179,11 @@ class Record(models.Model):
         elif self.status != self.STATUS_OCORRENCIA.DONE and self.finished:
             self.finished = None
 
-        
         self.area = self.area.upper() if self.area else ''
         self.brand = self.brand.upper() if self.brand else ''
         self.model = self.model.upper() if self.model else ''
         self.technical = self.technical.capitalize() if self.technical else ''
 
-        # Validações de data
         if self.finished:
             if self.data and self.finished < self.data:
                 raise ValidationError({
@@ -184,7 +194,6 @@ class Record(models.Model):
                     "finished": "Data de conclusão não pode ser anterior ao prazo."
                 })
 
-        # Atualização automática do status
         if self.deadline and not self.finished:
             if (self.deadline - today).days < 0:
                 self.status = self.STATUS_OCORRENCIA.LATE
@@ -192,12 +201,25 @@ class Record(models.Model):
                 self.status = self.STATUS_OCORRENCIA.PROGRESS
 
     def save(self, *args, **kwargs):
-        """Garante que as validações sejam executadas antes de salvar"""
+        is_new = self._state.adding
+
         self.full_clean()
-        super().save(*args, **kwargs)
+
+        super().save(*args, **kwargs)  # Salva para ter id
+
+        if is_new and not self.codigo_externo:
+            if self.country and self.country.name.lower() == 'brasil':
+                self.codigo_externo = str(self.id)
+            else:
+                while True:
+                    novo_codigo = gerar_codigo_espanha()
+                    if not Record.objects.filter(codigo_externo=novo_codigo).exists():
+                        self.codigo_externo = novo_codigo
+                        break
+            super().save(update_fields=['codigo_externo'])
 
     def __str__(self):
-        return f"Ocorrência #{self.pk or 'Nova'} - {self.device} ({self.get_status_display()})"
+        return f"Ocorrência #{self.codigo_externo or self.id} - {self.device} ({self.get_status_display()})"
 
     class Meta:
         verbose_name = "Ocorrência"
@@ -208,3 +230,12 @@ class Record(models.Model):
             models.Index(fields=['device']),
             models.Index(fields=['data']),
         ]
+
+
+class ArquivoOcorrencia(models.Model):
+    record = models.ForeignKey('Record', on_delete=models.CASCADE, related_name='arquivos', null=True)
+    arquivo = models.FileField(upload_to='download_arquivo/')
+    nome_original = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"{self.record} salve {self.arquivo}"

@@ -144,3 +144,6 @@ GitHub.sublime-settings
 staticfiles/
 
 *.sqlite3
+
+uploads/
+download_arquivo/
