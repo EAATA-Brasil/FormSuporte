@@ -276,8 +276,10 @@ form input[type="submit"]:hover {
       {% endif %}
     {% endif %}
 
-    
-
+    <span id="span_ticket">
+      <label for="ticket">Ticket</label>
+      <input type="text" id="ticket" name="ticket"/>
+    </span>
     <label for="technical">Técnico *</label>
     <input type="text" id="technical" name="technical" required />
 
@@ -376,6 +378,7 @@ form input[type="submit"]:hover {
   // Elementos do DOM
   const countrySelect = document.getElementById('country');
   const responsibleSelect = document.getElementById('responsible');
+  
 
   // Função para popular o select de responsáveis baseado no país selecionado
   function filterResponsiblesByCountry(countryId) {
@@ -389,10 +392,13 @@ form input[type="submit"]:hover {
     
     if (!countryId) {
       // Se nenhum país selecionado, mostrar todos os responsáveis
+
+      
       responsaveisParaMostrar = todosResponsaveis;
     } else {
       // Mostrar apenas responsáveis do país selecionado
       responsaveisParaMostrar = responsaveisPorPais[countryId] || [];
+      
     }
     
     responsaveisParaMostrar.forEach(responsavel => {
@@ -543,9 +549,28 @@ form input[type="submit"]:hover {
 
   // Inicializar quando a página carregar
   document.addEventListener('DOMContentLoaded', function() {
+    const inputTicket = document.getElementById('span_ticket')
+    inputTicket.style.display='none'
+    document.getElementById("ticket").required = false;
     if('{{has_full_permission}}' == 'True'){
       filterResponsiblesByCountry('');
     }
+    const paises = JSON.parse('{{ paises_json|safe }}');
+    document.getElementById('country').addEventListener('change', function (e) {
+      document.getElementById("ticket").value = ''
+
+      const nomePais = paises[e.target.value];
+      if(["ESPANHA", "PORTUGAL"].includes(nomePais.toUpperCase())){
+        inputTicket.style.display='block'
+        document.getElementById("ticket").required = true;
+      }else{
+        inputTicket.style.display='none'
+        document.getElementById("ticket").required = false;
+        
+      }
+      
+    });
+    
   });
 </script>
 

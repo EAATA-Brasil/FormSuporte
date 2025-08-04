@@ -15,7 +15,7 @@
     <table id="data-table" class="table">
         <thead>
             <tr style="background-color: #0459B5;">
-                {% include 'ocorrencia/components/lineHead.html' with name='id' ID="id"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='id' ID="codigo_externo"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='data' ID="data"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='Técnico' ID="technical"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='país' ID="country"%}
@@ -78,8 +78,8 @@
         console.log(url)
         try {
             // Se a URL já é uma URL completa de download, usa diretamente
+            window.open(`/download_arquivo/${url}`, '_blank');
                 if (url) {
-                    window.open(`/download_arquivo/${url}`, '_blank');
                     console.log("salve")
                 } else {
                     // Cria um elemento 'a' temporário para forçar o download
@@ -691,7 +691,7 @@
         // *** FUNÇÃO CORRIGIDA E MELHORADA: Popular a caixa de filtro com IDs únicos e lógica de toggle ***
         function populateFilterBox(filterBoxElement, headerInfo) {
             const columnName = headerInfo.columnName;
-                        let options = currentFilterOptions[columnName] || (headerInfo.isDateColumn ? {} : []);
+            let options = currentFilterOptions[columnName] || (headerInfo.isDateColumn ? {} : []);
             
             // Para filtros não-data, garante que as opções sejam um array e únicas
             if (!headerInfo.isDateColumn) {
@@ -942,7 +942,6 @@
                     
                     currentFilterOptions = data.filter_options || {};
                     updateTable(data.records);
-                    
                     total_pages = data.num_pages;
                     paginate(data.has_previous, data.has_next);
 

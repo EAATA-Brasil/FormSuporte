@@ -14,6 +14,7 @@ from django.contrib.auth import authenticate, login as login_django, logout as l
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.serializers import serialize
 
 from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia
 
@@ -223,7 +224,8 @@ def filter_data_view(request):
             records_data = []
             for record in page_obj.object_list:
                 record_data = {
-                    'id': record.codigo_externo or str(record.id),  # Usar codigo_externo ou id como fallback
+                    'id':record.id,
+                    'codigo_externo': record.codigo_externo or str(record.id),  # Usar codigo_externo ou id como fallback
                     'data': record.data or '',
                     'technical': record.technical or '',
                     'country': record.country.name if record.country else '',
@@ -394,7 +396,6 @@ def criar_usuario(request):
 def subir_ocorrencia(request):
     has_full_permission = request.user.is_superuser
     paises = Country.objects.all().order_by('name')
-
     responsaveis_por_pais = {}
     todos_responsaveis = []
     todos_equipamentos = []
@@ -436,21 +437,38 @@ def subir_ocorrencia(request):
         country = get_object_or_404(Country, id=country_id) if has_full_permission else paises.first()
         device = get_object_or_404(Device, id=device_id)
 
-        # Montar dados do Record
-        record_data = {
-            'technical': request.POST.get("technical"),
-            'responsible': request.POST.get("responsible"),
-            'device': device,
-            'area': request.POST.get("area_radio"),
-            'serial': request.POST.get("serial"),
-            'brand': request.POST.get("brand"),
-            'model': request.POST.get("model"),
-            'year': request.POST.get("year"),
-            'country': country,
-            'version': request.POST.get("version"),
-            'problem_detected': request.POST.get("problem_detected"),
-            'status': Record.STATUS_OCORRENCIA.REQUESTED
-        }
+        id = request.POST.get("ticket", False)
+        if id:
+            record_data = {
+                'codigo_externo':id,
+                'technical': request.POST.get("technical"),
+                'responsible': request.POST.get("responsible"),
+                'device': device,
+                'area': request.POST.get("area_radio"),
+                'serial': request.POST.get("serial"),
+                'brand': request.POST.get("brand"),
+                'model': request.POST.get("model"),
+                'year': request.POST.get("year"),
+                'country': country,
+                'version': request.POST.get("version"),
+                'problem_detected': request.POST.get("problem_detected"),
+                'status': Record.STATUS_OCORRENCIA.REQUESTED
+            }
+        else:
+            record_data = {
+                'technical': request.POST.get("technical"),
+                'responsible': request.POST.get("responsible"),
+                'device': device,
+                'area': request.POST.get("area_radio"),
+                'serial': request.POST.get("serial"),
+                'brand': request.POST.get("brand"),
+                'model': request.POST.get("model"),
+                'year': request.POST.get("year"),
+                'country': country,
+                'version': request.POST.get("version"),
+                'problem_detected': request.POST.get("problem_detected"),
+                'status': Record.STATUS_OCORRENCIA.REQUESTED
+            }
 
         # Status opcional
         status_mapping = {
@@ -494,9 +512,13 @@ def subir_ocorrencia(request):
             )
 
         return JsonResponse({"status": "success", "message": "Ocorrência cadastrada com sucesso."}, status=201)
-
+    paises_dict = {
+        str(p['id']): p['name']
+        for p in Country.objects.all().values('id', 'name')
+    }
     return render(request, 'ocorrencia/subir_ocorrencia.html', {
         'paises': paises,
+        'paises_json': json.dumps(paises_dict),
         'has_full_permission': has_full_permission,
         'responsaveis_por_pais': json.dumps(responsaveis_por_pais),
         'todos_responsaveis': json.dumps(todos_responsaveis),
