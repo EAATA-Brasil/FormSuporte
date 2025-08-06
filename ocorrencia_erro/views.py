@@ -87,11 +87,60 @@ def get_responsaveis():
     todos_responsaveis_json = json.dumps(todos_responsaveis)
     return(responsaveis_por_pais_json, todos_responsaveis_json)
 
+def subir_arquivo(files, record):
+    for file in files:
+            print(file)
+            # Extrai a extensão do arquivo original
+            ext = os.path.splitext(file.name)[1]  # inclui o ponto, ex: ".jpg"
+
+            # Define o novo nome do arquivo
+            novo_nome = f"image_relatorio_{record.id}{ext}"
+
+            # Opcional: definir o nome dentro do arquivo UploadedFile (não obrigatório para salvar)
+            file.name = novo_nome
+
+            # Cria o registro no banco
+            ArquivoOcorrencia.objects.create(
+                record=record,
+                arquivo=file,
+                nome_original=novo_nome  # ou mantenha file.name se preferir
+            )
+
 
 @login_required(login_url=URL_LOGIN)
 def index(request):
     responsaveis_por_pais_json, todos_responsaveis_json = get_responsaveis()
     
+    responsaveis = json.loads(todos_responsaveis_json)
+
+    # 2. Mapeia status técnicos para nomes legíveis
+    status_map = {
+        Record.STATUS_OCORRENCIA.DONE: "Concluído",
+        Record.STATUS_OCORRENCIA.LATE: "Atrasado",
+        Record.STATUS_OCORRENCIA.PROGRESS: "Em progresso",
+        Record.STATUS_OCORRENCIA.REQUESTED: "Requisitado"
+    }
+
+    # 3. Inicializa dicionário de contagem
+    ocorrencias_dict = {}
+
+    for responsavel in responsaveis:
+        nome = responsavel.get('name') or responsavel.get('nome') or responsavel.get('responsible')
+        if nome:
+            ocorrencias_dict[nome] = {label: 0 for label in status_map.values()}
+
+    # 4. Consulta todos os registros e agrupa por responsável e status
+    for record in Record.objects.all().values('responsible', 'status'):
+        nome = record['responsible']
+        status_codigo = record['status']
+        status_legivel = status_map.get(status_codigo)
+
+        if nome in ocorrencias_dict and status_legivel:
+            ocorrencias_dict[nome][status_legivel] += 1
+
+    # 5. Resultado final
+    ocorrencias_json = json.dumps(ocorrencias_dict, ensure_ascii=False)
+
     is_super = request.user.is_superuser
     permitted_countries = Country.objects.filter(
         countrypermission__user=request.user
@@ -103,6 +152,8 @@ def index(request):
         'has_full_permission': is_super,
         'responsaveis_por_pais': responsaveis_por_pais_json,
         'todos_responsaveis': todos_responsaveis_json,
+        'ocorrencias_json':ocorrencias_json,
+        'subir_arquivos':subir_arquivo
     }
     return render(request, 'ocorrencia/index.html', context)
 
@@ -392,6 +443,8 @@ def criar_usuario(request):
         messages.success(request, f"Usuário {username} criado com sucesso.")
         return redirect('/ocorrencia')
 
+
+
 # @login_required(login_url='subir_ocorrencia')
 def subir_ocorrencia(request):
     has_full_permission = request.user.is_superuser
@@ -616,7 +669,9 @@ def alterar_dados(request):
                 setattr(record, field_name, new_value)
                 new_display = new_value.strftime('%Y-%m-%d')
             elif field_name == 'status':
-                if record.deadline:
+                if record.finished:
+                    new_value = 'Concluído'
+                elif record.deadline:
                     if record.finished:
                         new_value = 'Concluído'
                     else:

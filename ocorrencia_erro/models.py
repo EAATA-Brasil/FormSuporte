@@ -189,10 +189,6 @@ class Record(models.Model):
                 raise ValidationError({
                     "finished": "Data de conclusão não pode ser anterior à data de reporte."
                 })
-            if self.deadline and self.finished < self.deadline:
-                raise ValidationError({
-                    "finished": "Data de conclusão não pode ser anterior ao prazo."
-                })
 
         if self.deadline and not self.finished:
             if (self.deadline - today).days < 0:
@@ -201,21 +197,12 @@ class Record(models.Model):
                 self.status = self.STATUS_OCORRENCIA.PROGRESS
 
     def save(self, *args, **kwargs):
-        is_new = self._state.adding
-
         self.full_clean()
 
         super().save(*args, **kwargs)  # Salva para ter id
 
-        if is_new and not self.codigo_externo:
-            if self.country and self.country.name.lower() == 'brasil':
-                self.codigo_externo = str(self.id)
-            else:
-                while True:
-                    novo_codigo = gerar_codigo_espanha()
-                    if not Record.objects.filter(codigo_externo=novo_codigo).exists():
-                        self.codigo_externo = novo_codigo
-                        break
+        if not self.codigo_externo:
+            self.codigo_externo = str(self.id)
             super().save(update_fields=['codigo_externo'])
 
     def __str__(self):

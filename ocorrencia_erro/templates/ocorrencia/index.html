@@ -47,15 +47,15 @@
         <span class="button-paginator" id="next">Avançar</span>
     </div>
     <a href="{% url 'subir_ocorrencia' %}" style="padding: 0.6rem 1.2rem;
-    font-size: 1rem;
-    border: none;
-    border-radius: 0.3rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    text-decoration: none;
-    display: inline-block;
-    background-color: #157347;
-    color: var(--light);">
+        font-size: 1rem;
+        border: none;
+        border-radius: 0.3rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        text-decoration: none;
+        display: inline-block;
+        background-color: #157347;
+        color: var(--light);">
         <i class="fas fa-plus"></i> Nova Ocorrência
     </a>
     {%if has_full_permission%}
@@ -72,15 +72,84 @@
             <i class="fas fa-plus"></i> Criar novo responsável
         </a>
     {%endif%}
+    {%if has_full_permission%}
+    <footer>
+        <div id="ocorrencias-panel">
+            <label for="responsavel-select">Selecionar responsável:</label>
+            <div id="selector-and-info">
+                <select id="responsavel-select">
+                    <option value="">-- Escolha --</option>
+                </select>
 
+                <div id="ocorrencias-info" style="display: none;">
+                    <strong>Total de ocorrências: <span id="total-ocorrencias">0</span></strong>
+                    <ul id="status-percentuais"></ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+    {%endif%}
 <script>
+    if("{{has_full_permission}}" == "True"){
+        const ocorrenciasData = {{ ocorrencias_json | safe }};
+        
+        const select = document.getElementById('responsavel-select');
+        const infoDiv = document.getElementById('ocorrencias-info');
+        const totalSpan = document.getElementById('total-ocorrencias');
+        const statusList = document.getElementById('status-percentuais');
+        
+        // Preenche <select> com nomes dos responsáveis
+        Object.keys(ocorrenciasData).forEach(nome => {
+          const opt = document.createElement('option');
+          opt.value = nome;
+          opt.textContent = nome;
+          select.appendChild(opt);
+        });
+        
+        select.addEventListener('change', () => {
+          const responsavel = select.value;
+        
+          if (!responsavel || !ocorrenciasData[responsavel]) {
+            infoDiv.style.display = 'none';
+            return;
+          }
+        
+          const stats = ocorrenciasData[responsavel];
+          const total = Object.values(stats).reduce((a, b) => a + b, 0);
+        
+          totalSpan.textContent = total;
+          statusList.innerHTML = '';
+        
+          Object.entries(stats).forEach(([status, qtd]) => {
+            const percent = total > 0 ? ((qtd / total) * 100).toFixed(1) : 0;
+            const li = document.createElement('li');
+            li.textContent = `${status}: ${qtd} (${percent}%)`;
+        
+            const statusLower = status.toLowerCase();
+        
+            if (statusLower.includes("atrasado")) {
+              li.classList.add("status-atrasado");
+            } else if (statusLower.includes("concluido") || statusLower.includes("concluído")) {
+              li.classList.add("status-concluido");
+            } else if (statusLower.includes("progresso")) {
+              li.classList.add("status-progresso");
+            } else if (statusLower.includes("requisitado")) {
+              li.classList.add("status-requisitado");
+            }
+        
+            statusList.appendChild(li);
+          });
+        
+          infoDiv.style.display = 'block';
+        });
+    }
+
     function downloadFile(url, filename) {
-        console.log(url)
         try {
             // Se a URL já é uma URL completa de download, usa diretamente
             window.open(`/download_arquivo/${url}`, '_blank');
                 if (url) {
-                    console.log("salve")
+                    null
                 } else {
                     // Cria um elemento 'a' temporário para forçar o download
                     const link = document.createElement('a');
@@ -99,7 +168,7 @@
                 }
                 
                 // Feedback visual opcional
-                console.log(`Download iniciado: ${filename}`);
+                //console.log(`Download iniciado: ${filename}`);
             } catch (error) {
                 console.error('Erro ao fazer download:', error);
                 alert('Erro ao fazer download do arquivo. Tente novamente.');
@@ -979,362 +1048,551 @@
         /**
         * Atualiza o corpo da tabela.
         */
-        function updateTable(records) { 
-            tableBody.innerHTML = ""; 
-            if (!records || records.length === 0) {
-                const colspan = table.querySelectorAll("thead th[data-column]").length;
-                const noResultsRow = tableBody.insertRow();
-                const cell = noResultsRow.insertCell();
-                
-                cell.colSpan = colspan > 0 ? colspan : 1; 
-                cell.textContent = "Nenhum registro encontrado.";
-                cell.style.textAlign = "center";
-                return;
-            }
-            const visibleColumns = Array.from(table.querySelectorAll("thead th[data-column]")).map(th => th.getAttribute('data-column'));
-            //console.log("Colunas visíveis para renderizar linhas:", visibleColumns); 
-            let has_full_permission = '{{has_full_permission}}'
+        // ===== SISTEMA DE ATUALIZAÇÃO DINÂMICA DE STATUS =====
+// Simula o comportamento de useEffect do React em JavaScript puro
 
-            const UTCtime = new Date()
-            var today = new Date(`${UTCtime.getUTCMonth()+1}/${UTCtime.getUTCDate()}/${UTCtime.getUTCFullYear()}`)
-            
-            records.forEach((record) => {
-                const row = tableBody.insertRow();
-                visibleColumns.forEach(columnName => {
-                    const cell = row.insertCell();
-                    cell.setAttribute("data-column", columnName);
-                    cell.setAttribute("data-id", record.id)
+// Estado global para controlar atualizações
+let statusUpdateSystem = {
+    records: [],
+    isInitialized: false,
+    observers: new Map(),
+    debounceTimers: new Map()
+};
 
-                    let value = record[columnName]; 
-                    const headerInfo = headerData.find(h => h.columnName === columnName);
-                    // Formata data apenas se for uma coluna de data e tiver valor
-                    if (headerInfo?.isDateColumn) { 
-                        if(value){
-                            value = formatDateToDisplay(value);
-                        }
-                        else{
-                            if(columnName == 'finished'){
-                                value = "Não finalizado"
-                            }
-                            else{
-                                value = 'Não definido'
-                            }
-                        }
-                    }
-                    
-                    // *** MODIFICAÇÃO PRINCIPAL: Adicionar botão para Problem Detected ***
-                    if(columnName == 'problem_detected'){
-                        cell.classList.add("no-cursor")
-                        
-                        // Criar container para o conteúdo
-                        const container = document.createElement('div');
-                        container.style.display = 'flex';
-                        container.style.alignItems = 'center';
-                        container.style.justifyContent = 'center';
-                        
-                        
-                        // Botão para abrir detalhes
-                        const detailsButton = document.createElement('button');
-                        detailsButton.innerHTML = 'Ver Detalhes';
-                        detailsButton.style.cssText = `
-                            background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
-                            color: white;
-                            border: none;
-                            padding: 6px 12px;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-size: 0.8rem;
-                            font-weight: 600
-                        `;
-                        
-                        detailsButton.addEventListener('mouseenter', function() {
-                            this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
-                            this.style.transform = 'translateY(-1px)';
-                            this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
-                        });
-                        
-                        detailsButton.addEventListener('mouseleave', function() {
-                            this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
-                            this.style.transform = 'translateY(0)';
-                            this.style.boxShadow = 'none';
-                        });
-                        
-                        detailsButton.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            showProblemDetails(record);
-                        });
-                        
-                        container.appendChild(detailsButton);
-                        cell.appendChild(container);
-                        
-                        
-                    }
-                    else if(columnName == 'feedback_technical'){
-                         cell.classList.add("no-cursor")
-                        
-                        // Criar container para o conteúdo
-                        const container = document.createElement('div');
-                        container.style.display = 'flex';
-                        container.style.alignItems = 'center';
-                        container.style.justifyContent = 'center';
-                        
-                        
-                        // Botão para abrir detalhes
-                        const detailsButton = document.createElement('button');
-                        detailsButton.innerHTML = 'Gerenciar feedback';
-                        detailsButton.style.cssText = `
-                            background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
-                            color: white;
-                            border: none;
-                            padding: 6px 12px;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-size: 0.8rem;
-                            font-weight: 600
-                        `;
-                        
-                        detailsButton.addEventListener('mouseenter', function() {
-                            this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
-                            this.style.transform = 'translateY(-1px)';
-                            this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
-                        });
-                        
-                        detailsButton.addEventListener('mouseleave', function() {
-                            this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
-                            this.style.transform = 'translateY(0)';
-                            this.style.boxShadow = 'none';
-                        });
-                        
-                        detailsButton.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            generateFeedback(record);
-                        });
-                        
-                        container.appendChild(detailsButton);
-                        cell.appendChild(container);
-                        
-                        
-                    }
+// Função pura para calcular o status baseado nas datas
+function calculateStatus(record) {
+    const deadlineStr = record.deadline; // Formato: DD/MM/YYYY
+    const finishedStr = record.finished; // Formato: DD/MM/YYYY
+    
+    // Se tem data de finalização, sempre é "Concluído"
+    if (finishedStr && finishedStr !== "Não finalizado") {
+        return 'Concluído';
+    }
+    
+    // Se não tem prazo definido, é "Requisitado"
+    if (!deadlineStr || deadlineStr === "Não definido") {
+        return 'Requisitado';
+    }
+    
+    // Converte data do formato DD/MM/YYYY para Date
+    const parseDate = (dateStr) => {
+        if (!dateStr || dateStr === "Não definido" || dateStr === "Não finalizado") return null;
+        const [day, month, year] = dateStr.split('/').map(Number);
+        return new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
+    };
+    
+    const deadlineDate = parseDate(deadlineStr);
+    if (!deadlineDate) return 'Requisitado';
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas a data
+    
+    const deadline = new Date(deadlineDate);
+    deadline.setHours(0, 0, 0, 0);
+    
+    // Compara as datas
+    if (today > deadline) {
+        return 'Atrasado';
+    } else {
+        return 'Em progresso';
+    }
+}
 
-                    else if (columnName == 'status'){
-                        const data_deadline = record['deadline'] ? new Date(record['deadline'].split('/').reverse().join('-')) : null
-                        const data_finished = record['finished'] ? new Date(record['finished'].split('/').reverse().join('-')) : null
-                        
-                        
-
-                        cell.id = `${columnName}${record.id}`
-                        cell.classList.add('field-container')
-                        cell.textContent = value
-                        let statu = document.querySelector(`#${columnName}${record.id}`)
-                        statu.setAttribute('data-initial-value', cell.textContent)
-
-                        let valor_inicial = statu.getAttribute('data-initial-value')
-
-                        if(valor_inicial != 'Concluído'){
-                            if(data_finished){
-                                statu.value = 'Concluído'
-                                saveField(statu)
-                            }
-                            else if(!data_deadline && valor_inicial != 'Requisitado'){
-                                statu.value = 'Requisitado'
-                                saveField(statu)
-                                record['finished'].disabled = true
-
-                            }
-                            else if(data_deadline && today  < new Date(data_deadline.setDate(data_deadline.getDate()+1))){
-                                statu.value = 'Em progresso'
-                                saveField(statu)
-
-                            }
-                            else if(data_deadline && today  > new Date(data_deadline.setDate(data_deadline.getDate()+1))){
-                                statu.value = 'Atrasado'
-                                saveField(statu)
-                            }
-                            
-                        }
-                        
-                    }
-
-                    else if( (columnName == 'deadline' && '{{has_full_permission}}' === 'True') || columnName == 'finished' ) {
-                        cell.id = `${columnName}${record.id}`
-                        cell.classList.add('editable-field-container')
-                        cell.classList.add('date-input-container')  
-                        // cell.title = "Clique duas vezes para copiar o texto"
-                        // Input de texto para a data formatada
-                        const textInput = document.createElement('input');
-                        textInput.type = 'text';
-                        textInput.placeholder = 'DD/MM/AAAA';
-                        textInput.classList.add('date-text-input')
-                        
-                        cell.addEventListener('dblclick', (e)=>{
-                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
-                            textInput.blur()
-                            Swal.fire({
-                                title:"Texto copiado",
-                                text: 'Data copiada para área de transferência',
-                                showCloseButton: true,
-                                icon:'success'
-                            })
-                        })
-
-                        if(columnName == "finished" && !record['deadline']){
-                            textInput.disabled = true
-                            
-                        }
-
-                        textInput.placeholder = value;
-                        textInput.setAttribute('data-initial-value', value)
-                        let [initial_day, initial_month, initial_year] = value.split("/").map(Number)
-                        let initial_date = new Date(`${initial_month+1}/${initial_day}/ ${initial_year}`)
-                        
-                        // Adiciona os elementos ao container
-                        cell.appendChild(textInput);
-                        
-                        // Configura os eventos
-                        textInput.addEventListener('blur', function(e){
-                            e.target.classList.remove("erro")
-                            e.target.classList.remove("success")
-                        })
-
-                        textInput.addEventListener('input', function(e) {
-                            let value = e.target.value.replace(/\D/g, '');
-                            
-                            // Formatação automática: DD/MM/AAAA
-                            if (value.length > 2) value = value.substring(0, 2) + '/' + value.substring(2);
-                            if (value.length > 5) value = value.substring(0, 5) + '/' + value.substring(5, 9);
-
-                            
-                            
-                            e.target.value = value;
-                            if(columnName == 'finished'){
-                                if(value.split('/').length !=3){
-                                    e.target.classList.add("erro")
-                                    e.target.classList.remove("success")
-                                }
-                                else{
-                                    
-                                    var deadline_data = new Date(`${record['deadline'].split('/')[2]}-${record['deadline'].split('/')[1]}-${record['deadline'].split('/')[0]}`)
-                                    var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
-                                    
-                                    if(input_data < deadline_data){
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-                                    }
-                                    else if(value.split('/')[2].length == 4 && isValidDate(value)){
-                                        e.target.classList.remove("erro")
-                                        e.target.classList.add("success")
-                                        atualizarDados(e)
-                                    }
-                                    else{
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-                                    }
-                                }
-                            }else if(columnName == 'deadline'){
-                                if(value.split('/').length !=3){
-                                    e.target.classList.add("erro")
-                                    e.target.classList.remove("success")
-                                }
-                                else{
-                                    var finished = new Date(`${record['finished'].split('/')[2]}-${record['finished'].split('/')[1]}-${record['finished'].split('/')[0]}`)
-                                    var data = new Date(record['data'])
-                                    var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
-                                    if(input_data < data){
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-
-                                    }
-                                    else if(finished && input_data > finished){
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-
-                                    }
-                                    else if(value.split('/')[2].length == 4 && isValidDate(value)){
-                                        e.target.classList.remove("erro")
-                                        e.target.classList.add("success")
-                                        atualizarDados(e)
-                                    }
-                                    else{
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-                                    }
-                                }
-                            }
-                            
-                        })
-                        if(textInput.classList[0] == 'date-text-input'){
-                            let teste = flatpickr('.date-text-input', {'allowInput':true, 'dateFormat':'d/m/Y', 'minDate':'today'})
-                        }
-                    }
-                    else if ((columnName == 'responsible' && '{{has_full_permission}}' === 'True')) {
-                        cell.id = `${columnName}${record.id}`;
-                        cell.classList.add('editable-field-container');
-                        cell.classList.add('date-input-container');
-
-                        const select = document.createElement('select');
-                        select.setAttribute('data-initial-value', value);
-                        select.placeholder = value;
-                        select.id = `${columnName}${record.id}`;
-
-                        // Adiciona evento para atualizar valor
-                        select.addEventListener('change', (e) => atualizarDados(e));
-
-                        // Placeholder temporário até carregar os responsáveis
-                        const optionPlaceholder = document.createElement('option');
-                        optionPlaceholder.textContent = '-- Selecione o responsável --';
-                        optionPlaceholder.disabled = true;
-                        optionPlaceholder.selected = true;
-                        select.appendChild(optionPlaceholder);
-
-                        // Adiciona o select na célula
-                        cell.appendChild(select);
-
-                        // Buscar responsáveis via AJAX com base no país
-                        const responsaveis = responsaveisPorPais[record.country]
-                        
-                        for(let responsavel in responsaveis){
-                            const opt = document.createElement('option');
-                            opt.textContent = capitalizeFirstLetter(responsaveis[responsavel].name)
-                            opt.value = responsaveis[responsavel].name
-                            if (responsaveis[responsavel].name.toUpperCase() === select.getAttribute('data-initial-value').toUpperCase()) {
-                                opt.selected = true;
-                            }
-                            select.appendChild(opt);
-                        }
-                        }
-
-                    
-                    else if(headerInfo.isTextAreaColumn){
-                        cell.id = `${columnName}${record.id}`
-                        cell.classList.add('editable-field-container')
-                        cell.classList.add('date-input-container')
-
-                        let textArea = document.createElement('textarea')
-                        textArea.setAttribute('data-initial-value', value)
-                        textArea.rows = 5
-                        textArea.cols = 20
-                        textArea.placeholder = value
-                        // textArea.title="Clique duas vezes para copiar o texto"
-                        textArea.id = `${columnName}${record.id}`
-                        textArea.addEventListener('input', (e)=>atualizarDados(e))
-                        textArea.addEventListener('dblclick', (e)=>{
-                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
-                            Swal.fire({
-                                title:"Texto copiado",
-                                text: 'Feedback copiado para área de transferência',
-                                showCloseButton: true,
-                                icon:'success'
-                            })
-                        })
-                        cell.appendChild(textArea)
-                    }
-                    else{
-                        cell.textContent = (value !== null && value !== undefined) ? value : ""; 
-                    }
-                    
-                });
-            });
+// Função para atualizar o status de um registro específico
+function updateRecordStatus(recordId, newStatus) {
+    const statusCell = document.querySelector(`[data-column="status"][data-id="${recordId}"]`);
+    if (!statusCell) return;
+    
+    const currentStatus = statusCell.textContent.trim();
+    
+    // Só atualiza se o status mudou
+    if (currentStatus !== newStatus) {
+        statusCell.textContent = newStatus;
+        
+        // Cria um elemento mock para usar com a função saveField existente
+        const mockElement = {
+            value: newStatus,
+            closest: () => statusCell,
+            classList: { add: () => {}, remove: () => {} },
+            setAttribute: () => {}
+        };
+        
+        // Chama a função saveField para persistir no backend
+        if (typeof saveField === 'function') {
+            saveField(mockElement);
         }
+        statusCell.setAttribute('data-initial-value', newStatus)
+        //console.log(`Status atualizado para registro ${recordId}: ${currentStatus} → ${newStatus}`);
+    }
+}
+
+// Função para recalcular todos os status
+function recalculateAllStatus() {
+    statusUpdateSystem.records.forEach(record => {
+        const newStatus = calculateStatus(record);
+        updateRecordStatus(record.id, newStatus);
+    });
+}
+
+// Função para recalcular status de um registro específico
+function recalculateRecordStatus(recordId) {
+    const record = statusUpdateSystem.records.find(r => r.id == recordId);
+    if (!record) return;
+    
+    // Atualiza os dados do record com os valores atuais dos inputs
+    const deadlineInput = document.querySelector(`[data-column="deadline"][data-id="${recordId}"] input`);
+    const finishedInput = document.querySelector(`[data-column="finished"][data-id="${recordId}"] input`);
+    
+    if (deadlineInput) {
+        record.deadline = deadlineInput.value || deadlineInput.placeholder;
+    }
+    if (finishedInput) {
+        record.finished = finishedInput.value || finishedInput.placeholder;
+    }
+    
+    const newStatus = calculateStatus(record);
+    updateRecordStatus(recordId, newStatus);
+}
+
+// Função com debounce para evitar execuções excessivas
+function debounce(func, wait, key) {
+    if (statusUpdateSystem.debounceTimers.has(key)) {
+        clearTimeout(statusUpdateSystem.debounceTimers.get(key));
+    }
+    
+    const timer = setTimeout(() => {
+        func();
+        statusUpdateSystem.debounceTimers.delete(key);
+    }, wait);
+    
+    statusUpdateSystem.debounceTimers.set(key, timer);
+}
+
+// Função para configurar observadores nos inputs de data
+function setupDateInputObservers() {
+    // Remove observadores existentes
+    statusUpdateSystem.observers.forEach(observer => observer.disconnect());
+    statusUpdateSystem.observers.clear();
+    
+    // Configura observadores para inputs de deadline e finished
+    const dateInputs = document.querySelectorAll('[data-column="deadline"] input, [data-column="finished"] input');
+    
+    dateInputs.forEach(input => {
+        const cell = input.closest('[data-id]');
+        if (!cell) return;
+        
+        const recordId = cell.getAttribute('data-id');
+        const columnName = cell.getAttribute('data-column');
+        
+        // Event listener para mudanças no input
+        const handleInputChange = () => {
+            debounce(() => {
+                recalculateRecordStatus(recordId);
+            }, 300, `${recordId}-${columnName}`);
+        };
+        
+        // Remove listeners existentes para evitar duplicação
+        input.removeEventListener('input', handleInputChange);
+        input.removeEventListener('change', handleInputChange);
+        input.removeEventListener('blur', handleInputChange);
+        
+        // Adiciona os listeners
+        input.addEventListener('input', handleInputChange);
+        input.addEventListener('change', handleInputChange);
+        input.addEventListener('blur', handleInputChange);
+        
+        //console.log(`Observer configurado para ${columnName} do registro ${recordId}`);
+    });
+    
+    // MutationObserver para detectar mudanças no DOM (quando novos inputs são adicionados)
+    const tableObserver = new MutationObserver((mutations) => {
+        let shouldReconfigure = false;
+        
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    const hasDateInputs = node.querySelectorAll && 
+                        node.querySelectorAll('[data-column="deadline"] input, [data-column="finished"] input').length > 0;
+                    
+                    if (hasDateInputs) {
+                        shouldReconfigure = true;
+                    }
+                }
+            });
+        });
+        
+        if (shouldReconfigure) {
+            debounce(() => {
+                setupDateInputObservers();
+                recalculateAllStatus();
+            }, 100, 'dom-mutation');
+        }
+    });
+    
+    // Observa mudanças no tbody da tabela
+    const tableBody = document.getElementById('table-body');
+    if (tableBody) {
+        tableObserver.observe(tableBody, {
+            childList: true,
+            subtree: true
+        });
+        statusUpdateSystem.observers.set('table-mutation', tableObserver);
+    }
+}
+
+// Função melhorada updateTable com sistema de atualização dinâmica
+function updateTable(records) {
+    // Armazena os records no sistema de status
+    statusUpdateSystem.records = records || [];
+    
+    tableBody.innerHTML = "";
+    if (!records || records.length === 0) {
+        const colspan = table.querySelectorAll("thead th[data-column]").length;
+        const noResultsRow = tableBody.insertRow();
+        const cell = noResultsRow.insertCell();
+
+        cell.colSpan = colspan > 0 ? colspan : 1;
+        cell.textContent = "Nenhum registro encontrado.";
+        cell.style.textAlign = "center";
+        return;
+    }
+    
+    const visibleColumns = Array.from(table.querySelectorAll("thead th[data-column]")).map(th => th.getAttribute('data-column'));
+    let has_full_permission = '{{has_full_permission}}'
+
+    records.forEach((record) => {
+        const row = tableBody.insertRow();
+        visibleColumns.forEach(columnName => {
+            const cell = row.insertCell();
+            cell.setAttribute("data-column", columnName);
+            cell.setAttribute("data-id", record.id)
+
+            let value = record[columnName];
+            const headerInfo = headerData.find(h => h.columnName === columnName);
+            
+            if (headerInfo?.isDateColumn) {
+                if (value) {
+                    value = formatDateToDisplay(value);
+                } else {
+                    if (columnName == 'finished') {
+                        value = "Não finalizado"
+                    } else {
+                        value = 'Não definido'
+                    }
+                }
+            }
+
+            if (columnName == 'problem_detected') {
+                cell.classList.add("no-cursor")
+                
+                const container = document.createElement('div');
+                container.style.display = 'flex';
+                container.style.alignItems = 'center';
+                container.style.justifyContent = 'center';
+                
+                const detailsButton = document.createElement('button');
+                detailsButton.innerHTML = 'Ver Detalhes';
+                detailsButton.style.cssText = `
+                    background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
+                    color: white;
+                    border: none;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    font-weight: 600
+                `;
+                
+                detailsButton.addEventListener('mouseenter', function() {
+                    this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
+                    this.style.transform = 'translateY(-1px)';
+                    this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
+                });
+                
+                detailsButton.addEventListener('mouseleave', function() {
+                    this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'none';
+                });
+                
+                detailsButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    showProblemDetails(record);
+                });
+                
+                container.appendChild(detailsButton);
+                cell.appendChild(container);
+
+            } else if (columnName == 'feedback_technical') {
+                cell.classList.add("no-cursor")
+                
+                const container = document.createElement('div');
+                container.style.display = 'flex';
+                container.style.alignItems = 'center';
+                container.style.justifyContent = 'center';
+                
+                const detailsButton = document.createElement('button');
+                detailsButton.innerHTML = 'Gerenciar feedback';
+                detailsButton.style.cssText = `
+                    background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
+                    color: white;
+                    border: none;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    font-weight: 600
+                `;
+                
+                detailsButton.addEventListener('mouseenter', function() {
+                    this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
+                    this.style.transform = 'translateY(-1px)';
+                    this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
+                });
+                
+                detailsButton.addEventListener('mouseleave', function() {
+                    this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'none';
+                });
+                
+                detailsButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    generateFeedback(record);
+                });
+                
+                container.appendChild(detailsButton);
+                cell.appendChild(container);
+
+            } else if (columnName == 'status') {
+                // === NOVA LÓGICA DE STATUS DINÂMICA ===
+                cell.id = `${columnName}${record.id}`;
+                cell.classList.add('field-container');
+                
+                // Calcula o status correto baseado nas datas
+                const calculatedStatus = calculateStatus(record);
+                cell.textContent = calculatedStatus;
+                cell.setAttribute('data-initial-value', calculatedStatus);
+                // Se o status calculado for diferente do que veio do backend, atualiza
+                if (calculatedStatus !== record[columnName]) {
+                    const mockElement = {
+                        value: calculatedStatus,
+                        closest: () => cell,
+                        classList: { add: () => {}, remove: () => {} },
+                        setAttribute: () => {}
+                    };
+                    
+                    if (typeof saveField === 'function') {
+                        saveField(mockElement);
+                    }
+                }
+
+            } else if ((columnName == 'deadline' && '{{has_full_permission}}' === 'True') || columnName == 'finished') {
+                cell.id = `${columnName}${record.id}`
+                cell.classList.add('editable-field-container')
+                cell.classList.add('date-input-container')
+
+                const textInput = document.createElement('input');
+                textInput.type = 'text';
+                textInput.placeholder = 'DD/MM/AAAA';
+                textInput.classList.add('date-text-input')
+                
+                cell.addEventListener('dblclick', (e) => {
+                    navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
+                    textInput.blur()
+                    Swal.fire({
+                        title: "Texto copiado",
+                        text: 'Data copiada para área de transferência',
+                        showCloseButton: true,
+                        icon: 'success'
+                    })
+                })
+
+                if (columnName == "finished" && !record['deadline']) {
+                    textInput.disabled = true
+                }
+
+                textInput.placeholder = value;
+                textInput.setAttribute('data-initial-value', value)
+
+                cell.appendChild(textInput);
+
+                textInput.addEventListener('blur', function(e) {
+                    e.target.classList.remove("erro")
+                    e.target.classList.remove("success")
+                })
+
+                textInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+
+                    if (value.length > 2) value = value.substring(0, 2) + '/' + value.substring(2);
+                    if (value.length > 5) value = value.substring(0, 5) + '/' + value.substring(5, 9);
+
+                    e.target.value = value;
+                    
+                    if (columnName == 'finished') {
+                        if (value.split('/').length != 3) {
+                            e.target.classList.add("erro")
+                            e.target.classList.remove("success")
+                        } else {
+                            var deadline_data = new Date(`${record['deadline'].split('/')[2]}-${record['deadline'].split('/')[1]}-${record['deadline'].split('/')[0]}`)
+                            var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
+
+                            if (input_data < deadline_data) {
+                                e.target.classList.add("erro")
+                                e.target.classList.remove("success")
+                            } else if (value.split('/')[2].length == 4 && isValidDate(value)) {
+                                e.target.classList.remove("erro")
+                                e.target.classList.add("success")
+                                atualizarDados(e)
+                            } else {
+                                e.target.classList.add("erro")
+                                e.target.classList.remove("success")
+                            }
+                        }
+                    } else if (columnName == 'deadline') {
+                        if (value.split('/').length != 3) {
+                            e.target.classList.add("erro")
+                            e.target.classList.remove("success")
+                        } else {
+                            var finished = record['finished'] ? new Date(`${record['finished'].split('/')[2]}-${record['finished'].split('/')[1]}-${record['finished'].split('/')[0]}`) : null;
+                            var data = new Date(record['data'])
+                            var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
+                            
+                            if (input_data < data) {
+                                e.target.classList.add("erro")
+                                e.target.classList.remove("success")
+                            } else if (finished && input_data > finished) {
+                                e.target.classList.add("erro")
+                                e.target.classList.remove("success")
+                            } else if (value.split('/')[2].length == 4 && isValidDate(value)) {
+                                e.target.classList.remove("erro")
+                                e.target.classList.add("success")
+                                atualizarDados(e)
+                            } else {
+                                e.target.classList.add("erro")
+                                e.target.classList.remove("success")
+                            }
+                        }
+                    }
+                })
+                
+                if (textInput.classList[0] == 'date-text-input') {
+                    flatpickr('.date-text-input', { 'allowInput': true, 'dateFormat': 'd/m/Y', 'minDate': 'today' })
+                }
+
+            } else if ((columnName == 'responsible' && '{{has_full_permission}}' === 'True')) {
+                cell.id = `${columnName}${record.id}`;
+                cell.classList.add('editable-field-container');
+                cell.classList.add('date-input-container');
+
+                const select = document.createElement('select');
+                select.setAttribute('data-initial-value', value);
+                select.placeholder = value;
+                select.id = `${columnName}${record.id}`;
+
+                select.addEventListener('change', (e) => atualizarDados(e));
+
+                const optionPlaceholder = document.createElement('option');
+                optionPlaceholder.textContent = '-- Selecione o responsável --';
+                optionPlaceholder.disabled = true;
+                optionPlaceholder.selected = !value;
+                select.appendChild(optionPlaceholder);
+
+                cell.appendChild(select);
+
+                const responsaveis = responsaveisPorPais[record.country]
+
+                if (responsaveis) {
+                    responsaveis.forEach(responsavel => {
+                        const opt = document.createElement('option');
+                        opt.textContent = capitalizeFirstLetter(responsavel.name)
+                        opt.value = responsavel.name
+                        if (value && responsavel.name.toUpperCase() === value.toUpperCase()) {
+                            opt.selected = true;
+                        }
+                        select.appendChild(opt);
+                    });
+                }
+
+            } else if (headerInfo.isTextAreaColumn) {
+                cell.id = `${columnName}${record.id}`
+                cell.classList.add('editable-field-container')
+                cell.classList.add('date-input-container')
+
+                let textArea = document.createElement('textarea')
+                textArea.setAttribute('data-initial-value', value)
+                textArea.rows = 5
+                textArea.cols = 20
+                textArea.placeholder = value
+                textArea.id = `${columnName}${record.id}`
+                textArea.addEventListener('input', (e) => atualizarDados(e))
+                textArea.addEventListener('dblclick', (e) => {
+                    navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
+                    Swal.fire({
+                        title: "Texto copiado",
+                        text: 'Feedback copiado para área de transferência',
+                        showCloseButton: true,
+                        icon: 'success'
+                    })
+                })
+                cell.appendChild(textArea)
+
+            } else {
+                cell.textContent = (value !== null && value !== undefined) ? value : "";
+            }
+        });
+    });
+    
+    // Configura os observadores após renderizar a tabela
+    setTimeout(() => {
+        setupDateInputObservers();
+        if (!statusUpdateSystem.isInitialized) {
+            recalculateAllStatus();
+            statusUpdateSystem.isInitialized = true;
+        }
+    }, 100);
+}
+
+// Função para inicializar o sistema de atualização dinâmica
+function initializeStatusUpdateSystem() {
+    //console.log('Sistema de atualização dinâmica de status inicializado');
+    
+    // Configura um observer global para detectar mudanças na página
+    const globalObserver = new MutationObserver((mutations) => {
+        let hasTableChanges = false;
+        
+        mutations.forEach((mutation) => {
+            if (mutation.target.id === 'table-body' || 
+                mutation.target.closest('#table-body')) {
+                hasTableChanges = true;
+            }
+        });
+        
+        if (hasTableChanges) {
+            debounce(() => {
+                setupDateInputObservers();
+            }, 200, 'global-table-change');
+        }
+    });
+    
+    // Observa mudanças em toda a página
+    globalObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    
+    statusUpdateSystem.observers.set('global', globalObserver);
+}
+
+// Inicializa o sistema quando o DOM estiver pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeStatusUpdateSystem);
+} else {
+    initializeStatusUpdateSystem();
+}
+
+
 
         // --- Inicialização ---
         //console.log("Inicializando event listeners para cabeçalhos...");
@@ -1459,8 +1717,6 @@
     
 
         }
-
-        // Função para fazer download de arquivos
         
     
 

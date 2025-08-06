@@ -1,579 +1,699 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Formulário de Ocorrência</title>
-  <style>
+  <!DOCTYPE html>
+  <html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Formulário de Ocorrência</title>
+    <style>
+      #actions_log {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 16px;
+      z-index: 1000;
+    }
+    .buttons_log {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 28px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 6px var(--shadow-light);
+      transition: background-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      letter-spacing: 0.03em;
+    }
+
+    .buttons_log:hover {
+      background-color: var(--primary-dark);
+      box-shadow: 0 4px 14px var(--shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .buttons_log:focus-visible {
+      outline: 2px solid var(--primary-light);
+      outline-offset: 2px;
+    }
+    .new_user {
+      background-color: #2e7d32;
+      box-shadow: 0 2px 6px rgba(46, 125, 50, 0.2);
+    }
+
+    .new_user:hover {
+      background-color: #27632a;
+      box-shadow: 0 4px 14px rgba(46, 125, 50, 0.4);
+    }
+
+    .logout {
+      background-color: #b00020;
+      box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
+    }
+
+    .logout:hover {
+      background-color: #7a0015;
+      box-shadow: 0 4px 14px rgba(176, 0, 32, 0.4);
+    }
+
+    .redirecionar {
+      background-color: #525252ff;
+      box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
+    }
+
+    .redirecionar:hover {
+      background-color: #3f3f3fff;
+      box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
+    }
+
+    .login {
+      background-color: var(--primary);
+      box-shadow: 0 2px 6px var(--shadow-light);
+    }
+
+    .login:hover {
+      background-color: var(--primary-dark);
+      box-shadow: 0 4px 14px var(--shadow-hover);
+    }
     :root {
-  --primary: #1a73e8;        /* Azul profissional */
-  --primary-dark: #155ab6;
-  --primary-light: #3a8ee6;
-  --secondary: #5f6368;      /* Cinza neutro */
-  --background: #f9fafb;
-  --text-primary: #202124;
-  --text-secondary: #5f6368;
-  --border-color: #dfe1e5;
-  --shadow-light: rgba(60, 64, 67, 0.15);
-  --shadow-hover: rgba(26, 115, 232, 0.3);
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: var(--text-primary);
-}
-
-body {
-  background-color: var(--background);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 2rem;
-  flex-direction: column;
-}
-
-/* Container dos botões */
-#actions_log {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  gap: 16px;
-  z-index: 1000;
-}
-
-/* Botões: base */
-.buttons_log {
-  background-color: var(--primary);
-  color: white;
-  border: none;
-  padding: 10px 28px;
-  border-radius: 6px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 6px var(--shadow-light);
-  transition: background-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-  letter-spacing: 0.03em;
-}
-
-/* Hover suave */
-.buttons_log:hover {
-  background-color: var(--primary-dark);
-  box-shadow: 0 4px 14px var(--shadow-hover);
-  transform: translateY(-2px);
-}
-
-/* Focus acessível */
-.buttons_log:focus-visible {
-  outline: 2px solid var(--primary-light);
-  outline-offset: 2px;
-}
-
-/* Botão Criar Usuário (verde sóbrio) */
-.new_user {
-  background-color: #2e7d32;
-  box-shadow: 0 2px 6px rgba(46, 125, 50, 0.2);
-}
-
-.new_user:hover {
-  background-color: #27632a;
-  box-shadow: 0 4px 14px rgba(46, 125, 50, 0.4);
-}
-
-/* Botão Logout (vermelho elegante) */
-.logout {
-  background-color: #b00020;
-  box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
-}
-.redirecionar {
-  background-color: #525252ff;
-  box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
-}
-.redirecionar:hover {
-  background-color: #3f3f3fff;
-  box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2);
-}
-
-.logout:hover {
-  background-color: #7a0015;
-  box-shadow: 0 4px 14px rgba(176, 0, 32, 0.4);
-}
-
-/* Botão Login (azul padrão) */
-.login {
-  background-color: var(--primary);
-  box-shadow: 0 2px 6px var(--shadow-light);
-}
-
-.login:hover {
-  background-color: var(--primary-dark);
-  box-shadow: 0 4px 14px var(--shadow-hover);
-}
-
-/* Formulário com layout limpo */
-form {
-  background-color: white;
-  padding: 2.5rem 3rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(32, 33, 36, 0.08);
-  max-width: 600px;
-  width: 100%;
-  display: grid;
-  gap: 1.25rem;
-}
-
-/* Inputs e selects limpos */
-form input[type="text"],
-form textarea,
-form select {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 1rem;
-  color: var(--text-primary);
-  transition: border-color 0.2s ease;
-  background-color: white;
-}
-
-form textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-form input[type="text"]:focus,
-form textarea:focus,
-form select:focus {
-  border-color: var(--primary);
-  outline: none;
-  background-color: #fff;
-  box-shadow: 0 0 4px var(--primary-light);
-}
-
-form input[readonly] {
-  background-color: #f3f4f6;
-  color: var(--text-secondary);
-}
-
-form input[type="submit"] {
-  background-color: var(--primary);
-  color: white;
-  border: none;
-  padding: 12px 0;
-  font-weight: 700;
-  font-size: 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.25s ease, box-shadow 0.25s ease;
-  box-shadow: 0 3px 10px var(--shadow-light);
-}
-
-form input[type="submit"]:hover {
-  background-color: var(--primary-dark);
-  box-shadow: 0 5px 18px var(--shadow-hover);
-}
-.area{
-  display:flex;
-  flex-direction:row;
-  justify-content:space-between;
-}
-.area span{
-  display:flex;
-  align-items:center;
-  gap:5px;
-}
- input[type="radio"] {
-       appearance: none; /* Remove a aparência padrão */
-       -webkit-appearance: none; /* Remove a aparência padrão para navegadores WebKit */
-       width: 20px;
-       height: 20px;
-       border: 2px solid #ccc;
-       border-radius: 50%; /* Torna o botão redondo */
-       outline: none; /* Remove o contorno padrão */
-       background-color: #fff;
-       transition: background-color 0.2s ease; /* Adiciona uma transição suave */
-   }
-
-   input[type="radio"]:checked {
-       background-color: #009EE0; /* Cor quando selecionado */
-       border: 2px solid #009EE0;
-   }
-
-   input[type="radio"]:hover {
-       cursor: pointer; /* Muda o cursor para um ponteiro */
-       border: 2px solid #15446D;
-   }
-/* Responsividade */
-@media (max-width: 480px) {
-  form {
-    padding: 1.5rem 1.5rem;
+    --primary: #1a73e8;
+    --primary-dark: #155ab6;
+    --primary-light: #3a8ee6;
+    --secondary: #5f6368;
+    --background: #f9fafb;
+    --text-primary: #202124;
+    --text-secondary: #5f6368;
+    --border-color: #dfe1e5;
+    --shadow-light: rgba(60, 64, 67, 0.15);
+    --shadow-hover: rgba(26, 115, 232, 0.3);
+    --gray: #f5f7fa;
+    --hover-bg: #e9ecef;
   }
 
-  #actions_log {
-    position: static;
+  /* Reset básico */
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-primary);
+  }
+
+  body {
+    background-color: var(--background);
+    display: flex;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 1rem;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+    flex-direction: column;
   }
 
-  .buttons_log {
-    padding: 10px 20px;
-    font-size: 14px;
-    border-radius: 6px;
+  /* FORMULÁRIO */
+  form {
+    background-color: white;
+    padding: 2.5rem 3rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(32, 33, 36, 0.08);
+    max-width: 900px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem 2rem;
+    align-items: start;
   }
-}
+
+  /* BLOCO DE LABEL + INPUT */
+  .form-pair,
+  .file-upload-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  /* CAMPOS QUE OCUPAM AS DUAS COLUNAS */
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* INPUTS E SELECTS */
+  form input[type="text"],
+  form select,
+  form textarea {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    background-color: white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+  }
+
+  form input[type="text"]:focus,
+  form select:focus,
+  form textarea:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 4px var(--primary-light);
+  }
+
+  form input[readonly] {
+    background-color: #f3f4f6;
+    color: var(--text-secondary);
+  }
+
+  form textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+
+  /* SUBMIT */
+  form input[type="submit"] {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 0;
+    font-weight: 700;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px var(--shadow-light);
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+    width: 100%;
+  }
+
+  form input[type="submit"]:hover {
+    background-color: var(--primary-dark);
+    box-shadow: 0 5px 18px var(--shadow-hover);
+  }
+
+  /* ÁREA DE RADIO BUTTONS */
+  .area {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.5rem;
+  }
+
+  .area span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  input[type="radio"] {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    border-radius: 50%;
+    background-color: #fff;
+    transition: background-color 0.2s ease;
+  }
+
+  input[type="radio"]:checked {
+    background-color: #009EE0;
+    border: 2px solid #009EE0;
+  }
+
+  input[type="radio"]:hover {
+    cursor: pointer;
+    border: 2px solid #15446D;
+  }
+
+  /* UPLOAD DE ARQUIVOS */
+  .file-upload {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .custom-file-button {
+    background-color: var(--primary);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 6px var(--shadow-light);
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .custom-file-button:hover {
+    background-color: var(--primary-dark);
+    box-shadow: 0 4px 14px var(--shadow-hover);
+  }
+
+  .file-upload input[type="file"] {
+    display: none;
+  }
+
+  #file-name {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    flex: 1;
+    word-break: break-word;
+  }
+
+  /* RESPONSIVO */
+  @media (max-width: 768px) {
+    form {
+      grid-template-columns: 1fr;
+      padding: 2rem;
+    }
+
+    .area {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .custom-file-button,
+    #file-name {
+      width: 100%;
+    }
+
+    .file-upload {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    form input[type="submit"] {
+      width: 100%;
+    }
+    #actions_log {
+      position: static;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+    
+    .buttons_log {
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 6px;
+    }
+  }
 
   </style>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-</head>
-<body>
-  <div id="actions_log">
-    {%if has_full_permission%}
-      <button class="new_user buttons_log" onclick="newUser()">Criar novo usuário</button>
-    {%endif%}
 
-    {%if user.is_authenticated%}
-      <button class="logout buttons_log" onclick="logOut()">Logout</button>
-      <button class="redirecionar buttons_log" onclick="redirecionar()">Voltar para tabela</button>
-    {%else%}
-      <button class="login buttons_log" onclick="handleLogin()">Login</button>
-    {%endif%}
-  </div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  </head>
+  <body>
+    <div id="actions_log">
+      {%if has_full_permission%}
+        <button class="new_user buttons_log" onclick="newUser()">Criar novo usuário</button>
+      {%endif%}
 
-  
+      {%if user.is_authenticated%}
+        <button class="logout buttons_log" onclick="logOut()">Logout</button>
+        <button class="redirecionar buttons_log" onclick="redirecionar()">Voltar para tabela</button>
+      {%else%}
+        <button class="login buttons_log" onclick="handleLogin()">Login</button>
+      {%endif%}
+    </div>
+
+    
+    <!-- Formulário de Ocorrência em duas colunas sem separar label dos inputs -->
   <form method="POST" enctype="multipart/form-data" id="form-ocorrencia">
-
     {% csrf_token %}
 
-    {% if has_full_permission %}
+    <div class="form-pair">
       <label for="country">País</label>
-      <select id="country" name="country" required>
-          <option value="">-- Selecione o país --</option>
-          {% for pais in paises %}
-              <option value="{{ pais.id }}">{{ pais.name }}</option>
-          {% endfor %}
-      </select>
-    {% else %}
-      <label for="country">País</label>
-      {% if paises %}
-          <select id="country" name="country">
+      {% if has_full_permission %}
+        <select id="country" name="country" required>
             <option value="">-- Selecione o país --</option>
             {% for pais in paises %}
                 <option value="{{ pais.id }}">{{ pais.name }}</option>
             {% endfor %}
-          </select>
+        </select>
       {% else %}
-          <input type="text" id="country" name="country" value="Sem país atribuído" readonly />
+        {% if paises %}
+            <select id="country" name="country">
+              <option value="">-- Selecione o país --</option>
+              {% for pais in paises %}
+                  <option value="{{ pais.id }}">{{ pais.name }}</option>
+              {% endfor %}
+            </select>
+        {% else %}
+            <input type="text" id="country" name="country" value="Sem país atribuído" readonly />
+        {% endif %}
       {% endif %}
-    {% endif %}
+    </div>
 
-    <span id="span_ticket">
+    
+
+    <div class="form-pair">
+      <label for="technical">Técnico </label>
+      <input type="text" id="technical" name="technical" required />
+    </div>
+    <div class="form-pair full-width" id="span_ticket">
       <label for="ticket">Ticket</label>
-      <input type="text" id="ticket" name="ticket"/>
-    </span>
-    <label for="technical">Técnico *</label>
-    <input type="text" id="technical" name="technical" required />
+      <input type="text" id="ticket" name="ticket" />
+    </div>
 
     {% if has_full_permission %}
-      <label for="responsible">Responsável </label>
-      <select id="responsible" name="responsible" >
+      <div class="form-pair">
+        <label for="responsible">Responsável </label>
+        <select id="responsible" name="responsible">
+          <option value="">-- Selecione o responsável --</option>
+          {% for responsavel in todos_responsaveis_raw %}
+              <option value="{{ responsavel.name }}">{{ responsavel.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+
+    <div class="form-pair">
+      <label for="device">Equipamentos </label>
+      <select id="device" name="device" required>
         <option value="">-- Selecione o responsável --</option>
-        {% for responsavel in todos_responsaveis_raw %}
-            <option value="{{ responsavel.name }}">{{ responsavel.name }}</option>
+        {% for device in todos_equipamentos_raw %}
+            <option value="{{ device.id }}">{{ device.name }}</option>
         {% endfor %}
       </select>
-    {% endif %}
+    </div>
 
-    <label for="device">Equipamentos *</label>
-    <select id="device" name="device" required>
-      <option value="">-- Selecione o responsável --</option>
-      {% for device in todos_equipamentos_raw %}
-          <option value="{{ device.id }}">{{ device.name }}</option>
-      {% endfor %}
-    </select>
-
-    <label for="area">Área *</label>
-    <span class="area">
-      <span>
-        <input type="radio" name="area_radio" id="IMMO" value="IMMO" required>
-        <label for="IMMO">IMMO</label>
+    <div class="form-pair full-width">
+      <label for="area">Área </label>
+      <span class="area">
+        <span>
+          <input type="radio" name="area_radio" id="IMMO" value="IMMO" required>
+          <label for="IMMO">IMMO</label>
+        </span>
+        <span>
+          <input type="radio" name="area_radio" id="Diagnosis" value="Diagnosis">
+          <label for="Diagnosis">Diagnosis</label>
+        </span>
+        <span>
+          <input type="radio" name="area_radio" id="Device" value="Device">
+          <label for="Device">Device</label>
+        </span>
       </span>
-      <span>
-        <input type="radio" name="area_radio" id="Diagnosis" value="Diagnosis">
-        <label for="Diagnosis">Diagnosis</label>
-      </span>
-      <span>
-        <input type="radio" name="area_radio" id="Device" value="Device">
-        <label for="Device">Device</label>
-      </span>
-    </span>
+    </div>
 
-    <label for="serial">Serial</label>
-    <input type="text" id="serial" name="serial" required/>
+    <div class="form-pair">
+      <label for="serial">Serial</label>
+      <input type="text" id="serial" name="serial" required />
+    </div>
 
-    <label for="brand">Marca</label>
-    <input type="text" id="brand" name="brand" required/>
+    <div class="form-pair">
+      <label for="brand">Marca</label>
+      <input type="text" id="brand" name="brand" required />
+    </div>
 
-    <label for="model">Modelo</label>
-    <input type="text" id="model" name="model" required/>
+    <div class="form-pair full-width">
+      <label for="model">Modelo</label>
+      <input type="text" id="model" name="model" required />
+    </div>
 
-    <label for="year">Ano</label>
-    <input type="text" id="year" name="year" required/>
+    <div class="form-pair">
+      <label for="year">Ano</label>
+      <input type="text" id="year" name="year" required />
+    </div>
 
-    <label for="version">Versão</label>
-    <input type="text" id="version" name="version" required/>
+    <div class="form-pair ">
+      <label for="version">Versão</label>
+      <input type="text" id="version" name="version" required />
+    </div>
 
     {% if has_full_permission %}
-      <label for="deadline">Deadline</label>
-      <input type="text" id="deadline" name="deadline" required/>
+      <div class="form-pair">
+        <label for="deadline">Deadline</label>
+        <input type="text" id="deadline" name="deadline" required />
+      </div>
 
-      <label for="status">Status</label>
-      <select id="status" name="status" >
-        <option value="">-- Estado da ocorrência --</option>
-        <option value="Requisitado">Requisitado</option>
-        <option value="Concluído">Concluído</option>
-        <option value="Em progresso">Em progresso</option>
-        <option value="Atrasado">Atrasado</option>
-      </select>
+      <div class="form-pair">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">-- Estado da ocorrência --</option>
+          <option value="Requisitado">Requisitado</option>
+          <option value="Concluído">Concluído</option>
+          <option value="Em progresso">Em progresso</option>
+          <option value="Atrasado">Atrasado</option>
+        </select>
+      </div>
     {% else %}
       <input type="hidden" name="status" value="Requisitado" />
     {% endif %}
 
-    <label for="problem_detected">Problema Detectado</label>
-    <textarea id="problem_detected" name="problem_detected" required></textarea>
+    <div class="form-pair full-width">
+      <label for="problem_detected">Problema Detectado</label>
+      <textarea id="problem_detected" name="problem_detected" required></textarea>
+    </div>
 
-    <label for="arquivo">Anexar Arquivo</label>
-    <input type="file" id="arquivo" name="arquivo" multiple />
+    <div class="file-upload-wrapper full-width">
+      <label>Anexar Arquivo</label>
+      <div class="file-upload">
+        <label for="arquivo" class="custom-file-button">Selecionar Arquivos</label>
+        <input type="file" id="arquivo" name="arquivo" multiple />
+        <span id="file-name">Nenhum arquivo selecionado</span>
+      </div>
+    </div>
 
-
-    <input type="submit" value="Cadastrar Ocorrência" required/>
+    <div class="form-pair full-width">
+      <input type="submit" value="Cadastrar Ocorrência" required />
+    </div>
   </form>
 
-<script>
-  flatpickr('#deadline', {'allowInput':false, 'dateFormat':'d/m/Y', 'minDate':'today'})
-  // Dados do backend - responsáveis por país (baseado no modelo CountryPermission)
-  const responsaveisPorPais = {{ responsaveis_por_pais|safe }};
-  const todosResponsaveis = {{ todos_responsaveis|safe }};
-  
-  // Criar mapeamento reverso: responsável -> países
-  const paisesPorResponsavel = {};
-  Object.keys(responsaveisPorPais).forEach(paisId => {
-    responsaveisPorPais[paisId].forEach(responsavel => {
-      if (!paisesPorResponsavel[responsavel.name]) {
-        paisesPorResponsavel[responsavel.name] = [];
-      }
-      paisesPorResponsavel[responsavel.name].push(parseInt(paisId));
-    });
-  });
 
-  // Elementos do DOM
-  const countrySelect = document.getElementById('country');
-  const responsibleSelect = document.getElementById('responsible');
-  
-
-  // Função para popular o select de responsáveis baseado no país selecionado
-  function filterResponsiblesByCountry(countryId) {
-    // Salvar seleção atual
-    const currentResponsible = responsibleSelect.value;
+  <script>
+    flatpickr('#deadline', {'allowInput':false, 'dateFormat':'d/m/Y', 'minDate':'today'})
+    // Dados do backend - responsáveis por país (baseado no modelo CountryPermission)
+    const responsaveisPorPais = {{ responsaveis_por_pais|safe }};
+    const todosResponsaveis = {{ todos_responsaveis|safe }};
     
-    // Limpar opções existentes (exceto a primeira)
-    responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
-    
-    let responsaveisParaMostrar = [];
-    
-    if (!countryId) {
-      // Se nenhum país selecionado, mostrar todos os responsáveis
-
-      
-      responsaveisParaMostrar = todosResponsaveis;
-    } else {
-      // Mostrar apenas responsáveis do país selecionado
-      responsaveisParaMostrar = responsaveisPorPais[countryId] || [];
-      
-    }
-    
-    responsaveisParaMostrar.forEach(responsavel => {
-      const option = document.createElement('option');
-      option.value = responsavel.name;
-      option.textContent = responsavel.name;
-      responsibleSelect.appendChild(option);
-    });
-    
-    // Restaurar seleção se ainda for válida
-    if (currentResponsible && responsaveisParaMostrar.some(r => r.name === currentResponsible)) {
-      responsibleSelect.value = currentResponsible;
-    }
-  }
-
-  // Função para filtrar países baseado no responsável selecionado
-  function filterCountriesByResponsible(responsibleName) {
-    if (!responsibleName) {
-      // Se nenhum responsável selecionado, mostrar todos os países
-      Array.from(countrySelect.options).forEach(option => {
-        option.style.display = 'block';
+    // Criar mapeamento reverso: responsável -> países
+    const paisesPorResponsavel = {};
+    Object.keys(responsaveisPorPais).forEach(paisId => {
+      responsaveisPorPais[paisId].forEach(responsavel => {
+        if (!paisesPorResponsavel[responsavel.name]) {
+          paisesPorResponsavel[responsavel.name] = [];
+        }
+        paisesPorResponsavel[responsavel.name].push(parseInt(paisId));
       });
-      return;
-    }
+    });
 
-    const paisesDoResponsavel = paisesPorResponsavel[responsibleName] || [];
+    // Elementos do DOM
+    const countrySelect = document.getElementById('country');
+    const responsibleSelect = document.getElementById('responsible');
     
-    // Mostrar/ocultar países baseado no responsável
-    Array.from(countrySelect.options).forEach(option => {
-      if (option.value === '') return; // Pular a opção padrão
+
+    // Função para popular o select de responsáveis baseado no país selecionado
+    function filterResponsiblesByCountry(countryId) {
+      // Salvar seleção atual
+      const currentResponsible = responsibleSelect.value;
       
-      const paisId = parseInt(option.value);
-      if (!paisesDoResponsavel.includes(paisId)) {
-        option.style.display = 'none';
+      // Limpar opções existentes (exceto a primeira)
+      responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
+      
+      let responsaveisParaMostrar = [];
+      
+      if (!countryId) {
+        // Se nenhum país selecionado, mostrar todos os responsáveis
+
+        
+        responsaveisParaMostrar = todosResponsaveis;
       } else {
-        option.style.display = 'block';
-      }
-    });
-  }
-
-  // Função para verificar se uma combinação é válida
-  function isValidCombination(countryId, responsibleName) {
-    if (!countryId || !responsibleName) return true;
-    
-    const responsaveisValidosParaPais = responsaveisPorPais[countryId] || [];
-    return responsaveisValidosParaPais.some(resp => resp.name === responsibleName);
-  }
-
-  // Event listeners para os selects
-  countrySelect.addEventListener('change', function() {
-    const selectedCountryId = this.value;
-    
-    // Verificar se a combinação atual é válida
-    if('{{has_full_permission}}' == 'True'){
-      const currentResponsibleName = responsibleSelect.value;
-      if (currentResponsibleName && !isValidCombination(selectedCountryId, currentResponsibleName)) {
-        // Se a combinação não é válida, limpar o responsável
-        responsibleSelect.value = '';
-      }
-    }
-    
-    // Resetar visibilidade de todos os países
-    Array.from(countrySelect.options).forEach(option => {
-      option.style.display = 'block';
-    });
-    if('{{has_full_permission}}' == 'True'){
-      filterResponsiblesByCountry(selectedCountryId);
-    }
-  });
-
-  if('{{has_full_permission}}' == 'True'){
-    responsibleSelect.addEventListener('change', function() {
-      const selectedResponsibleName = this.value;
-      const currentCountryId = countrySelect.value;
-      
-      // Verificar se a combinação atual é válida
-      if (currentCountryId && !isValidCombination(currentCountryId, selectedResponsibleName)) {
-        // Se a combinação não é válida, limpar o país
-        countrySelect.value = '';
-      }
-      
-      filterCountriesByResponsible(selectedResponsibleName);
-    });
-  }
-
-  // Função para lidar com o login
-  function newUser(){
-    window.location.href = '/criar_usuario'
-  }
-  function redirecionar(){
-    window.location.href = '/'
-  }
-  function logOut(){
-    window.location.href = '/logout'
-  }
-  function handleLogin() {
-    window.location.href = '/login';
-  }
-
-  // Event listener para o formulário
-  document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const form = e.target;
-    const data = new FormData(form);
-
-    const countrySelect = form.querySelector('#country');
-    const responsibleSelect = form.querySelector('#responsible');
-    
-    if (countrySelect && countrySelect.value === "") {
-        alert('Por favor, selecione um país.');
-        return;
-    }
-
-
-    try {
-        const response = await fetch("", {
-            method: "POST",
-            headers: {
-                'X-CSRFToken': data.get('csrfmiddlewaretoken')
-            },
-            body: data
-        });
-
-        if (!response.ok) {
-            throw new Error('Erro de rede ou do servidor');
-        }
-
-        const result = await response.json();
-
-        if (result.status === "success") {
-            alert(result.message);
-            form.reset();
-            // Reinicializar os selects após reset
-            if('{{has_full_permission}}' == 'True'){
-              filterResponsiblesByCountry('');
-            }
-            Array.from(countrySelect.options).forEach(option => {
-              option.style.display = 'block';
-            });
-        } else {
-            alert("Erro: " + result.message);
-        }
-    } catch (error) {
-        alert("Erro inesperado: " + error.message);
-    }
-  });
-
-  // Inicializar quando a página carregar
-  document.addEventListener('DOMContentLoaded', function() {
-    const inputTicket = document.getElementById('span_ticket')
-    inputTicket.style.display='none'
-    document.getElementById("ticket").required = false;
-    if('{{has_full_permission}}' == 'True'){
-      filterResponsiblesByCountry('');
-    }
-    const paises = JSON.parse('{{ paises_json|safe }}');
-    document.getElementById('country').addEventListener('change', function (e) {
-      document.getElementById("ticket").value = ''
-
-      const nomePais = paises[e.target.value];
-      if(["ESPANHA", "PORTUGAL"].includes(nomePais.toUpperCase())){
-        inputTicket.style.display='block'
-        document.getElementById("ticket").required = true;
-      }else{
-        inputTicket.style.display='none'
-        document.getElementById("ticket").required = false;
+        // Mostrar apenas responsáveis do país selecionado
+        responsaveisParaMostrar = responsaveisPorPais[countryId] || [];
         
       }
       
-    });
-    
-  });
-</script>
+      responsaveisParaMostrar.forEach(responsavel => {
+        const option = document.createElement('option');
+        option.value = responsavel.name;
+        option.textContent = responsavel.name;
+        responsibleSelect.appendChild(option);
+      });
+      
+      // Restaurar seleção se ainda for válida
+      if (currentResponsible && responsaveisParaMostrar.some(r => r.name === currentResponsible)) {
+        responsibleSelect.value = currentResponsible;
+      }
+    }
 
-</body>
-</html>
+    // Função para filtrar países baseado no responsável selecionado
+    function filterCountriesByResponsible(responsibleName) {
+      if (!responsibleName) {
+        // Se nenhum responsável selecionado, mostrar todos os países
+        Array.from(countrySelect.options).forEach(option => {
+          option.style.display = 'block';
+        });
+        return;
+      }
+
+      const paisesDoResponsavel = paisesPorResponsavel[responsibleName] || [];
+      
+      // Mostrar/ocultar países baseado no responsável
+      Array.from(countrySelect.options).forEach(option => {
+        if (option.value === '') return; // Pular a opção padrão
+        
+        const paisId = parseInt(option.value);
+        if (!paisesDoResponsavel.includes(paisId)) {
+          option.style.display = 'none';
+        } else {
+          option.style.display = 'block';
+        }
+      });
+    }
+
+    // Função para verificar se uma combinação é válida
+    function isValidCombination(countryId, responsibleName) {
+      if (!countryId || !responsibleName) return true;
+      
+      const responsaveisValidosParaPais = responsaveisPorPais[countryId] || [];
+      return responsaveisValidosParaPais.some(resp => resp.name === responsibleName);
+    }
+
+    // Event listeners para os selects
+    countrySelect.addEventListener('change', function() {
+      const selectedCountryId = this.value;
+      
+      // Verificar se a combinação atual é válida
+      if('{{has_full_permission}}' == 'True'){
+        const currentResponsibleName = responsibleSelect.value;
+        if (currentResponsibleName && !isValidCombination(selectedCountryId, currentResponsibleName)) {
+          // Se a combinação não é válida, limpar o responsável
+          responsibleSelect.value = '';
+        }
+      }
+      
+      // Resetar visibilidade de todos os países
+      Array.from(countrySelect.options).forEach(option => {
+        option.style.display = 'block';
+      });
+      if('{{has_full_permission}}' == 'True'){
+        filterResponsiblesByCountry(selectedCountryId);
+      }
+    });
+
+    if('{{has_full_permission}}' == 'True'){
+      responsibleSelect.addEventListener('change', function() {
+        const selectedResponsibleName = this.value;
+        const currentCountryId = countrySelect.value;
+        
+        // Verificar se a combinação atual é válida
+        if (currentCountryId && !isValidCombination(currentCountryId, selectedResponsibleName)) {
+          // Se a combinação não é válida, limpar o país
+          countrySelect.value = '';
+        }
+        
+        filterCountriesByResponsible(selectedResponsibleName);
+      });
+    }
+
+    // Função para lidar com o login
+    function newUser(){
+      window.location.href = '/criar_usuario'
+    }
+    function redirecionar(){
+      window.location.href = '/'
+    }
+    function logOut(){
+      window.location.href = '/logout'
+    }
+    function handleLogin() {
+      window.location.href = '/login';
+    }
+
+    // Event listener para o formulário
+    document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const form = e.target;
+      const data = new FormData(form);
+
+      const countrySelect = form.querySelector('#country');
+      const responsibleSelect = form.querySelector('#responsible');
+      
+      if (countrySelect && countrySelect.value === "") {
+          alert('Por favor, selecione um país.');
+          return;
+      }
+
+
+      try {
+          const response = await fetch("", {
+              method: "POST",
+              headers: {
+                  'X-CSRFToken': data.get('csrfmiddlewaretoken')
+              },
+              body: data
+          });
+
+          if (!response.ok) {
+              throw new Error('Erro de rede ou do servidor');
+          }
+
+          const result = await response.json();
+
+          if (result.status === "success") {
+              alert(result.message);
+              form.reset();
+              // Reinicializar os selects após reset
+              if('{{has_full_permission}}' == 'True'){
+                filterResponsiblesByCountry('');
+              }
+              Array.from(countrySelect.options).forEach(option => {
+                option.style.display = 'block';
+              });
+          } else {
+              alert("Erro: " + result.message);
+          }
+      } catch (error) {
+          alert("Erro inesperado: " + error.message);
+      }
+    });
+
+    // Inicializar quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+  const inputTicket = document.getElementById('span_ticket');
+  inputTicket.style.display = 'none';
+  document.getElementById("ticket").required = false;
+
+  if('{{has_full_permission}}' == 'True'){
+    filterResponsiblesByCountry('');
+  }
+
+  const paises = JSON.parse('{{ paises_json|safe }}');
+
+  document.getElementById('country').addEventListener('change', function (e) {
+    document.getElementById("ticket").value = '';
+
+    const nomePais = paises[e.target.value];
+    if (nomePais && ["ESPANHA", "PORTUGAL"].includes(nomePais.toUpperCase())) {
+      inputTicket.style.display = 'block';
+      document.getElementById("ticket").required = true;
+    } else {
+      inputTicket.style.display = 'none';
+      document.getElementById("ticket").required = false;
+    }
+  });
+});
+
+// Atualização do texto do arquivo selecionado
+document.getElementById('arquivo').addEventListener('change', function(e) {
+  const fileNameSpan = document.getElementById('file-name');
+  if (this.files.length === 0) {
+    fileNameSpan.textContent = 'Nenhum arquivo selecionado';
+  } else if (this.files.length === 1) {
+    fileNameSpan.textContent = this.files[0].name;
+  } else {
+    fileNameSpan.textContent = `${this.files.length} arquivos selecionados`;
+  }
+});
+
+  </script>
+
+  </body>
+  </html>
 
