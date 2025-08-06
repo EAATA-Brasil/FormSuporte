@@ -23,27 +23,46 @@
                 <div class="form-group">
                     <label for="serie">Nº Série</label>
                     <input type="text" id="serie" name="serial" class="form-control" 
-                           value="{{ request.POST.serial }}" required>
+                           value="{{ serial_digitado }}" required>
                     <button type="submit" class="btn-buscar">Buscar</button>
                 </div>
             </form>
 
-            {% if cliente %}
+            {% if clientes_duplicados %}
+            <div class="section">
+                <h2 class="section-title">Clientes com serial duplicado:</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CNPJ</th>
+                            <th>Telefone</th>
+                            <th>Equipamento</th>
+                            <th>Vencimento</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in clientes_duplicados %}
+                        <tr class="{{ item.status }}">
+                            <td data-label="Nome">{{ item.cliente.nome }}</td>
+                            <td data-label="CNPJ">{{ item.cliente.cnpj }}</td>
+                            <td data-label="Telefone">{{ item.cliente.tel }}</td>
+                            <td data-label="Equipamento">{{ item.cliente.equipamento }}</td>
+                            <td data-label="Vencimento">{{ item.cliente.vencimento }}</td>
+                            <td data-label="Status">{{ item.status_message }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% elif cliente %}
             <div class="section">
                 <h2 class="section-title">Dados Cliente:</h2>
-                <div class="form-group">
-                    {{ cliente.nome | yesno:"talvez" }}
-                </div>
-                <div class="form-group">
-                    
-                    {{ cliente.cnpj}}
-                </div>
-                <div class="form-group">
-                    {{ cliente.tel }}
-                </div>
-                <div class="form-group">
-                    {{ cliente.equipamento }}
-                </div>
+                <div class="form-group">{{ cliente.nome }}</div>
+                <div class="form-group">{{ cliente.cnpj }}</div>
+                <div class="form-group">{{ cliente.tel }}</div>
+                <div class="form-group">{{ cliente.equipamento }}</div>
             </div>
 
             <div class="section">
@@ -52,21 +71,13 @@
                     <p class="status-text">{{ status_message }}</p>
                 </div>
             </div>
-            {%else%}
+            {% else %}
             <div class="section">
                 <h2 class="section-title">Dados Cliente:</h2>
-                <div class="form-group">
-                    SEM DADOS
-                </div>
-                <div class="form-group">
-                    SEM DADOS
-                </div>
-                <div class="form-group">
-                    SEM DADOS
-                </div>
-                <div class="form-group">
-                    SEM DADOS
-                </div>
+                <div class="form-group">SEM DADOS</div>
+                <div class="form-group">SEM DADOS</div>
+                <div class="form-group">SEM DADOS</div>
+                <div class="form-group">SEM DADOS</div>
             </div>
 
             <div class="section">

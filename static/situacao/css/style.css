@@ -220,3 +220,74 @@ label {
         padding: 15px;
     }
 }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--text);
+}
+
+thead {
+    background-color: var(--primary);
+    color: var(--light);
+}
+
+th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+tbody tr:nth-child(even) {
+    background-color: var(--gray);
+}
+
+/* Status por linha */
+tr.vencido {
+    background-color: var(--error);
+    color: var(--error-text);
+}
+
+tr.direito {
+    background-color: var(--success);
+    color: var(--success-text);
+}
+
+tr.vencendo {
+    background-color: var(--warning);
+    color: var(--warning-text);
+}
+
+/* Responsividade para tabela */
+@media (max-width: 768px) {
+    table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100%;
+    }
+    thead tr {
+        display: none;
+    }
+    tbody tr {
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+    }
+    tbody tr td {
+        padding-left: 50%;
+        position: relative;
+        text-align: left;
+        border: none;
+        border-bottom: 1px solid #eee;
+    }
+    tbody tr td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+}

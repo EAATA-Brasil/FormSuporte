@@ -1,6 +1,7 @@
 from django.db import models
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 class Cliente(models.Model):
     data = models.DateField(verbose_name="Data", blank=False, default=timezone.now)
@@ -16,8 +17,16 @@ class Cliente(models.Model):
     tel = models.CharField(max_length=30, verbose_name='Telefone', blank=True, default="SEM DADO")
     equipamento = models.CharField(verbose_name='Equipamento', max_length=100, blank=True, default="")
 
+    def clean(self):
+        if self.serial:
+            qs = Cliente.objects.filter(serial=self.serial)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError({'serial': 'Este serial já está cadastrado para outro cliente.'})
+
     def save(self, *args, **kwargs):
-        # Recalcula o vencimento se a data ou os anos mudarem
+        self.clean()  # chama o clean para validar
         if self.data and self.anos_para_vencimento:
             self.vencimento = self.data + relativedelta(years=self.anos_para_vencimento)
         super().save(*args, **kwargs)
