@@ -1025,3 +1025,146 @@ footer select {
   background-color: #3498db; /* azul */
 }
 
+/* Estilização do container de upload de arquivos no popup */
+.file-upload-wrapper {
+    margin-top: 15px;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.file-upload-wrapper:hover {
+    background-color: #e9ecef;
+    border-color: var(--primary-light);
+}
+
+/* Esconde o input de arquivo padrão */
+.file-upload input[type="file"] {
+    display: none;
+}
+
+/* Estiliza o label como um botão customizado */
+.file-upload .custom-file-button {
+    display: inline-block;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: var(--light);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.file-upload .custom-file-button:hover {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
+}
+
+/* Estiliza o nome do arquivo selecionado */
+.file-upload #file-name {
+    margin-left: 15px;
+    font-style: italic;
+    color: var(--text-light);
+}
+
+/* Estiliza o botão de submit (Cadastrar Ocorrência) */
+.file-upload input[type="submit"] {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--success);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.file-upload input[type="submit"]:hover {
+    background-color: #157347;
+}
+
+/* Estilo para a área de upload durante o drag-over */
+.file-upload-wrapper.drag-over {
+    background-color: #e0eafc; /* Um azul claro para indicar "pronto para soltar" */
+    border-color: var(--primary); /* Borda mais forte para destaque */
+    border-style: solid; /* Muda de tracejado para sólido */
+}
+
+/* Container para os cards de pré-visualização de arquivos */
+.file-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px; /* Espaço entre os cards e os botões */
+}
+
+/* Estilo individual de cada card de arquivo */
+.file-preview-card {
+    background-color: #e9ecef;
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--text);
+    border: 1px solid var(--border-color);
+    animation: fadeIn 0.3s ease; /* Animação suave de entrada */
+}
+
+/* Nome do arquivo dentro do card */
+.file-preview-card .file-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px; /* Evita que nomes muito longos quebrem o layout */
+}
+
+/* Botão de remover (o "x") */
+.file-preview-card .remove-file-btn {
+    background: none;
+    border: none;
+    color: var(--error);
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.file-preview-card .remove-file-btn:hover {
+    transform: scale(1.2);
+}
+
+/* Estilo para o botão "Limpar Tudo" */
+.clear-all-files-btn {
+    display: block; /* Ocupa sua própria linha */
+    /* margin: 0 auto 15px; Centraliza e adiciona espaço abaixo */
+    padding: 6px 12px;
+    background-color: var(--error);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.clear-all-files-btn:hover {
+    background-color: #a71d2a; /* Um vermelho mais escuro no hover */
+}
+
+.container_buttons_popup{
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}

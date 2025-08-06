@@ -153,7 +153,6 @@ def index(request):
         'responsaveis_por_pais': responsaveis_por_pais_json,
         'todos_responsaveis': todos_responsaveis_json,
         'ocorrencias_json':ocorrencias_json,
-        'subir_arquivos':subir_arquivo
     }
     return render(request, 'ocorrencia/index.html', context)
 
@@ -654,50 +653,81 @@ def get_paises_por_responsavel(request):
 
 @login_required(login_url=URL_LOGIN)
 def alterar_dados(request):
-    if request.method == 'POST':
-        try:
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error'}, status=405)
+
+    try:
+        if request.content_type.startswith('multipart/form-data'):
+            body = request.POST
+            files = request.FILES.getlist("arquivo")
+
+            if body.get("action") == "deletar":
+                file_id = body.get("file")
+                try:
+                    arquivo = ArquivoOcorrencia.objects.get(id=file_id)
+                    arquivo.delete()
+                    return JsonResponse({'status': 'success'})
+                except ArquivoOcorrencia.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Arquivo não encontrado'}, status=404)
+
+            elif files:
+                try:
+                    record = Record.objects.get(id=body.get('record'))
+                    for file in files:
+                        ext = os.path.splitext(file.name)[1]
+                        novo_nome = f"image_relatorio_{record}{ext}"
+                        file.name = novo_nome
+                        ArquivoOcorrencia.objects.create(
+                            record=record,
+                            arquivo=file,
+                            nome_original=novo_nome
+                        )
+                    return JsonResponse({'status': 'success', 'page_num': body.get("page_num")})
+                except Exception as e:
+                    return JsonResponse({'status': 'error','message': f'Erro ao salvar arquivos: {str(e)}'}, status=500)
+
+        else:
+            # JSON puro (sem arquivos)
             data = json.loads(request.body.decode('utf-8'))
             record = Record.objects.get(id=data.get('id'))
             field_name = data.get('field')
             new_value = data.get('value')
+
             if field_name == 'country':
                 new_value = get_object_or_404(Country, id=new_value)
                 setattr(record, field_name, new_value)
                 new_display = new_value.name
+
             elif field_name in DATE_COLUMNS and new_value:
                 new_value = datetime.strptime(new_value, '%d/%m/%Y').date()
                 setattr(record, field_name, new_value)
                 new_display = new_value.strftime('%Y-%m-%d')
+
             elif field_name == 'status':
                 if record.finished:
                     new_value = 'Concluído'
                 elif record.deadline:
-                    if record.finished:
-                        new_value = 'Concluído'
+                    if record.deadline < date.today():
+                        new_value = 'Atrasado'
                     else:
-                        if record.deadline < date.today():
-                            new_value = 'Atrasado'
-                        else:
-                            new_value = "Em progresso"
+                        new_value = "Em progresso"
                 else:
                     new_value = 'Requisitado'
+
                 new_display = new_value
                 new_value = STATUS_OCORRENCIA.get(new_value)
                 setattr(record, field_name, new_value)
 
             else:
-                print(record, field_name, new_value.capitalize())
                 setattr(record, field_name, new_value.capitalize())
                 new_display = new_value.capitalize()
-            
+
             record.save(update_fields=[field_name])
             return JsonResponse({'status': 'success', 'new_display': new_display, 'page_num': data.get("page_num")})
 
-        except Exception as e:
-            print(e)
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-
-    return JsonResponse({'status': 'error'}, status=405)
+    except Exception as e:
+        print(e)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 # Alias para compatibilidade com URLs existentes
 update_record_view = alterar_dados
@@ -755,3 +785,40 @@ def download_arquivo(request, arquivo_id):
         print(f"Erro no download do arquivo {arquivo_id}: {str(e)}")
         raise Http404("Erro ao processar download")
 
+def get_record(request, pk):
+    try:
+        record = Record.objects.prefetch_related('arquivos').get(id=pk)
+        
+        data = {
+            "id": record.id,
+            "technical": record.technical,
+            "responsible": record.responsible,
+            "device": str(record.device) if record.device else None,
+            "area": record.area,
+            "serial": record.serial,
+            "brand": record.brand,
+            "model": record.model,
+            "year": record.year,
+            "version": record.version,
+            "country": record.country.name if record.country else None,
+            "status": record.status,
+            "data": record.data.strftime("%Y-%m-%d") if record.data else None,
+            "deadline": record.deadline.strftime("%Y-%m-%d") if record.deadline else None,
+            "finished": record.finished.strftime("%Y-%m-%d") if record.finished else None,
+            "problem_detected": record.problem_detected,
+            "feedback_technical": record.feedback_technical,
+            "feedback_manager": record.feedback_manager,
+            "arquivos": [
+                {
+                    "id": arquivo.id,
+                    "nome_original": arquivo.nome_original,
+                    "caminho": arquivo.arquivo.url if arquivo.arquivo else None
+                }
+                for arquivo in record.arquivos.all()
+            ]
+        }
+
+        return JsonResponse(data)
+
+    except Record.DoesNotExist:
+        return JsonResponse({'error': 'Registro não encontrado'}, status=404)

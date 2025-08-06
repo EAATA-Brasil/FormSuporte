@@ -90,6 +90,18 @@
     </footer>
     {%endif%}
 <script>
+    function getCookie(name) { 
+             if (document.cookie && document.cookie !== "") {
+                const cookies = document.cookie.split(";");
+                for (let i = 0; i < cookies.length; i++) {
+                    let cookie = cookies[i].trim();
+                    if (cookie.startsWith(name + "=")) {
+                        return decodeURIComponent(cookie.substring(name.length + 1));
+                    }
+                }
+            }
+            return null;
+        }
     if("{{has_full_permission}}" == "True"){
         const ocorrenciasData = {{ ocorrencias_json | safe }};
         
@@ -143,6 +155,48 @@
           infoDiv.style.display = 'block';
         });
     }
+    function deleteFile(fileId, fileName, record) {
+        if (confirm(`Deseja realmente deletar o arquivo "${fileName}"?`)) {
+            const formData = new FormData();
+            formData.append('action', 'deletar');
+            formData.append('file', fileId);
+
+            fetch('{% url "update_ocorrencia/" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')  // importante para Django
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    applyFiltersAndSort();
+                    Swal.close();
+                    setTimeout(async () => {
+                    try {
+                        console.log(record)
+                        const response = await fetch(`/ocorrencia/get_record/${record.id}`);
+                        const updatedRecord = await response.json();
+                        showProblemDetails(updatedRecord);
+                    } catch (error) {
+                        console.error("Erro ao buscar o registro atualizado:", error);
+                        alert("Erro ao atualizar os dados da ocorrência.");
+                    }
+                    }, 100);
+
+
+                } else {
+                    alert('Erro ao deletar o arquivo: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao deletar o arquivo.');
+            });
+        }
+    }
+    window.deleteFile = deleteFile;
 
     function downloadFile(url, filename) {
         try {
@@ -211,6 +265,10 @@
                             <span style="font-size: 18px;">📎</span>
                             <span style="font-weight: 500; color: #495057;">${arq.nome_original || 'Arquivo'}</span>
                         </div>
+                        <button onclick="deleteFile('${arq.id}', '${arq.nome_original}', ${JSON.stringify(record).replace(/"/g, '&quot;')})"
+                                style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background-color 0.2s;">
+                            🗑 Deletar
+                        </button>
                         <button onclick="downloadFile('${arq.id}', '${arq.nome_original || 'arquivo'}')" 
                                 style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background-color 0.2s;">
                             ⬇ Download
@@ -317,6 +375,30 @@
                     <div style="margin-bottom: 20px;">
                         <h4>Arquivos anexados:</h4>
                         ${arquivosListHTML}
+                        <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">Adicionar novo arquivo:</h5>
+                        
+                        <div id="file-upload-wrapper-${record.id}" class="file-upload-wrapper full-width">
+                            <div id="file-preview-container" class="file-preview-container"></div>
+
+                            
+
+                            <form method="POST" enctype="multipart/form-data" id="form-ocorrencia" class="file-upload">
+
+                                {% csrf_token %}
+                                
+                                <input type="hidden" name="record" value="${record.id}"/>
+                                <input type="hidden" name="page_num" value="${page_num}"/>
+                                
+                                <span class="container_buttons_popup">
+                                    <label for="arquivo" class="custom-file-button">Selecionar Arquivos</label>
+                                    <input type="file" id="arquivo" name="arquivo" multiple />
+                                    <input type="submit" value="Cadastrar" required />
+                                    <button type="button" id="clear-all-files-btn" class="clear-all-files-btn" style="display: none;">
+                                        Limpar Tudo
+                                    </button>
+                                </span>
+                            </form>
+                        </div>
                     </div>
                     <div style="background: var(--gray); padding: 15px; border-radius: 8px;">
                         <h4 style="margin-top: 0; color: var(--warning);">Feedback do Gerente:</h4>
@@ -329,7 +411,7 @@
                     
                 </div>
             `;
-
+            let id = record.id
             Swal.fire({
                 title: 'Informações Detalhadas',
                 html: popupContent,
@@ -348,7 +430,49 @@
                     const problemDetectedTextarea = document.getElementById(problemDetectedId);
                     const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);
                     const feedbackManagerTextarea = document.getElementById(feedbackManagerId);
+                    console.log(document.getElementById('form-ocorrencia'))
+                    document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const form = e.target;
+                        const data = new FormData(form);
+                        try {
+                            const response = await fetch('{% url "update_ocorrencia/" %}', {
+                                method: "POST",
+                                headers: {
+                                    'X-CSRFToken': data.get('csrfmiddlewaretoken')
+                                },
+                                body: data
+                            });
 
+                            if (!response.ok) {
+                                throw new Error('Erro de rede ou do servidor');
+                            }
+
+                            const result = await response.json();
+
+                            if (result.status === "success") {
+                                await applyFiltersAndSort(); // Garante que os dados da tabela e arquivos sejam atualizados
+                                Swal.close(); // Fecha o popup
+                                setTimeout(async () => {
+                                try {
+                                    const response = await fetch(`/ocorrencia/get_record/${id}`);
+                                    const updatedRecord = await response.json();
+                                    showProblemDetails(updatedRecord);
+                                } catch (error) {
+                                    console.error("Erro ao buscar o registro atualizado:", error);
+                                    alert("Erro ao atualizar os dados da ocorrência.");
+                                }
+                                }, 100);
+
+
+                                
+                            } else {
+                                alert("Erro: " + result.message);
+                            }
+                        } catch (error) {
+                            alert("Erro inesperado: " + error.message);
+                        }
+                    })
                     if (problemDetectedTextarea) {
                         problemDetectedTextarea.addEventListener('input', (e) => {
                             atualizarDadosPopup(e.target);
@@ -364,10 +488,95 @@
                             atualizarDadosPopup(e.target);
                         });
                     }
+                    // --- INÍCIO DA LÓGICA DE UPLOAD COM PRÉ-VISUALIZAÇÃO ---
+
+                    const uploadWrapper = document.getElementById(`file-upload-wrapper-${record.id}`);
+                    const fileInput = document.getElementById('arquivo');
+                    const previewContainer = document.getElementById('file-preview-container');
+                    const clearAllBtn = document.getElementById('clear-all-files-btn'); // 1. SELECIONE O BOTÃO
+
+                    let fileStore = new DataTransfer();
+
+                    // Função para renderizar os cards de pré-visualização
+                    const renderPreviews = () => {
+                        previewContainer.innerHTML = ''; 
+                        
+                        Array.from(fileStore.files).forEach((file, index) => {
+                            // ... (código de criação do card - sem alterações)
+                            const card = document.createElement('div');
+                            card.className = 'file-preview-card';
+                            card.innerHTML = `
+                                <span class="file-name" title="${file.name}">${file.name}</span>
+                                <button type="button" class="remove-file-btn" data-index="${index}">&times;</button>
+                            `;
+                            previewContainer.appendChild(card);
+                        });
+
+                        // 2. MOSTRA/ESCONDE O BOTÃO "LIMPAR TUDO"
+                        if (fileStore.files.length > 0) {
+                            clearAllBtn.style.display = 'block';
+                        } else {
+                            clearAllBtn.style.display = 'none';
+                        }
+
+                        fileInput.files = fileStore.files;
+                    };
+
+                    // ... (função handleFiles - sem alterações) ...
+                    const handleFiles = (files) => {
+                        for (const file of files) {
+                            fileStore.items.add(file);
+                        }
+                        renderPreviews();
+                    };
+
+                    // ... (event listener do previewContainer - sem alterações) ...
+                    previewContainer.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('remove-file-btn')) {
+                            const indexToRemove = parseInt(e.target.dataset.index, 10);
+                            const newFiles = new DataTransfer();
+                            Array.from(fileStore.files).forEach((file, index) => {
+                                if (index !== indexToRemove) {
+                                    newFiles.items.add(file);
+                                }
+                            });
+                            fileStore = newFiles;
+                            renderPreviews();
+                        }
+                    });
+
+                    // 3. ADICIONE O EVENT LISTENER PARA O BOTÃO "LIMPAR TUDO"
+                    clearAllBtn.addEventListener('click', () => {
+                        fileStore = new DataTransfer(); // Esvazia nossa lista de arquivos
+                        renderPreviews(); // Renderiza novamente a UI (que ficará vazia)
+                    });
+
+                    // ... (Lógica de Drag and Drop e clique no input - sem alterações) ...
+                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                        uploadWrapper.addEventListener(eventName, (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }, false);
+                    });
+                    ['dragenter', 'dragover'].forEach(eventName => {
+                        uploadWrapper.addEventListener(eventName, () => uploadWrapper.classList.add('drag-over'), false);
+                    });
+                    ['dragleave', 'drop'].forEach(eventName => {
+                        uploadWrapper.addEventListener(eventName, () => uploadWrapper.classList.remove('drag-over'), false);
+                    });
+                    uploadWrapper.addEventListener('drop', (e) => {
+                        handleFiles(e.dataTransfer.files);
+                    }, false);
+                    fileInput.addEventListener('change', () => {
+                        handleFiles(fileInput.files);
+                    });
+
+                    // --- FIM DA LÓGICA DE UPLOAD ---
                 }
             });
         }
-
+        window.showProblemDetails = showProblemDetails;
+    
         function generateFeedback(record){
             const feedbackTechnicalValue = record.feedback_technical || '';
 
@@ -627,18 +836,7 @@
         const CSRF_TOKEN = getCookie("csrftoken");
 
         // --- Funções Auxiliares --- 
-        function getCookie(name) { 
-             if (document.cookie && document.cookie !== "") {
-                const cookies = document.cookie.split(";");
-                for (let i = 0; i < cookies.length; i++) {
-                    let cookie = cookies[i].trim();
-                    if (cookie.startsWith(name + "=")) {
-                        return decodeURIComponent(cookie.substring(name.length + 1));
-                    }
-                }
-            }
-            return null;
-        }
+        
 
         function parseDateToISO(dateString) { 
             if (!dateString || typeof dateString !== "string") return dateString;
@@ -970,627 +1168,629 @@
 
         // --- Lógica de Filtragem e Ordenação ---
         function applyFiltersAndSort(closeBox = false) {
-                // 1. Preparar dados de filtro
-                const filterData = {
-                    filters: {},
-                    sort: currentSort,
-                    page: page_num
-                };
-                if('{{has_full_permission}}' == 'False'){
-                    filterData.filters['responsible'] = []
-                    filterData.filters['responsible'].push('{{user}}'.toUpperCase())
-                }
+            // 1. Preparar dados de filtro
+            const filterData = {
+                filters: {},
+                sort: currentSort,
+                page: page_num
+            };
+            if('{{has_full_permission}}' == 'False'){
+                filterData.filters['responsible'] = []
+                filterData.filters['responsible'].push('{{user}}'.toUpperCase())
+            }
 
-                // 2. Processar filtros ativos
+            // 2. Processar filtros ativos
+            Object.keys(currentFilters).forEach(columnName => {
+                const filter = currentFilters[columnName];
+                if (filter.isApplied && filter.values.length > 0) {
+                    const headerInfo = headerData.find(h => h.columnName === columnName);
+                    
+                    if (headerInfo?.isDateColumn) {
+                        // Para datas, converter para ISO
+                        filterData.filters[columnName] = filter.values.map(parseDateToISO);
+                    } else {
+                        filterData.filters[columnName] = filter.values;
+                    }
+                }
+            });
+
+            // 3. Enviar para o backend
+            fetch("{% url 'filter_data' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": CSRF_TOKEN,
+                },
+                body: JSON.stringify(filterData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                
+                currentFilterOptions = data.filter_options || {};
+                updateTable(data.records);
+                total_pages = data.num_pages;
+                paginate(data.has_previous, data.has_next);
+
+                // --- INÍCIO DA NOVA LÓGICA PARA FEEDBACK VISUAL DE FILTRO ---
+                // Remove a classe 'filtered' de todos os cabeçalhos primeiro
+                headers.forEach(header => {
+                    header.classList.remove('filtered');
+                });
+
+                // Adiciona a classe 'filtered' aos cabeçalhos com filtros ativos
                 Object.keys(currentFilters).forEach(columnName => {
                     const filter = currentFilters[columnName];
                     if (filter.isApplied && filter.values.length > 0) {
                         const headerInfo = headerData.find(h => h.columnName === columnName);
-                        
-                        if (headerInfo?.isDateColumn) {
-                            // Para datas, converter para ISO
-                            filterData.filters[columnName] = filter.values.map(parseDateToISO);
-                        } else {
-                            filterData.filters[columnName] = filter.values;
+                        if (headerInfo && headerInfo.element) {
+                            headerInfo.element.classList.add('filtered');
                         }
                     }
                 });
+                // --- FIM DA NOVA LÓGICA PARA FEEDBACK VISUAL DE FILTRO ---
 
-                // 3. Enviar para o backend
-                fetch("{% url 'filter_data' %}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": CSRF_TOKEN,
-                    },
-                    body: JSON.stringify(filterData),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) throw new Error(data.error);
-                    
-                    currentFilterOptions = data.filter_options || {};
-                    updateTable(data.records);
-                    total_pages = data.num_pages;
-                    paginate(data.has_previous, data.has_next);
+            })
+            .catch(error => {
+                console.error("Erro ao filtrar:", error);
+                Swal.fire("Erro", "Ocorreu um erro ao aplicar os filtros.", "error");
+            });
 
-                    // --- INÍCIO DA NOVA LÓGICA PARA FEEDBACK VISUAL DE FILTRO ---
-                    // Remove a classe 'filtered' de todos os cabeçalhos primeiro
-                    headers.forEach(header => {
-                        header.classList.remove('filtered');
-                    });
-
-                    // Adiciona a classe 'filtered' aos cabeçalhos com filtros ativos
-                    Object.keys(currentFilters).forEach(columnName => {
-                        const filter = currentFilters[columnName];
-                        if (filter.isApplied && filter.values.length > 0) {
-                            const headerInfo = headerData.find(h => h.columnName === columnName);
-                            if (headerInfo && headerInfo.element) {
-                                headerInfo.element.classList.add('filtered');
-                            }
-                        }
-                    });
-                    // --- FIM DA NOVA LÓGICA PARA FEEDBACK VISUAL DE FILTRO ---
-
-                })
-                .catch(error => {
-                    console.error("Erro ao filtrar:", error);
-                    Swal.fire("Erro", "Ocorreu um erro ao aplicar os filtros.", "error");
-                });
-
-                // 4. Fechar a caixa de filtro se necessário
-                if (closeBox && openFilterBox) {
-                    openFilterBox.style.display = "none";
-                    openFilterBox = null;
-                }
+            // 4. Fechar a caixa de filtro se necessário
+            if (closeBox && openFilterBox) {
+                openFilterBox.style.display = "none";
+                openFilterBox = null;
             }
+        }
+        window.applyFiltersAndSort = applyFiltersAndSort;
+    
 
         /**
         * Atualiza o corpo da tabela.
         */
         // ===== SISTEMA DE ATUALIZAÇÃO DINÂMICA DE STATUS =====
-// Simula o comportamento de useEffect do React em JavaScript puro
+        // Simula o comportamento de useEffect do React em JavaScript puro
 
-// Estado global para controlar atualizações
-let statusUpdateSystem = {
-    records: [],
-    isInitialized: false,
-    observers: new Map(),
-    debounceTimers: new Map()
-};
-
-// Função pura para calcular o status baseado nas datas
-function calculateStatus(record) {
-    const deadlineStr = record.deadline; // Formato: DD/MM/YYYY
-    const finishedStr = record.finished; // Formato: DD/MM/YYYY
-    
-    // Se tem data de finalização, sempre é "Concluído"
-    if (finishedStr && finishedStr !== "Não finalizado") {
-        return 'Concluído';
-    }
-    
-    // Se não tem prazo definido, é "Requisitado"
-    if (!deadlineStr || deadlineStr === "Não definido") {
-        return 'Requisitado';
-    }
-    
-    // Converte data do formato DD/MM/YYYY para Date
-    const parseDate = (dateStr) => {
-        if (!dateStr || dateStr === "Não definido" || dateStr === "Não finalizado") return null;
-        const [day, month, year] = dateStr.split('/').map(Number);
-        return new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
-    };
-    
-    const deadlineDate = parseDate(deadlineStr);
-    if (!deadlineDate) return 'Requisitado';
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas a data
-    
-    const deadline = new Date(deadlineDate);
-    deadline.setHours(0, 0, 0, 0);
-    
-    // Compara as datas
-    if (today > deadline) {
-        return 'Atrasado';
-    } else {
-        return 'Em progresso';
-    }
-}
-
-// Função para atualizar o status de um registro específico
-function updateRecordStatus(recordId, newStatus) {
-    const statusCell = document.querySelector(`[data-column="status"][data-id="${recordId}"]`);
-    if (!statusCell) return;
-    
-    const currentStatus = statusCell.textContent.trim();
-    
-    // Só atualiza se o status mudou
-    if (currentStatus !== newStatus) {
-        statusCell.textContent = newStatus;
-        
-        // Cria um elemento mock para usar com a função saveField existente
-        const mockElement = {
-            value: newStatus,
-            closest: () => statusCell,
-            classList: { add: () => {}, remove: () => {} },
-            setAttribute: () => {}
+        // Estado global para controlar atualizações
+        let statusUpdateSystem = {
+            records: [],
+            isInitialized: false,
+            observers: new Map(),
+            debounceTimers: new Map()
         };
-        
-        // Chama a função saveField para persistir no backend
-        if (typeof saveField === 'function') {
-            saveField(mockElement);
+
+        // Função pura para calcular o status baseado nas datas
+        function calculateStatus(record) {
+            const deadlineStr = record.deadline; // Formato: DD/MM/YYYY
+            const finishedStr = record.finished; // Formato: DD/MM/YYYY
+            
+            // Se tem data de finalização, sempre é "Concluído"
+            if (finishedStr && finishedStr !== "Não finalizado") {
+                return 'Concluído';
+            }
+            
+            // Se não tem prazo definido, é "Requisitado"
+            if (!deadlineStr || deadlineStr === "Não definido") {
+                return 'Requisitado';
+            }
+            
+            // Converte data do formato DD/MM/YYYY para Date
+            const parseDate = (dateStr) => {
+                if (!dateStr || dateStr === "Não definido" || dateStr === "Não finalizado") return null;
+                const [day, month, year] = dateStr.split('/').map(Number);
+                return new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
+            };
+            
+            const deadlineDate = parseDate(deadlineStr);
+            if (!deadlineDate) return 'Requisitado';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas a data
+            
+            const deadline = new Date(deadlineDate);
+            deadline.setHours(0, 0, 0, 0);
+            
+            // Compara as datas
+            if (today > deadline) {
+                return 'Atrasado';
+            } else {
+                return 'Em progresso';
+            }
         }
-        statusCell.setAttribute('data-initial-value', newStatus)
-        //console.log(`Status atualizado para registro ${recordId}: ${currentStatus} → ${newStatus}`);
-    }
-}
 
-// Função para recalcular todos os status
-function recalculateAllStatus() {
-    statusUpdateSystem.records.forEach(record => {
-        const newStatus = calculateStatus(record);
-        updateRecordStatus(record.id, newStatus);
-    });
-}
+        // Função para atualizar o status de um registro específico
+        function updateRecordStatus(recordId, newStatus) {
+            const statusCell = document.querySelector(`[data-column="status"][data-id="${recordId}"]`);
+            if (!statusCell) return;
+            
+            const currentStatus = statusCell.textContent.trim();
+            
+            // Só atualiza se o status mudou
+            if (currentStatus !== newStatus) {
+                statusCell.textContent = newStatus;
+                
+                // Cria um elemento mock para usar com a função saveField existente
+                const mockElement = {
+                    value: newStatus,
+                    closest: () => statusCell,
+                    classList: { add: () => {}, remove: () => {} },
+                    setAttribute: () => {}
+                };
+                
+                // Chama a função saveField para persistir no backend
+                if (typeof saveField === 'function') {
+                    saveField(mockElement);
+                }
+                statusCell.setAttribute('data-initial-value', newStatus)
+                //console.log(`Status atualizado para registro ${recordId}: ${currentStatus} → ${newStatus}`);
+            }
+        }
 
-// Função para recalcular status de um registro específico
-function recalculateRecordStatus(recordId) {
-    const record = statusUpdateSystem.records.find(r => r.id == recordId);
-    if (!record) return;
-    
-    // Atualiza os dados do record com os valores atuais dos inputs
-    const deadlineInput = document.querySelector(`[data-column="deadline"][data-id="${recordId}"] input`);
-    const finishedInput = document.querySelector(`[data-column="finished"][data-id="${recordId}"] input`);
-    
-    if (deadlineInput) {
-        record.deadline = deadlineInput.value || deadlineInput.placeholder;
-    }
-    if (finishedInput) {
-        record.finished = finishedInput.value || finishedInput.placeholder;
-    }
-    
-    const newStatus = calculateStatus(record);
-    updateRecordStatus(recordId, newStatus);
-}
+        // Função para recalcular todos os status
+        function recalculateAllStatus() {
+            statusUpdateSystem.records.forEach(record => {
+                const newStatus = calculateStatus(record);
+                updateRecordStatus(record.id, newStatus);
+            });
+        }
 
-// Função com debounce para evitar execuções excessivas
-function debounce(func, wait, key) {
-    if (statusUpdateSystem.debounceTimers.has(key)) {
-        clearTimeout(statusUpdateSystem.debounceTimers.get(key));
-    }
-    
-    const timer = setTimeout(() => {
-        func();
-        statusUpdateSystem.debounceTimers.delete(key);
-    }, wait);
-    
-    statusUpdateSystem.debounceTimers.set(key, timer);
-}
+        // Função para recalcular status de um registro específico
+        function recalculateRecordStatus(recordId) {
+            const record = statusUpdateSystem.records.find(r => r.id == recordId);
+            if (!record) return;
+            
+            // Atualiza os dados do record com os valores atuais dos inputs
+            const deadlineInput = document.querySelector(`[data-column="deadline"][data-id="${recordId}"] input`);
+            const finishedInput = document.querySelector(`[data-column="finished"][data-id="${recordId}"] input`);
+            
+            if (deadlineInput) {
+                record.deadline = deadlineInput.value || deadlineInput.placeholder;
+            }
+            if (finishedInput) {
+                record.finished = finishedInput.value || finishedInput.placeholder;
+            }
+            
+            const newStatus = calculateStatus(record);
+            updateRecordStatus(recordId, newStatus);
+        }
 
-// Função para configurar observadores nos inputs de data
-function setupDateInputObservers() {
-    // Remove observadores existentes
-    statusUpdateSystem.observers.forEach(observer => observer.disconnect());
-    statusUpdateSystem.observers.clear();
-    
-    // Configura observadores para inputs de deadline e finished
-    const dateInputs = document.querySelectorAll('[data-column="deadline"] input, [data-column="finished"] input');
-    
-    dateInputs.forEach(input => {
-        const cell = input.closest('[data-id]');
-        if (!cell) return;
-        
-        const recordId = cell.getAttribute('data-id');
-        const columnName = cell.getAttribute('data-column');
-        
-        // Event listener para mudanças no input
-        const handleInputChange = () => {
-            debounce(() => {
-                recalculateRecordStatus(recordId);
-            }, 300, `${recordId}-${columnName}`);
-        };
-        
-        // Remove listeners existentes para evitar duplicação
-        input.removeEventListener('input', handleInputChange);
-        input.removeEventListener('change', handleInputChange);
-        input.removeEventListener('blur', handleInputChange);
-        
-        // Adiciona os listeners
-        input.addEventListener('input', handleInputChange);
-        input.addEventListener('change', handleInputChange);
-        input.addEventListener('blur', handleInputChange);
-        
-        //console.log(`Observer configurado para ${columnName} do registro ${recordId}`);
-    });
-    
-    // MutationObserver para detectar mudanças no DOM (quando novos inputs são adicionados)
-    const tableObserver = new MutationObserver((mutations) => {
-        let shouldReconfigure = false;
-        
-        mutations.forEach((mutation) => {
-            mutation.addedNodes.forEach((node) => {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    const hasDateInputs = node.querySelectorAll && 
-                        node.querySelectorAll('[data-column="deadline"] input, [data-column="finished"] input').length > 0;
-                    
-                    if (hasDateInputs) {
-                        shouldReconfigure = true;
-                    }
+        // Função com debounce para evitar execuções excessivas
+        function debounce(func, wait, key) {
+            if (statusUpdateSystem.debounceTimers.has(key)) {
+                clearTimeout(statusUpdateSystem.debounceTimers.get(key));
+            }
+            
+            const timer = setTimeout(() => {
+                func();
+                statusUpdateSystem.debounceTimers.delete(key);
+            }, wait);
+            
+            statusUpdateSystem.debounceTimers.set(key, timer);
+        }
+
+        // Função para configurar observadores nos inputs de data
+        function setupDateInputObservers() {
+            // Remove observadores existentes
+            statusUpdateSystem.observers.forEach(observer => observer.disconnect());
+            statusUpdateSystem.observers.clear();
+            
+            // Configura observadores para inputs de deadline e finished
+            const dateInputs = document.querySelectorAll('[data-column="deadline"] input, [data-column="finished"] input');
+            
+            dateInputs.forEach(input => {
+                const cell = input.closest('[data-id]');
+                if (!cell) return;
+                
+                const recordId = cell.getAttribute('data-id');
+                const columnName = cell.getAttribute('data-column');
+                
+                // Event listener para mudanças no input
+                const handleInputChange = () => {
+                    debounce(() => {
+                        recalculateRecordStatus(recordId);
+                    }, 300, `${recordId}-${columnName}`);
+                };
+                
+                // Remove listeners existentes para evitar duplicação
+                input.removeEventListener('input', handleInputChange);
+                input.removeEventListener('change', handleInputChange);
+                input.removeEventListener('blur', handleInputChange);
+                
+                // Adiciona os listeners
+                input.addEventListener('input', handleInputChange);
+                input.addEventListener('change', handleInputChange);
+                input.addEventListener('blur', handleInputChange);
+                
+                //console.log(`Observer configurado para ${columnName} do registro ${recordId}`);
+            });
+            
+            // MutationObserver para detectar mudanças no DOM (quando novos inputs são adicionados)
+            const tableObserver = new MutationObserver((mutations) => {
+                let shouldReconfigure = false;
+                
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const hasDateInputs = node.querySelectorAll && 
+                                node.querySelectorAll('[data-column="deadline"] input, [data-column="finished"] input').length > 0;
+                            
+                            if (hasDateInputs) {
+                                shouldReconfigure = true;
+                            }
+                        }
+                    });
+                });
+                
+                if (shouldReconfigure) {
+                    debounce(() => {
+                        setupDateInputObservers();
+                        recalculateAllStatus();
+                    }, 100, 'dom-mutation');
                 }
             });
-        });
-        
-        if (shouldReconfigure) {
-            debounce(() => {
-                setupDateInputObservers();
-                recalculateAllStatus();
-            }, 100, 'dom-mutation');
-        }
-    });
-    
-    // Observa mudanças no tbody da tabela
-    const tableBody = document.getElementById('table-body');
-    if (tableBody) {
-        tableObserver.observe(tableBody, {
-            childList: true,
-            subtree: true
-        });
-        statusUpdateSystem.observers.set('table-mutation', tableObserver);
-    }
-}
-
-// Função melhorada updateTable com sistema de atualização dinâmica
-function updateTable(records) {
-    // Armazena os records no sistema de status
-    statusUpdateSystem.records = records || [];
-    
-    tableBody.innerHTML = "";
-    if (!records || records.length === 0) {
-        const colspan = table.querySelectorAll("thead th[data-column]").length;
-        const noResultsRow = tableBody.insertRow();
-        const cell = noResultsRow.insertCell();
-
-        cell.colSpan = colspan > 0 ? colspan : 1;
-        cell.textContent = "Nenhum registro encontrado.";
-        cell.style.textAlign = "center";
-        return;
-    }
-    
-    const visibleColumns = Array.from(table.querySelectorAll("thead th[data-column]")).map(th => th.getAttribute('data-column'));
-    let has_full_permission = '{{has_full_permission}}'
-
-    records.forEach((record) => {
-        const row = tableBody.insertRow();
-        visibleColumns.forEach(columnName => {
-            const cell = row.insertCell();
-            cell.setAttribute("data-column", columnName);
-            cell.setAttribute("data-id", record.id)
-
-            let value = record[columnName];
-            const headerInfo = headerData.find(h => h.columnName === columnName);
             
-            if (headerInfo?.isDateColumn) {
-                if (value) {
-                    value = formatDateToDisplay(value);
-                } else {
-                    if (columnName == 'finished') {
-                        value = "Não finalizado"
-                    } else {
-                        value = 'Não definido'
-                    }
-                }
+            // Observa mudanças no tbody da tabela
+            const tableBody = document.getElementById('table-body');
+            if (tableBody) {
+                tableObserver.observe(tableBody, {
+                    childList: true,
+                    subtree: true
+                });
+                statusUpdateSystem.observers.set('table-mutation', tableObserver);
             }
+        }
 
-            if (columnName == 'problem_detected') {
-                cell.classList.add("no-cursor")
-                
-                const container = document.createElement('div');
-                container.style.display = 'flex';
-                container.style.alignItems = 'center';
-                container.style.justifyContent = 'center';
-                
-                const detailsButton = document.createElement('button');
-                detailsButton.innerHTML = 'Ver Detalhes';
-                detailsButton.style.cssText = `
-                    background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
-                    color: white;
-                    border: none;
-                    padding: 6px 12px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 0.8rem;
-                    font-weight: 600
-                `;
-                
-                detailsButton.addEventListener('mouseenter', function() {
-                    this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
-                    this.style.transform = 'translateY(-1px)';
-                    this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
-                });
-                
-                detailsButton.addEventListener('mouseleave', function() {
-                    this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
-                    this.style.transform = 'translateY(0)';
-                    this.style.boxShadow = 'none';
-                });
-                
-                detailsButton.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    showProblemDetails(record);
-                });
-                
-                container.appendChild(detailsButton);
-                cell.appendChild(container);
+        // Função melhorada updateTable com sistema de atualização dinâmica
+        function updateTable(records) {
+            // Armazena os records no sistema de status
+            statusUpdateSystem.records = records || [];
+            
+            tableBody.innerHTML = "";
+            if (!records || records.length === 0) {
+                const colspan = table.querySelectorAll("thead th[data-column]").length;
+                const noResultsRow = tableBody.insertRow();
+                const cell = noResultsRow.insertCell();
 
-            } else if (columnName == 'feedback_technical') {
-                cell.classList.add("no-cursor")
-                
-                const container = document.createElement('div');
-                container.style.display = 'flex';
-                container.style.alignItems = 'center';
-                container.style.justifyContent = 'center';
-                
-                const detailsButton = document.createElement('button');
-                detailsButton.innerHTML = 'Gerenciar feedback';
-                detailsButton.style.cssText = `
-                    background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
-                    color: white;
-                    border: none;
-                    padding: 6px 12px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 0.8rem;
-                    font-weight: 600
-                `;
-                
-                detailsButton.addEventListener('mouseenter', function() {
-                    this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
-                    this.style.transform = 'translateY(-1px)';
-                    this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
-                });
-                
-                detailsButton.addEventListener('mouseleave', function() {
-                    this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
-                    this.style.transform = 'translateY(0)';
-                    this.style.boxShadow = 'none';
-                });
-                
-                detailsButton.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    generateFeedback(record);
-                });
-                
-                container.appendChild(detailsButton);
-                cell.appendChild(container);
+                cell.colSpan = colspan > 0 ? colspan : 1;
+                cell.textContent = "Nenhum registro encontrado.";
+                cell.style.textAlign = "center";
+                return;
+            }
+            
+            const visibleColumns = Array.from(table.querySelectorAll("thead th[data-column]")).map(th => th.getAttribute('data-column'));
+            let has_full_permission = '{{has_full_permission}}'
 
-            } else if (columnName == 'status') {
-                // === NOVA LÓGICA DE STATUS DINÂMICA ===
-                cell.id = `${columnName}${record.id}`;
-                cell.classList.add('field-container');
-                
-                // Calcula o status correto baseado nas datas
-                const calculatedStatus = calculateStatus(record);
-                cell.textContent = calculatedStatus;
-                cell.setAttribute('data-initial-value', calculatedStatus);
-                // Se o status calculado for diferente do que veio do backend, atualiza
-                if (calculatedStatus !== record[columnName]) {
-                    const mockElement = {
-                        value: calculatedStatus,
-                        closest: () => cell,
-                        classList: { add: () => {}, remove: () => {} },
-                        setAttribute: () => {}
-                    };
+            records.forEach((record) => {
+                const row = tableBody.insertRow();
+                visibleColumns.forEach(columnName => {
+                    const cell = row.insertCell();
+                    cell.setAttribute("data-column", columnName);
+                    cell.setAttribute("data-id", record.id)
+
+                    let value = record[columnName];
+                    const headerInfo = headerData.find(h => h.columnName === columnName);
                     
-                    if (typeof saveField === 'function') {
-                        saveField(mockElement);
-                    }
-                }
-
-            } else if ((columnName == 'deadline' && '{{has_full_permission}}' === 'True') || columnName == 'finished') {
-                cell.id = `${columnName}${record.id}`
-                cell.classList.add('editable-field-container')
-                cell.classList.add('date-input-container')
-
-                const textInput = document.createElement('input');
-                textInput.type = 'text';
-                textInput.placeholder = 'DD/MM/AAAA';
-                textInput.classList.add('date-text-input')
-                
-                cell.addEventListener('dblclick', (e) => {
-                    navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
-                    textInput.blur()
-                    Swal.fire({
-                        title: "Texto copiado",
-                        text: 'Data copiada para área de transferência',
-                        showCloseButton: true,
-                        icon: 'success'
-                    })
-                })
-
-                if (columnName == "finished" && !record['deadline']) {
-                    textInput.disabled = true
-                }
-
-                textInput.placeholder = value;
-                textInput.setAttribute('data-initial-value', value)
-
-                cell.appendChild(textInput);
-
-                textInput.addEventListener('blur', function(e) {
-                    e.target.classList.remove("erro")
-                    e.target.classList.remove("success")
-                })
-
-                textInput.addEventListener('input', function(e) {
-                    let value = e.target.value.replace(/\D/g, '');
-
-                    if (value.length > 2) value = value.substring(0, 2) + '/' + value.substring(2);
-                    if (value.length > 5) value = value.substring(0, 5) + '/' + value.substring(5, 9);
-
-                    e.target.value = value;
-                    
-                    if (columnName == 'finished') {
-                        if (value.split('/').length != 3) {
-                            e.target.classList.add("erro")
-                            e.target.classList.remove("success")
+                    if (headerInfo?.isDateColumn) {
+                        if (value) {
+                            value = formatDateToDisplay(value);
                         } else {
-                            var deadline_data = new Date(`${record['deadline'].split('/')[2]}-${record['deadline'].split('/')[1]}-${record['deadline'].split('/')[0]}`)
-                            var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
-
-                            if (input_data < deadline_data) {
-                                e.target.classList.add("erro")
-                                e.target.classList.remove("success")
-                            } else if (value.split('/')[2].length == 4 && isValidDate(value)) {
-                                e.target.classList.remove("erro")
-                                e.target.classList.add("success")
-                                atualizarDados(e)
+                            if (columnName == 'finished') {
+                                value = "Não finalizado"
                             } else {
-                                e.target.classList.add("erro")
-                                e.target.classList.remove("success")
+                                value = 'Não definido'
                             }
                         }
-                    } else if (columnName == 'deadline') {
-                        if (value.split('/').length != 3) {
-                            e.target.classList.add("erro")
-                            e.target.classList.remove("success")
-                        } else {
-                            var finished = record['finished'] ? new Date(`${record['finished'].split('/')[2]}-${record['finished'].split('/')[1]}-${record['finished'].split('/')[0]}`) : null;
-                            var data = new Date(record['data'])
-                            var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
+                    }
+
+                    if (columnName == 'problem_detected') {
+                        cell.classList.add("no-cursor")
+                        
+                        const container = document.createElement('div');
+                        container.style.display = 'flex';
+                        container.style.alignItems = 'center';
+                        container.style.justifyContent = 'center';
+                        
+                        const detailsButton = document.createElement('button');
+                        detailsButton.innerHTML = 'Ver Detalhes';
+                        detailsButton.style.cssText = `
+                            background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
+                            color: white;
+                            border: none;
+                            padding: 6px 12px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 0.8rem;
+                            font-weight: 600
+                        `;
+                        
+                        detailsButton.addEventListener('mouseenter', function() {
+                            this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
+                            this.style.transform = 'translateY(-1px)';
+                            this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
+                        });
+                        
+                        detailsButton.addEventListener('mouseleave', function() {
+                            this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
+                            this.style.transform = 'translateY(0)';
+                            this.style.boxShadow = 'none';
+                        });
+                        
+                        detailsButton.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            showProblemDetails(record);
+                        });
+                        
+                        container.appendChild(detailsButton);
+                        cell.appendChild(container);
+
+                    } else if (columnName == 'feedback_technical') {
+                        cell.classList.add("no-cursor")
+                        
+                        const container = document.createElement('div');
+                        container.style.display = 'flex';
+                        container.style.alignItems = 'center';
+                        container.style.justifyContent = 'center';
+                        
+                        const detailsButton = document.createElement('button');
+                        detailsButton.innerHTML = 'Gerenciar feedback';
+                        detailsButton.style.cssText = `
+                            background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
+                            color: white;
+                            border: none;
+                            padding: 6px 12px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 0.8rem;
+                            font-weight: 600
+                        `;
+                        
+                        detailsButton.addEventListener('mouseenter', function() {
+                            this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
+                            this.style.transform = 'translateY(-1px)';
+                            this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
+                        });
+                        
+                        detailsButton.addEventListener('mouseleave', function() {
+                            this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
+                            this.style.transform = 'translateY(0)';
+                            this.style.boxShadow = 'none';
+                        });
+                        
+                        detailsButton.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            generateFeedback(record);
+                        });
+                        
+                        container.appendChild(detailsButton);
+                        cell.appendChild(container);
+
+                    } else if (columnName == 'status') {
+                        // === NOVA LÓGICA DE STATUS DINÂMICA ===
+                        cell.id = `${columnName}${record.id}`;
+                        cell.classList.add('field-container');
+                        
+                        // Calcula o status correto baseado nas datas
+                        const calculatedStatus = calculateStatus(record);
+                        cell.textContent = calculatedStatus;
+                        cell.setAttribute('data-initial-value', calculatedStatus);
+                        // Se o status calculado for diferente do que veio do backend, atualiza
+                        if (calculatedStatus !== record[columnName]) {
+                            const mockElement = {
+                                value: calculatedStatus,
+                                closest: () => cell,
+                                classList: { add: () => {}, remove: () => {} },
+                                setAttribute: () => {}
+                            };
                             
-                            if (input_data < data) {
-                                e.target.classList.add("erro")
-                                e.target.classList.remove("success")
-                            } else if (finished && input_data > finished) {
-                                e.target.classList.add("erro")
-                                e.target.classList.remove("success")
-                            } else if (value.split('/')[2].length == 4 && isValidDate(value)) {
-                                e.target.classList.remove("erro")
-                                e.target.classList.add("success")
-                                atualizarDados(e)
-                            } else {
-                                e.target.classList.add("erro")
-                                e.target.classList.remove("success")
+                            if (typeof saveField === 'function') {
+                                saveField(mockElement);
                             }
                         }
-                    }
-                })
-                
-                if (textInput.classList[0] == 'date-text-input') {
-                    flatpickr('.date-text-input', { 'allowInput': true, 'dateFormat': 'd/m/Y', 'minDate': 'today' })
-                }
 
-            } else if ((columnName == 'responsible' && '{{has_full_permission}}' === 'True')) {
-                cell.id = `${columnName}${record.id}`;
-                cell.classList.add('editable-field-container');
-                cell.classList.add('date-input-container');
+                    } else if ((columnName == 'deadline' && '{{has_full_permission}}' === 'True') || columnName == 'finished') {
+                        cell.id = `${columnName}${record.id}`
+                        cell.classList.add('editable-field-container')
+                        cell.classList.add('date-input-container')
 
-                const select = document.createElement('select');
-                select.setAttribute('data-initial-value', value);
-                select.placeholder = value;
-                select.id = `${columnName}${record.id}`;
+                        const textInput = document.createElement('input');
+                        textInput.type = 'text';
+                        textInput.placeholder = 'DD/MM/AAAA';
+                        textInput.classList.add('date-text-input')
+                        
+                        cell.addEventListener('dblclick', (e) => {
+                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
+                            textInput.blur()
+                            Swal.fire({
+                                title: "Texto copiado",
+                                text: 'Data copiada para área de transferência',
+                                showCloseButton: true,
+                                icon: 'success'
+                            })
+                        })
 
-                select.addEventListener('change', (e) => atualizarDados(e));
-
-                const optionPlaceholder = document.createElement('option');
-                optionPlaceholder.textContent = '-- Selecione o responsável --';
-                optionPlaceholder.disabled = true;
-                optionPlaceholder.selected = !value;
-                select.appendChild(optionPlaceholder);
-
-                cell.appendChild(select);
-
-                const responsaveis = responsaveisPorPais[record.country]
-
-                if (responsaveis) {
-                    responsaveis.forEach(responsavel => {
-                        const opt = document.createElement('option');
-                        opt.textContent = capitalizeFirstLetter(responsavel.name)
-                        opt.value = responsavel.name
-                        if (value && responsavel.name.toUpperCase() === value.toUpperCase()) {
-                            opt.selected = true;
+                        if (columnName == "finished" && !record['deadline']) {
+                            textInput.disabled = true
                         }
-                        select.appendChild(opt);
-                    });
-                }
 
-            } else if (headerInfo.isTextAreaColumn) {
-                cell.id = `${columnName}${record.id}`
-                cell.classList.add('editable-field-container')
-                cell.classList.add('date-input-container')
+                        textInput.placeholder = value;
+                        textInput.setAttribute('data-initial-value', value)
 
-                let textArea = document.createElement('textarea')
-                textArea.setAttribute('data-initial-value', value)
-                textArea.rows = 5
-                textArea.cols = 20
-                textArea.placeholder = value
-                textArea.id = `${columnName}${record.id}`
-                textArea.addEventListener('input', (e) => atualizarDados(e))
-                textArea.addEventListener('dblclick', (e) => {
-                    navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
-                    Swal.fire({
-                        title: "Texto copiado",
-                        text: 'Feedback copiado para área de transferência',
-                        showCloseButton: true,
-                        icon: 'success'
-                    })
-                })
-                cell.appendChild(textArea)
+                        cell.appendChild(textInput);
 
-            } else {
-                cell.textContent = (value !== null && value !== undefined) ? value : "";
-            }
-        });
-    });
-    
-    // Configura os observadores após renderizar a tabela
-    setTimeout(() => {
-        setupDateInputObservers();
-        if (!statusUpdateSystem.isInitialized) {
-            recalculateAllStatus();
-            statusUpdateSystem.isInitialized = true;
-        }
-    }, 100);
-}
+                        textInput.addEventListener('blur', function(e) {
+                            e.target.classList.remove("erro")
+                            e.target.classList.remove("success")
+                        })
 
-// Função para inicializar o sistema de atualização dinâmica
-function initializeStatusUpdateSystem() {
-    //console.log('Sistema de atualização dinâmica de status inicializado');
-    
-    // Configura um observer global para detectar mudanças na página
-    const globalObserver = new MutationObserver((mutations) => {
-        let hasTableChanges = false;
-        
-        mutations.forEach((mutation) => {
-            if (mutation.target.id === 'table-body' || 
-                mutation.target.closest('#table-body')) {
-                hasTableChanges = true;
-            }
-        });
-        
-        if (hasTableChanges) {
-            debounce(() => {
+                        textInput.addEventListener('input', function(e) {
+                            let value = e.target.value.replace(/\D/g, '');
+
+                            if (value.length > 2) value = value.substring(0, 2) + '/' + value.substring(2);
+                            if (value.length > 5) value = value.substring(0, 5) + '/' + value.substring(5, 9);
+
+                            e.target.value = value;
+                            
+                            if (columnName == 'finished') {
+                                if (value.split('/').length != 3) {
+                                    e.target.classList.add("erro")
+                                    e.target.classList.remove("success")
+                                } else {
+                                    var deadline_data = new Date(`${record['deadline'].split('/')[2]}-${record['deadline'].split('/')[1]}-${record['deadline'].split('/')[0]}`)
+                                    var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
+
+                                    if (input_data < deadline_data) {
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+                                    } else if (value.split('/')[2].length == 4 && isValidDate(value)) {
+                                        e.target.classList.remove("erro")
+                                        e.target.classList.add("success")
+                                        atualizarDados(e)
+                                    } else {
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+                                    }
+                                }
+                            } else if (columnName == 'deadline') {
+                                if (value.split('/').length != 3) {
+                                    e.target.classList.add("erro")
+                                    e.target.classList.remove("success")
+                                } else {
+                                    var finished = record['finished'] ? new Date(`${record['finished'].split('/')[2]}-${record['finished'].split('/')[1]}-${record['finished'].split('/')[0]}`) : null;
+                                    var data = new Date(record['data'])
+                                    var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
+                                    
+                                    if (input_data < data) {
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+                                    } else if (finished && input_data > finished) {
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+                                    } else if (value.split('/')[2].length == 4 && isValidDate(value)) {
+                                        e.target.classList.remove("erro")
+                                        e.target.classList.add("success")
+                                        atualizarDados(e)
+                                    } else {
+                                        e.target.classList.add("erro")
+                                        e.target.classList.remove("success")
+                                    }
+                                }
+                            }
+                        })
+                        
+                        if (textInput.classList[0] == 'date-text-input') {
+                            flatpickr('.date-text-input', { 'allowInput': true, 'dateFormat': 'd/m/Y', 'minDate': 'today' })
+                        }
+
+                    } else if ((columnName == 'responsible' && '{{has_full_permission}}' === 'True')) {
+                        cell.id = `${columnName}${record.id}`;
+                        cell.classList.add('editable-field-container');
+                        cell.classList.add('date-input-container');
+
+                        const select = document.createElement('select');
+                        select.setAttribute('data-initial-value', value);
+                        select.placeholder = value;
+                        select.id = `${columnName}${record.id}`;
+
+                        select.addEventListener('change', (e) => atualizarDados(e));
+
+                        const optionPlaceholder = document.createElement('option');
+                        optionPlaceholder.textContent = '-- Selecione o responsável --';
+                        optionPlaceholder.disabled = true;
+                        optionPlaceholder.selected = !value;
+                        select.appendChild(optionPlaceholder);
+
+                        cell.appendChild(select);
+
+                        const responsaveis = responsaveisPorPais[record.country]
+
+                        if (responsaveis) {
+                            responsaveis.forEach(responsavel => {
+                                const opt = document.createElement('option');
+                                opt.textContent = capitalizeFirstLetter(responsavel.name)
+                                opt.value = responsavel.name
+                                if (value && responsavel.name.toUpperCase() === value.toUpperCase()) {
+                                    opt.selected = true;
+                                }
+                                select.appendChild(opt);
+                            });
+                        }
+
+                    } else if (headerInfo.isTextAreaColumn) {
+                        cell.id = `${columnName}${record.id}`
+                        cell.classList.add('editable-field-container')
+                        cell.classList.add('date-input-container')
+
+                        let textArea = document.createElement('textarea')
+                        textArea.setAttribute('data-initial-value', value)
+                        textArea.rows = 5
+                        textArea.cols = 20
+                        textArea.placeholder = value
+                        textArea.id = `${columnName}${record.id}`
+                        textArea.addEventListener('input', (e) => atualizarDados(e))
+                        textArea.addEventListener('dblclick', (e) => {
+                            navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
+                            Swal.fire({
+                                title: "Texto copiado",
+                                text: 'Feedback copiado para área de transferência',
+                                showCloseButton: true,
+                                icon: 'success'
+                            })
+                        })
+                        cell.appendChild(textArea)
+
+                    } else {
+                        cell.textContent = (value !== null && value !== undefined) ? value : "";
+                    }
+                });
+            });
+            
+            // Configura os observadores após renderizar a tabela
+            setTimeout(() => {
                 setupDateInputObservers();
-            }, 200, 'global-table-change');
+                if (!statusUpdateSystem.isInitialized) {
+                    recalculateAllStatus();
+                    statusUpdateSystem.isInitialized = true;
+                }
+            }, 100);
         }
-    });
-    
-    // Observa mudanças em toda a página
-    globalObserver.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-    
-    statusUpdateSystem.observers.set('global', globalObserver);
-}
 
-// Inicializa o sistema quando o DOM estiver pronto
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeStatusUpdateSystem);
-} else {
-    initializeStatusUpdateSystem();
-}
+        // Função para inicializar o sistema de atualização dinâmica
+        function initializeStatusUpdateSystem() {
+            //console.log('Sistema de atualização dinâmica de status inicializado');
+            
+            // Configura um observer global para detectar mudanças na página
+            const globalObserver = new MutationObserver((mutations) => {
+                let hasTableChanges = false;
+                
+                mutations.forEach((mutation) => {
+                    if (mutation.target.id === 'table-body' || 
+                        mutation.target.closest('#table-body')) {
+                        hasTableChanges = true;
+                    }
+                });
+                
+                if (hasTableChanges) {
+                    debounce(() => {
+                        setupDateInputObservers();
+                    }, 200, 'global-table-change');
+                }
+            });
+            
+            // Observa mudanças em toda a página
+            globalObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            statusUpdateSystem.observers.set('global', globalObserver);
+        }
+
+        // Inicializa o sistema quando o DOM estiver pronto
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeStatusUpdateSystem);
+        } else {
+            initializeStatusUpdateSystem();
+        }
 
 
 
@@ -1721,6 +1921,10 @@ if (document.readyState === 'loading') {
     
 
     });
+    
+    // Após definição de todas as funções:
+    
+
 </script>
 
 </body>

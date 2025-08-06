@@ -10,5 +10,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login_ocorrencias'),  
     path('logout/', views.logout_view, name='logout'),
     path('download_arquivo/<int:arquivo_id>/', views.download_arquivo, name='download_arquivo/'),
+    path('get_record/<int:pk>/', views.get_record, name='get_record'),
+
 ]
 
