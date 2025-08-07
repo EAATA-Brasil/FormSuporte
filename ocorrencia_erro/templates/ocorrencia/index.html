@@ -1634,10 +1634,7 @@
                                     var deadline_data = new Date(`${record['deadline'].split('/')[2]}-${record['deadline'].split('/')[1]}-${record['deadline'].split('/')[0]}`)
                                     var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
 
-                                    if (input_data < deadline_data) {
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-                                    } else if (value.split('/')[2].length == 4 && isValidDate(value)) {
+                                    if (value.split('/')[2].length == 4 && isValidDate(value)) {
                                         e.target.classList.remove("erro")
                                         e.target.classList.add("success")
                                         atualizarDados(e)
