@@ -90,22 +90,22 @@ def get_responsaveis():
 
 def subir_arquivo(files, record):
     for file in files:
-            print(file)
-            # Extrai a extensão do arquivo original
-            ext = os.path.splitext(file.name)[1]  # inclui o ponto, ex: ".jpg"
+        print(file)
+        # Extrai a extensão do arquivo original
+        ext = os.path.splitext(file.name)[1]  # inclui o ponto, ex: ".jpg"
 
-            # Define o novo nome do arquivo
-            novo_nome = f"image_relatorio_{record.id}{ext}"
+        # Define o novo nome do arquivo
+        novo_nome = f"image_relatorio_{record.id}{ext}"
 
-            # Opcional: definir o nome dentro do arquivo UploadedFile (não obrigatório para salvar)
-            file.name = novo_nome
+        # Opcional: definir o nome dentro do arquivo UploadedFile (não obrigatório para salvar)
+        file.name = novo_nome
 
-            # Cria o registro no banco
-            ArquivoOcorrencia.objects.create(
-                record=record,
-                arquivo=file,
-                nome_original=novo_nome  # ou mantenha file.name se preferir
-            )
+        # Cria o registro no banco
+        ArquivoOcorrencia.objects.create(
+            record=record,
+            arquivo=file,
+            nome_original=novo_nome  # ou mantenha file.name se preferir
+        )
 
 
 @login_required(login_url=URL_LOGIN)
@@ -441,7 +441,7 @@ def criar_usuario(request):
                 continue
 
         messages.success(request, f"Usuário {username} criado com sucesso.")
-        return redirect('/ocorrencia')
+        return redirect('criar_usuario')
 
 
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login</title>
+  <title>Login | Sistema de Ocorrências</title>
   <style>
     :root {
       --primary: #0056b3;
@@ -16,14 +16,16 @@
       --text-light: #6b7280;
       --border-color: #dee2e6;
       --hover-bg: #e9ecef;
-      --error-bg: #ffe5e5;
-      --error-text: #b30000;
+      --success: #28a745;
+      --error: #dc3545;
+      --warning: #ffc107;
+      --info: #17a2b8;
     }
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     body {
       background-color: var(--gray);
@@ -31,47 +33,72 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 1rem;
+      background-image: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+    }
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+      animation: fadeIn 0.5s ease;
     }
     .login-form {
       background: var(--light);
-      padding: 2rem;
+      padding: 2.5rem;
       border-radius: 12px;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 360px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
       border: 1px solid var(--border-color);
+      position: relative;
+      overflow: hidden;
     }
-    .login-form h2 {
+    .login-form::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--primary);
+    }
+    .login-header {
       text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-header h2 {
       color: var(--primary);
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
     }
-    .message-error {
-      background-color: var(--error-bg);
-      color: var(--error-text);
-      padding: 10px;
-      margin-bottom: 1rem;
-      border-radius: 8px;
+    .login-header p {
+      color: var(--text-light);
       font-size: 0.9rem;
-      text-align: center;
     }
-    .login-form input[type="text"],
-    .login-form input[type="password"] {
+    .form-group {
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .form-control {
       width: 100%;
-      padding: 0.75rem;
-      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      background-color: var(--gray);
+      background-color: var(--light);
       color: var(--text);
+      font-size: 1rem;
+      transition: all 0.3s ease;
     }
-    .login-form input[type="text"]:focus,
-    .login-form input[type="password"]:focus {
+    .form-control:focus {
       outline: none;
       border-color: var(--primary);
-      background-color: var(--light);
+      box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.2);
     }
-    .login-form input[type="submit"] {
+    .btn {
       width: 100%;
       padding: 0.75rem;
       background-color: var(--primary);
@@ -79,26 +106,165 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: all 0.3s ease;
+      font-size: 1rem;
+      font-weight: 500;
     }
-    .login-form input[type="submit"]:hover {
+    .btn:hover {
       background-color: var(--primary-light);
+    }
+    /* Feedback Visual - Mensagens */
+    .alert {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
+    }
+    .alert-error {
+      background-color: rgba(220, 53, 69, 0.1);
+      border-left: 4px solid var(--error);
+      color: var(--error);
+    }
+    .alert-success {
+      background-color: rgba(40, 167, 69, 0.1);
+      border-left: 4px solid var(--success);
+      color: var(--success);
+    }
+    .alert-warning {
+      background-color: rgba(255, 193, 7, 0.1);
+      border-left: 4px solid var(--warning);
+      color: var(--warning);
+    }
+    .alert-icon {
+      margin-right: 0.75rem;
+      font-size: 1.25rem;
+    }
+    /* Feedback Visual - Validação de Campos */
+    .is-invalid {
+      border-color: var(--error) !important;
+    }
+    .invalid-feedback {
+      color: var(--error);
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
+      display: none;
+    }
+    /* Animações */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .shake {
+      animation: shake 0.5s ease;
     }
   </style>
 </head>
 <body>
-  <div class="login-form">
-    <h2>Login</h2>
+  <div class="login-container">
+    <div class="login-form">
+      <div class="login-header">
+        <h2>Acessar o Sistema</h2>
+        <p>Informe suas credenciais para continuar</p>
+      </div>
 
-    <form action="{% url 'login_ocorrencias' %}" method="POST">
-      {% csrf_token %}
-      <input type="text" name="country" placeholder="Usuário" required>
-      <input type="password" name="password" placeholder="Senha" required>
-      {% if next %}
-        <input type="hidden" name="next" value="{{ next }}">
+      <!-- Feedback Visual - Mensagens do Sistema -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">
+            <span class="alert-icon">
+              {% if message.tags == 'error' %}
+                ⚠️
+              {% elif message.tags == 'success' %}
+                ✔️
+              {% elif message.tags == 'warning' %}
+                🔄
+              {% endif %}
+            </span>
+            {{ message }}
+          </div>
+        {% endfor %}
       {% endif %}
-      <input type="submit" value="Logar">
-    </form>
+
+      <form id="loginForm" action="{% url 'login_ocorrencias' %}" method="POST" novalidate>
+        {% csrf_token %}
+        
+        <div class="form-group">
+          <label for="username">Usuário</label>
+          <input type="text" id="username" class="form-control" name="country" 
+                 placeholder="Digite seu usuário" required>
+          <div class="invalid-feedback">Por favor, informe seu usuário</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" class="form-control" name="password" 
+                 placeholder="Digite sua senha" required>
+          <div class="invalid-feedback">Por favor, informe sua senha</div>
+        </div>
+
+        {% if next %}
+          <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+
+        <button type="submit" class="btn">Entrar</button>
+      </form>
+    </div>
   </div>
+
+  <script>
+    // Feedback Visual - Validação em tempo real
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      let isValid = true;
+      const username = document.getElementById('username');
+      const password = document.getElementById('password');
+      
+      // Reset feedback
+      username.classList.remove('is-invalid');
+      password.classList.remove('is-invalid');
+      username.nextElementSibling.style.display = 'none';
+      password.nextElementSibling.style.display = 'none';
+      
+      // Validação do usuário
+      if (!username.value.trim()) {
+        username.classList.add('is-invalid');
+        username.nextElementSibling.style.display = 'block';
+        isValid = false;
+      }
+      
+      // Validação da senha
+      if (!password.value.trim()) {
+        password.classList.add('is-invalid');
+        password.nextElementSibling.style.display = 'block';
+        isValid = false;
+      }
+      
+      // Feedback visual se inválido
+      if (!isValid) {
+        e.preventDefault();
+        document.getElementById('loginForm').classList.add('shake');
+        setTimeout(() => {
+          document.getElementById('loginForm').classList.remove('shake');
+        }, 500);
+      }
+    });
+    
+    // Feedback Visual - Interação com campos
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+      input.addEventListener('input', function() {
+        if (this.value.trim()) {
+          this.classList.remove('is-invalid');
+          this.nextElementSibling.style.display = 'none';
+        }
+      });
+    });
+  </script>
 </body>
 </html>
