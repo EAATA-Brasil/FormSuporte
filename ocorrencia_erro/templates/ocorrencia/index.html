@@ -161,7 +161,7 @@
             formData.append('action', 'deletar');
             formData.append('file', fileId);
 
-            fetch('{% url "update_ocorrencia/" %}', {
+            fetch('{% url "update_ocorrencia" %}', {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken')  // importante para Django
@@ -436,7 +436,7 @@
                         const form = e.target;
                         const data = new FormData(form);
                         try {
-                            const response = await fetch('{% url "update_ocorrencia/" %}', {
+                            const response = await fetch('{% url "update_ocorrencia" %}', {
                                 method: "POST",
                                 headers: {
                                     'X-CSRFToken': data.get('csrfmiddlewaretoken')
@@ -648,7 +648,7 @@
             inputElement.classList.remove('pending-save');
             inputElement.classList.add('saving'); // Opcional: Adicionar uma classe para indicar salvamento
 
-            fetch('{% url "update_ocorrencia/" %}', {
+            fetch('{% url "update_ocorrencia" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1866,7 +1866,7 @@
             const newValue = inputElement.value
             
             
-            fetch('{% url "update_ocorrencia/" %}', {
+            fetch('{% url "update_ocorrencia" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

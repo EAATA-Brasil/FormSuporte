@@ -463,37 +463,62 @@
         alert('Por favor, selecione um país.');
         return;
       }
+      // Função auxiliar para aguardar um tempo
+      function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      // Função auxiliar para fetch com retry
+      async function fetchWithRetry(url, options, retries = 3, delay = 500) {
+        for (let i = 0; i < retries; i++) {
+          try {
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error('Erro de rede ou do servidor');
+            return response;
+          } catch (err) {
+            if (i < retries - 1) {
+              console.warn(`Tentativa ${i + 1} falhou: ${err.message}. Tentando novamente...`);
+              await sleep(delay);
+            } else {
+              throw err; // Última tentativa falhou → propaga o erro
+            }
+          }
+        }
+      }
 
       try {
-        const response = await fetch("", {
+        const response = await fetchWithRetry("", {
           method: "POST",
           headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
-          body: data
+          body: data,
+          credentials: 'same-origin' // Garante envio de cookies para CSRF
         });
 
-        if (!response.ok) throw new Error('Erro de rede ou do servidor');
-        
         const result = await response.json();
 
         if (result.status === "success") {
           alert(result.message);
           form.reset();
-          document.getElementById('clear-all-files-btn').click(); // Limpa os previews de arquivo
+          document.getElementById('clear-all-files-btn').click();
+
           if ('{{has_full_permission}}' == 'True') {
-            document.getElementById('responsible').innerHTML = '<option value="">-- Selecione o responsável --</option>';
+            const responsibleSelect = document.getElementById('responsible');
+            responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
             todosResponsaveis.forEach(r => {
               const opt = document.createElement('option');
               opt.value = r.name;
               opt.textContent = r.name;
-              document.getElementById('responsible').appendChild(opt);
+              responsibleSelect.appendChild(opt);
             });
           }
         } else {
           alert("Erro: " + result.message);
         }
+
       } catch (error) {
         alert("Erro inesperado: " + error.message);
       }
+
     });
   </script>
 </body>
