@@ -130,7 +130,7 @@
     form input[readonly] { background-color: #f3f4f6; color: var(--text-secondary); }
     form textarea { min-height: 100px; resize: vertical; }
 
-    form input[type="submit"] {
+    form button[type="submit"] {
       background-color: var(--primary);
       color: white;
       border: none;
@@ -142,9 +142,12 @@
       box-shadow: 0 3px 10px var(--shadow-light);
       transition: background-color 0.25s ease, box-shadow 0.25s ease;
       width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
-    form input[type="submit"]:hover {
+    form button[type="submit"]:hover {
       background-color: var(--primary-dark);
       box-shadow: 0 5px 18px var(--shadow-hover);
     }
@@ -181,6 +184,68 @@
       .file-upload { flex-direction: column; align-items: stretch; }
       #actions_log { position: static; justify-content: center; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap; }
       .buttons_log { padding: 10px 20px; font-size: 14px; border-radius: 6px; }
+    }
+    .spinner {
+      border: 2px solid #f3f3f3; /* cor clara */
+      border-top: 2px solid #3498db; /* cor do "spin" */
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .spinner.visible {
+      opacity: 1;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+
+    #error-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      display: none; /* Inicia oculto */
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    #error-popup-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+      border-top: 4px solid transparent; /* Adicionado para o efeito de cor */
+    }
+
+    #popup-title {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    #popup-message {
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
     }
   </style>
 </head>
@@ -299,9 +364,20 @@
     </div>
 
     <div class="form-pair full-width">
-      <input type="submit" value="Cadastrar Ocorrência" required />
+      <button type="submit" id="submit-btn" required>
+        <span id="button-text" style="color:#fff">Cadastrar Ocorrência</span>
+        <span class="spinner" id="button-spinner"></span>
+      </button>
     </div>
   </form>
+
+  <div id="error-popup-overlay" style="display:none;">
+    <div id="error-popup-content">
+      <h3 id="popup-title" style="margin-bottom: 10px;"></h3>
+      <p id="popup-message" style="text-align: center; margin-bottom: 20px;"></p>
+      <button id="error-popup-close-btn" style="background-color: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Fechar</button>
+    </div>
+  </div>
 
   <script>
     // Dados do backend
@@ -325,6 +401,41 @@
     function redirecionar() { window.location.href = '/'; }
     function logOut() { window.location.href = '/logout'; }
     function handleLogin() { window.location.href = '/login'; }
+
+    // Função do Popup genérico
+    function showPopup(type, title, message) {
+      const overlay = document.getElementById('error-popup-overlay');
+      const titleElement = document.getElementById('popup-title');
+      const messageElement = document.getElementById('popup-message');
+      const contentElement = document.getElementById('error-popup-content');
+      const closeBtn = document.getElementById('error-popup-close-btn');
+
+      // Configura cores e ícones baseados no tipo
+      if (type === 'error') {
+        titleElement.style.color = 'var(--error)';
+        contentElement.style.borderTop = '4px solid var(--error)';
+      } else { // success
+        titleElement.style.color = '#2e7d32';
+        contentElement.style.borderTop = '4px solid #2e7d32';
+      }
+
+      titleElement.textContent = title;
+      messageElement.textContent = message;
+      overlay.style.display = 'flex';
+
+      closeBtn.onclick = () => {
+        overlay.style.display = 'none';
+        if (type === 'success') {
+          // Redirecionar ou outras ações após sucesso, se necessário
+        }
+      };
+    }
+    
+    // Elementos do DOM
+    const submitBtn = document.getElementById('submit-btn');
+    const submitBtnText = document.getElementById('button-text');
+    const submitBtnSpinner = document.getElementById('button-spinner');
+    const formOcorrencia = document.getElementById('form-ocorrencia');
 
     // Listener de inicialização do DOM
     document.addEventListener('DOMContentLoaded', function() {
@@ -454,72 +565,67 @@
     });
 
     // Event listener para o submit do formulário
-    document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const data = new FormData(form);
+    formOcorrencia.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const form = e.target;
+    const data = new FormData(form);
 
-      if (form.querySelector('#country') && form.querySelector('#country').value === "") {
-        alert('Por favor, selecione um país.');
+    // Validação básica do país (frontend)
+    if (form.querySelector('#country') && form.querySelector('#country').value === "") {
+        showPopup('error', 'Falha', 'Por favor, selecione um país.');
         return;
-      }
-      // Função auxiliar para aguardar um tempo
-      function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-      }
+    }
 
-      // Função auxiliar para fetch com retry
-      async function fetchWithRetry(url, options, retries = 3, delay = 500) {
-        for (let i = 0; i < retries; i++) {
-          try {
-            const response = await fetch(url, options);
-            if (!response.ok) throw new Error('Erro de rede ou do servidor');
-            return response;
-          } catch (err) {
-            if (i < retries - 1) {
-              console.warn(`Tentativa ${i + 1} falhou: ${err.message}. Tentando novamente...`);
-              await sleep(delay);
-            } else {
-              throw err; // Última tentativa falhou → propaga o erro
-            }
-          }
-        }
-      }
+    submitBtnText.style.display = 'none';
+    submitBtnSpinner.classList.add('visible');
+    submitBtn.disabled = true;
 
-      try {
-        const response = await fetchWithRetry("", {
-          method: "POST",
-          headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
-          body: data,
-          credentials: 'same-origin' // Garante envio de cookies para CSRF
+    try {
+        const response = await fetch("{% url 'subir_ocorrencia' %}", {
+            method: "POST",
+            headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
+            body: data,
+            credentials: 'same-origin'
         });
 
-        const result = await response.json();
-
-        if (result.status === "success") {
-          alert(result.message);
-          form.reset();
-          document.getElementById('clear-all-files-btn').click();
-
-          if ('{{has_full_permission}}' == 'True') {
-            const responsibleSelect = document.getElementById('responsible');
-            responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
-            todosResponsaveis.forEach(r => {
-              const opt = document.createElement('option');
-              opt.value = r.name;
-              opt.textContent = r.name;
-              responsibleSelect.appendChild(opt);
-            });
-          }
+        // Verifica se a resposta é JSON (sucesso/erro tratado)
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const result = await response.json();
+            
+            if (result.status === "success") {
+                showPopup('success', 'Sucesso', result.message);
+                form.reset();
+                document.getElementById('clear-all-files-btn').click();
+                
+                if ('{{has_full_permission}}' == 'True') {
+                    const responsibleSelect = document.getElementById('responsible');
+                    responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
+                    todosResponsaveis.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r.name;
+                        opt.textContent = r.name;
+                        responsibleSelect.appendChild(opt);
+                    });
+                }
+            } else {
+                // Exibe mensagem de erro específica do backend
+                showPopup('error', 'Falha', result.message || "Erro ao processar a requisição.");
+            }
         } else {
-          alert("Erro: " + result.message);
+            // Se não for JSON, trata como erro genérico
+            throw new Error('Resposta inesperada do servidor');
         }
-
-      } catch (error) {
-        alert("Erro inesperado: " + error.message);
-      }
-
-    });
+    } catch (error) {
+        // Captura erros de rede ou outros erros inesperados
+        showPopup('error', 'Erro inesperado', error.message || "Ocorreu um erro inesperado. Tente novamente.");
+    } finally {
+        submitBtnText.style.display = 'inline';
+        submitBtnSpinner.classList.remove('visible');
+        submitBtn.disabled = false;
+    }
+});
   </script>
 </body>
 </html>

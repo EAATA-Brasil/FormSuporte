@@ -15,6 +15,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.serializers import serialize
+from django.db import IntegrityError
 
 from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia
 
@@ -452,47 +453,71 @@ def subir_ocorrencia(request):
     todos_responsaveis = []
     todos_equipamentos = []
 
-    # Responsáveis
+    # Prepara lista de responsáveis
     usuarios_com_permissao = User.objects.filter(
         country_permissions__isnull=False
     ).distinct().values('id', 'first_name', 'last_name', 'username')
 
-    equipamentos_possiveis = Device.objects.all().values('id', 'name')
-
-    responsaveis_dict = {}
     for user in usuarios_com_permissao:
         nome_completo = f"{user['first_name']} {user['last_name']}".strip()
         if not nome_completo:
             nome_completo = user['username']
-        responsavel_data = {'id': user['id'], 'name': nome_completo}
-        todos_responsaveis.append(responsavel_data)
-        responsaveis_dict[user['id']] = responsavel_data
+        todos_responsaveis.append({'id': user['id'], 'name': nome_completo})
 
-    equipamento_dict = {}
-    for equipamento in equipamentos_possiveis:
-        equipamento_data = {'id': equipamento['id'], 'name': equipamento['name']}
-        todos_equipamentos.append(equipamento_data)
-        equipamento_dict[equipamento['id']] = equipamento_data
+    # Prepara lista de equipamentos
+    todos_equipamentos = list(Device.objects.all().values('id', 'name'))
 
+    # Mapeia responsáveis por país
     for pais in paises:
-        permissoes = CountryPermission.objects.filter(country=pais).select_related('user')
         responsaveis_por_pais[pais.id] = []
-        for permissao in permissoes:
+        for permissao in CountryPermission.objects.filter(country=pais).select_related('user'):
             user = permissao.user
             nome_completo = f"{user.first_name} {user.last_name}".strip() or user.username
             responsaveis_por_pais[pais.id].append({'id': user.id, 'name': nome_completo})
 
     if request.method == 'POST':
-        country_id = request.POST.get("country")
-        device_id = request.POST.get("device")
+        try:
+            # Validações obrigatórias
+            required_fields = {
+                'country': 'País',
+                'device': 'Equipamento',
+                'technical': 'Técnico',
+                'serial': 'Serial',
+                'brand': 'Marca',
+                'model': 'Modelo',
+                'year': 'Ano',
+                'version': 'Versão',
+                'problem_detected': 'Problema Detectado'
+            }
 
-        country = get_object_or_404(Country, id=country_id) if has_full_permission else paises.first()
-        device = get_object_or_404(Device, id=device_id)
+            missing_fields = [field_name for field_name, field_label in required_fields.items() 
+                             if not request.POST.get(field_name)]
+            if missing_fields:
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Campos obrigatórios faltando: {', '.join([required_fields[f] for f in missing_fields])}"
+                }, status=400)
 
-        id = request.POST.get("ticket", False)
-        if id:
+            country = get_object_or_404(Country, id=request.POST.get("country"))
+            device = get_object_or_404(Device, id=request.POST.get("device"))
+
+            # Validação específica do ticket
+            ticket = request.POST.get("ticket", "").strip()
+            if ticket:
+                if len(ticket) > 20:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Ticket deve ter no máximo 20 caracteres."
+                    }, status=400)
+                
+                if Record.objects.filter(codigo_externo=ticket).exists():
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Este ticket já está em uso. Insira um código único."
+                    }, status=400)
+
+            # Prepara dados do registro
             record_data = {
-                'codigo_externo':id,
                 'technical': request.POST.get("technical"),
                 'responsible': request.POST.get("responsible"),
                 'device': device,
@@ -506,79 +531,85 @@ def subir_ocorrencia(request):
                 'problem_detected': request.POST.get("problem_detected"),
                 'status': Record.STATUS_OCORRENCIA.REQUESTED
             }
-        else:
-            record_data = {
-                'technical': request.POST.get("technical"),
-                'responsible': request.POST.get("responsible"),
-                'device': device,
-                'area': request.POST.get("area_radio"),
-                'serial': request.POST.get("serial"),
-                'brand': request.POST.get("brand"),
-                'model': request.POST.get("model"),
-                'year': request.POST.get("year"),
-                'country': country,
-                'version': request.POST.get("version"),
-                'problem_detected': request.POST.get("problem_detected"),
-                'status': Record.STATUS_OCORRENCIA.REQUESTED
+
+            if ticket:
+                record_data['codigo_externo'] = ticket
+
+            # Validação de status
+            status_input = request.POST.get("status", "Requisitado")
+            status_mapping = {
+                'Requisitado': Record.STATUS_OCORRENCIA.REQUESTED,
+                'Concluído': Record.STATUS_OCORRENCIA.DONE,
+                'Em progresso': Record.STATUS_OCORRENCIA.PROGRESS,
+                'Atrasado': Record.STATUS_OCORRENCIA.LATE,
             }
+            if status_input in status_mapping:
+                record_data['status'] = status_mapping[status_input]
 
-        # Status opcional
-        status_mapping = {
-            'Requisitado': Record.STATUS_OCORRENCIA.REQUESTED,
-            'Concluído': Record.STATUS_OCORRENCIA.DONE,
-            'Em progresso': Record.STATUS_OCORRENCIA.PROGRESS,
-            'Atrasado': Record.STATUS_OCORRENCIA.LATE,
-        }
-        status_input = request.POST.get("status", "Requisitado")
-        if status_input in status_mapping:
-            record_data['status'] = status_mapping[status_input]
+            # Validação de deadline
+            if request.POST.get("deadline"):
+                try:
+                    record_data['deadline'] = datetime.strptime(
+                        request.POST.get("deadline"), 
+                        '%d/%m/%Y'
+                    ).date()
+                except ValueError:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Formato de data inválido. Use DD/MM/AAAA."
+                    }, status=400)
 
-        # Deadline
-        if request.POST.get("deadline"):
+            # Cria o registro
             try:
-                record_data['deadline'] = datetime.strptime(request.POST.get("deadline"), '%d/%m/%Y').date()
-            except Exception as e:
-                print("Erro no deadline:", e)
+                record = Record.objects.create(**record_data)
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Erro ao criar registro. Verifique os dados."
+                }, status=400)
 
-        # Criar ocorrência
-        record = Record.objects.create(**record_data)
+            # Processa arquivos anexados
+            for file in request.FILES.getlist("arquivo"):
+                ext = os.path.splitext(file.name)[1]
+                novo_nome = f"ocorrencia_{record.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}{ext}"
+                ArquivoOcorrencia.objects.create(
+                    record=record,
+                    arquivo=file,
+                    nome_original=novo_nome
+                )
 
-        # Salvar arquivos múltiplos
-        
-        for file in request.FILES.getlist("arquivo"):
-            print(file)
-            # Extrai a extensão do arquivo original
-            ext = os.path.splitext(file.name)[1]  # inclui o ponto, ex: ".jpg"
+            return JsonResponse({
+                "status": "success",
+                "message": "Ocorrência registrada com sucesso!",
+                "record_id": record.id
+            }, status=201)
 
-            # Define o novo nome do arquivo
-            novo_nome = f"image_relatorio_{record.id}{ext}"
+        except Country.DoesNotExist:
+            return JsonResponse({
+                "status": "error",
+                "message": "País selecionado não existe."
+            }, status=400)
+        except Device.DoesNotExist:
+            return JsonResponse({
+                "status": "error", 
+                "message": "Equipamento selecionado não existe."
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Erro interno: {str(e)}"
+            }, status=500)
 
-            # Opcional: definir o nome dentro do arquivo UploadedFile (não obrigatório para salvar)
-            file.name = novo_nome
-
-            # Cria o registro no banco
-            ArquivoOcorrencia.objects.create(
-                record=record,
-                arquivo=file,
-                nome_original=novo_nome  # ou mantenha file.name se preferir
-            )
-
-        return JsonResponse({"status": "success", "message": "Ocorrência cadastrada com sucesso."}, status=201)
-    paises_dict = {
-        str(p['id']): p['name']
-        for p in Country.objects.all().values('id', 'name')
-    }
+    # GET request - prepara dados para o template
+    paises_dict = {str(p.id): p.name for p in paises}
     return render(request, 'ocorrencia/subir_ocorrencia.html', {
         'paises': paises,
         'paises_json': json.dumps(paises_dict),
         'has_full_permission': has_full_permission,
         'responsaveis_por_pais': json.dumps(responsaveis_por_pais),
         'todos_responsaveis': json.dumps(todos_responsaveis),
-        'responsaveis_por_pais_raw': responsaveis_por_pais,
-        'todos_responsaveis_raw': todos_responsaveis,
         'todos_equipamentos_raw': todos_equipamentos,
     })
-
 # Views auxiliares para AJAX (opcionais)
 def get_responsaveis_por_pais(request):
     """
