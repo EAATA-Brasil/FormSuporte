@@ -46,6 +46,8 @@ class Equipamentos(models.Model):
     parcelas = models.FloatField(verbose_name='Quantidade de parcelas padrão', blank=True, null=True)
 
     disponibilidade = models.BooleanField(default=True, verbose_name='Equipamento disponível')
+    avista = models.BooleanField(default=False, verbose_name='Venda sozinha apenas à vista')
+    boleto = models.BooleanField(default=True, verbose_name='Aceita parcelar no boleto')
 
     detalhes = models.TextField(verbose_name='Detalhes do equipamento', blank=True, null=True)
     detalhes_html = models.TextField(verbose_name='Detalhes em HTML', editable=False, blank=True, null=True)

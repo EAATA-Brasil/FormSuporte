@@ -11,6 +11,8 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('download_arquivo/<int:arquivo_id>/', views.download_arquivo, name='download_arquivo'),
     path('get_record/<int:pk>/', views.get_record, name='get_record'),
-
+    path('notificacoes/', views.listar_notificacoes, name='listar_notificacoes'),
+    path('notificacoes/contar/', views.contar_notificacoes_nao_lidas, name='contar_notificacoes'),
+    path('notificacoes/<int:notificacao_id>/marcar_lida/', views.marcar_notificacao_lida, name='marcar_notificacao_lida'),
 ]
 

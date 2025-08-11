@@ -226,3 +226,70 @@ class ArquivoOcorrencia(models.Model):
 
     def __str__(self):
         return f"{self.record} salve {self.arquivo}"
+
+
+class Notificacao(models.Model):
+    """
+    Modelo para notificações de feedback em ocorrências
+    """
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='notificacoes',
+        verbose_name='Usuário'
+    )
+    record = models.ForeignKey(
+        Record, 
+        on_delete=models.CASCADE, 
+        related_name='notificacoes',
+        verbose_name='Ocorrência'
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=[
+            ('feedback_manager', 'Feedback do Gestor'),
+        ],
+        default='feedback_manager',
+        verbose_name='Tipo de Notificação'
+    )
+    titulo = models.CharField(
+        max_length=200,
+        verbose_name='Título'
+    )
+    resumo = models.TextField(
+        max_length=500,
+        verbose_name='Resumo'
+    )
+    lida = models.BooleanField(
+        default=False,
+        verbose_name='Lida'
+    )
+    criada_em = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Criada em'
+    )
+    lida_em = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Lida em'
+    )
+
+    class Meta:
+        verbose_name = "Notificação"
+        verbose_name_plural = "Notificações"
+        ordering = ['-criada_em']
+        indexes = [
+            models.Index(fields=['user', 'lida']),
+            models.Index(fields=['criada_em']),
+        ]
+
+    def __str__(self):
+        return f"Notificação para {self.user.username} - {self.titulo}"
+
+    def marcar_como_lida(self):
+        """Marca a notificação como lida"""
+        if not self.lida:
+            self.lida = True
+            self.lida_em = timezone.now()
+            self.save(update_fields=['lida', 'lida_em'])
+

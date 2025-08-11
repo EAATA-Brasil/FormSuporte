@@ -17,7 +17,7 @@ from django.contrib import messages
 from django.core.serializers import serialize
 from django.db import IntegrityError
 
-from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia
+from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao
 
 # Constantes
 DATE_COLUMNS = ["data", "deadline", "finished"]
@@ -167,11 +167,17 @@ def filter_data_view(request):
             page_number = data.get('page', 1)
 
             # Consulta base otimizada
-            base_queryset = Record.objects.select_related('country').all()
+            base_queryset = Record.objects.select_related('device', 'country')
             user = request.user
             has_full_permission = user.is_superuser
 
             queryset = base_queryset
+            
+            # Aplica permissões de país antes de qualquer outro filtro
+            if not has_full_permission:
+                permitted_countries = CountryPermission.objects.filter(user=user).values_list('country__name', flat=True)
+                queryset = queryset.filter(country__name__in=permitted_countries)
+
             # Construção dos filtros
             q_objects = Q()
             for column, values in filters.items():
@@ -197,9 +203,9 @@ def filter_data_view(request):
                         dates = []
                         for v in non_empty:
                             try:
-                                if '/' in v:  # Formato DD/MM/YYYY
+                                if '/' in v:
                                     dt = datetime.strptime(v, '%d/%m/%Y').date()
-                                else:  # Formato YYYY-MM-DD
+                                else:
                                     dt = datetime.strptime(v, '%Y-%m-%d').date()
                                 dates.append(dt)
                             except:
@@ -207,28 +213,15 @@ def filter_data_view(request):
                         if dates:
                             column_q |= Q(**{f'{column}__in': dates})
                     elif column == 'country':
-                        if has_full_permission:
-                            country_q_objects = Q()
-                            for val in non_empty:
-                                country_q_objects |= Q(country__name__iexact=val)
-                            column_q |= country_q_objects
-                        else:
-                            permitted = set(CountryPermission.objects.filter(
-                                user=user,
-                                country__name__in=non_empty
-                            ).values_list('country__name', flat=True))
-                            filtered = [v for v in non_empty if v in permitted]
-                            if filtered:
-                                country_q_objects = Q()
-                                for val in filtered:
-                                    country_q_objects |= Q(country__name__iexact=val)
-                                column_q |= country_q_objects
+                        country_q_objects = Q()
+                        for val in non_empty:
+                            country_q_objects |= Q(country__name__iexact=val)
+                        column_q |= country_q_objects
                     elif column == 'device':
-                        if has_full_permission:
-                            device_q_objects = Q()
-                            for val in non_empty:
-                                device_q_objects |= Q(device__name__iexact=val)
-                            column_q |= device_q_objects
+                        device_q_objects = Q()
+                        for val in non_empty:
+                            device_q_objects |= Q(device__name__iexact=val)
+                        column_q |= device_q_objects
                     elif column in TEXT_CASE_INSENSITIVE_COLUMNS:
                         text_q_objects = Q()
                         for val in non_empty:
@@ -275,9 +268,9 @@ def filter_data_view(request):
             records_data = []
             for record in page_obj.object_list:
                 record_data = {
-                    'id':record.id,
-                    'codigo_externo': record.codigo_externo or str(record.id),  # Usar codigo_externo ou id como fallback
-                    'data': record.data or '',
+                    'id': record.id,
+                    'codigo_externo': record.codigo_externo or str(record.id),
+                    'data': record.data,
                     'technical': record.technical or '',
                     'country': record.country.name if record.country else '',
                     'device': record.device.name if record.device else '',
@@ -316,18 +309,12 @@ def filter_data_view(request):
             filter_options = {}
             for col in FILTERABLE_COLUMNS_FOR_OPTIONS:
                 if col == 'country':
-                    if has_full_permission:
-                        options = base_queryset.exclude(country__isnull=True
-                                ).values_list('country__name', flat=True).distinct()
-                    else:
-                        options = CountryPermission.objects.filter(
-                            user=user
-                        ).values_list('country__name', flat=True).distinct()
+                    # Agora, as opções de país são derivadas do queryset filtrado.
+                    options = queryset.exclude(country__isnull=True).values_list('country__name', flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
                 elif col == 'device':
-                    if has_full_permission:
-                        options = base_queryset.exclude(device__isnull=True
-                                ).values_list('device__name', flat=True).distinct()
+                    # As opções de dispositivo também são derivadas do queryset filtrado.
+                    options = queryset.exclude(device__isnull=True).values_list('device__name', flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
                 elif col == 'status':
                     status_values = queryset.values_list('status', flat=True).distinct()
@@ -336,8 +323,7 @@ def filter_data_view(request):
                         key=lambda x: list(STATUS_OCORRENCIA.keys()).index(x) if x in STATUS_OCORRENCIA else float('inf')
                     )
                 elif col in DATE_COLUMNS:
-                    dates = queryset.exclude(**{f'{col}__isnull': True}
-                            ).values_list(col, flat=True).distinct()
+                    dates = queryset.exclude(**{f'{col}__isnull': True}).values_list(col, flat=True).distinct()
                     date_tree = defaultdict(lambda: defaultdict(list))
                     for dt in dates:
                         if dt:
@@ -359,9 +345,7 @@ def filter_data_view(request):
                     options = queryset.values_list(col, flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt for opt in options if opt is not None])))
                 else:
-                    options = queryset.exclude(**{f'{col}__isnull': True}
-                            ).exclude(**{f'{col}__exact': ''}
-                            ).values_list(col, flat=True).distinct()
+                    options = queryset.exclude(**{f'{col}__isnull': True}).exclude(**{f'{col}__exact': ''}).values_list(col, flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt is not None])))
 
             return JsonResponse({
@@ -752,8 +736,12 @@ def alterar_dados(request):
             else:
                 setattr(record, field_name, new_value.capitalize())
                 new_display = new_value.capitalize()
-
             record.save(update_fields=[field_name])
+            
+            # Criar notificação se o campo for feedback_manager
+            if field_name == 'feedback_manager' and new_value and new_value.strip():
+                criar_notificacao_feedback(record, 'feedback_manager', request.user)
+            
             return JsonResponse({'status': 'success', 'new_display': new_display, 'page_num': data.get("page_num")})
 
     except Exception as e:
@@ -853,3 +841,100 @@ def get_record(request, pk):
 
     except Record.DoesNotExist:
         return JsonResponse({'error': 'Registro não encontrado'}, status=404)
+
+
+def criar_notificacao_feedback(record, tipo_feedback, gestor_user):
+    """
+    Cria uma notificação quando um gestor adiciona feedback a uma ocorrência
+    """
+    try:
+        # Buscar o usuário responsável pela ocorrência
+        if record.responsible and record.responsible != "Não identificado":
+            # Tentar encontrar o usuário pelo nome completo ou username
+            usuarios_responsaveis = User.objects.filter(
+                Q(first_name__icontains=record.responsible.split()[0]) |
+                Q(username__icontains=record.responsible) |
+                Q(last_name__icontains=record.responsible.split()[-1] if len(record.responsible.split()) > 1 else record.responsible)
+            )
+            
+            for usuario in usuarios_responsaveis:
+                # Evitar criar notificação para o próprio gestor que fez o feedback
+                if usuario.id != gestor_user.id:
+                    # Verificar se já existe uma notificação não lida para esta ocorrência e usuário
+                    notificacao_existente = Notificacao.objects.filter(
+                        user=usuario,
+                        record=record,
+                        tipo=tipo_feedback,
+                        lida=False
+                    ).first()
+                    
+                    if not notificacao_existente:
+                        # Criar nova notificação
+                        titulo = f"Novo feedback na ocorrência #{record.codigo_externo or record.id}"
+                        resumo = f"O gestor adicionou um feedback na ocorrência {record.device.name if record.device else 'N/A'} - {record.area or 'N/A'}"
+                        
+                        Notificacao.objects.create(
+                            user=usuario,
+                            record=record,
+                            tipo=tipo_feedback,
+                            titulo=titulo,
+                            resumo=resumo
+                        )
+    except Exception as e:
+        print(f"Erro ao criar notificação: {e}")
+
+@login_required(login_url=URL_LOGIN)
+def listar_notificacoes(request):
+    """
+    API para listar notificações não lidas do usuário logado
+    """
+    try:
+        notificacoes = Notificacao.objects.filter(
+            user=request.user,
+            lida=False
+        ).select_related('record', 'record__device').order_by('-criada_em')
+        
+        notificacoes_data = []
+        for notificacao in notificacoes:
+            notificacoes_data.append({
+                'id': notificacao.id,
+                'titulo': notificacao.titulo,
+                'resumo': notificacao.resumo,
+                'tipo': notificacao.tipo,
+                'criada_em': notificacao.criada_em.strftime('%d/%m/%Y %H:%M'),
+                'record_id': notificacao.record.id,
+                'record_codigo': notificacao.record.codigo_externo or str(notificacao.record.id)
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'notificacoes': notificacoes_data,
+            'total': len(notificacoes_data)
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+@login_required(login_url=URL_LOGIN)
+def marcar_notificacao_lida(request, notificacao_id):
+    """
+    API para marcar uma notificação como lida
+    """
+    try:
+        notificacao = get_object_or_404(Notificacao, id=notificacao_id, user=request.user)
+        notificacao.marcar_como_lida()
+        
+        return JsonResponse({'status': 'success', 'message': 'Notificação marcada como lida'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+@login_required(login_url=URL_LOGIN)
+def contar_notificacoes_nao_lidas(request):
+    """
+    API para contar notificações não lidas do usuário logado
+    """
+    try:
+        count = Notificacao.objects.filter(user=request.user, lida=False).count()
+        return JsonResponse({'status': 'success', 'count': count})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
