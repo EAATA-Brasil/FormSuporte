@@ -36,7 +36,7 @@ class SerialDuplicadoFilter(admin.SimpleListFilter):
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
     list_display = ('serial', 'nome', 'equipamento', 'data', 'vencimento', 'anos_para_vencimento', 'acoes')
-    search_fields = ('serial', 'nome', 'equipamento'),
+    search_fields = ('serial', 'nome', 'equipamento')
     list_filter = (SerialDuplicadoFilter,)
     list_editable = ('anos_para_vencimento',)  # Permite editar diretamente na lista
     fieldsets = (
