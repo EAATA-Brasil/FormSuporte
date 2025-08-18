@@ -40,6 +40,8 @@ CSRF_TRUSTED_ORIGINS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -54,6 +56,20 @@ INSTALLED_APPS = [
     'rest_framework',
     'simulador'
 ]
+
+
+# WSGI_APPLICATION = 'Form_Suporte.wsgi.application'
+ASGI_APPLICATION = 'Form_Suporte.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        # O Django Channels usará o Redis para gerenciar a comunicação entre os consumidores
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('192.168.18.150', 6379)], # Ajuste o host e a porta do seu servidor Redis
+        },
+    },
+}
 
 CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOWED_ORIGINS = [
@@ -90,7 +106,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'Form_Suporte.wsgi.application'
+
 
 
 # Database

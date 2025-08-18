@@ -17,7 +17,90 @@
             right: 20px;
             z-index: 1000;
         }
-        
+        /* Estilos para o chat */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 400px; /* Altura fixa para o chat */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    padding: 10px;
+    margin-top: 20px;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column; /* Para que as mensagens novas apareçam na parte inferior */
+}
+
+.chat-message {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-radius: 18px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.chat-message.my-message {
+    background-color: #0459B5;
+    color: white;
+    align-self: flex-end; /* Alinha a sua mensagem à direita */
+}
+
+.chat-message.other-message {
+    background-color: #e5e5e5;
+    color: #333;
+    align-self: flex-start; /* Alinha a mensagem do outro à esquerda */
+}
+
+.chat-message-author {
+    font-size: 10px;
+    color: #999;
+    margin-bottom: 2px;
+}
+
+.chat-input-area {
+    display: flex;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.chat-input-area input {
+    flex-grow: 1;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    padding: 8px 15px;
+    margin-right: 8px;
+}
+
+.chat-input-area button {
+    background-color: #0459B5;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.chat-input-area button:hover {
+    background-color: #0347a0;
+}
+.chat-message-time {
+    display: block; /* Garante que a hora fique em uma nova linha */
+    font-size: 10px;
+    color: #999;
+    margin-top: 5px;
+    text-align: right;
+}
+
+.chat-message.my-message .chat-message-time {
+    color: rgba(255, 255, 255, 0.7); /* Cor da hora para suas mensagens */
+}
         .notification-bell {
             position: relative;
             background: #0459B5;
@@ -137,7 +220,7 @@
     </style>
 </head>
 <body>
-
+    <span id="username-holder" data-username="{{ request.user.username }}"></span>
     <!-- Container de notificações -->
     <div class="notification-container">
         <button class="notification-bell" id="notification-bell" onclick="toggleNotifications()">
@@ -175,7 +258,6 @@
                     {% include 'ocorrencia/components/lineHead.html' with name='responsável' ID="responsible"%}
                 {%endif%}
                 {% include 'ocorrencia/components/lineHead.html' with name='finalizado' ID="finished"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='Feedback Technical' ID="feedback_technical" checbox='false'%}
             </tr>
             
         </thead>
@@ -508,15 +590,6 @@
                             <span style="color: var(--text-light);">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
                         </div>
                     </div>
-                    
-                    <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <h4 style="margin-top: 0; color: var(--primary);">Feedback Técnico:</h4>
-                        <textarea id="${feedbackTechnicalId}" 
-                                  data-record-id="${record.id}" 
-                                  data-field-name="feedback_technical" 
-                                  data-initial-value="${feedbackTechnicalValue}"
-                                  style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${feedbackTechnicalValue}</textarea>
-                    </div>
                     <div style="margin-bottom: 20px;">
                         <h4>Arquivos anexados:</h4>
                         ${arquivosListHTML}
@@ -545,15 +618,18 @@
                             </form>
                         </div>
                     </div>
-                    <div style="background: var(--gray); padding: 15px; border-radius: 8px;">
-                        <h4 style="margin-top: 0; color: var(--warning);">Feedback do Gerente:</h4>
-                        <textarea id="${feedbackManagerId}" 
-                                  data-record-id="${record.id}" 
-                                  data-field-name="feedback_manager" 
-                                  data-initial-value="${feedbackManagerValue}"
-                                  style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${feedbackManagerValue}</textarea>
+                    <div class="chat-container">
+                        <h4 style="margin-left: 10px; margin-top: 10px; color: var(--primary);">Chat de feedback</h4>
+                        <div id="logged-in-user-id" style="display:none;">{{ request.user.id }}</div>
+                        <div id="logged-in-username" style="display:none;">{{ request.user.username }}</div>
+                        <div id="chat-messages" class="chat-messages"></div>
+                        <form id="${record.id}-chat">
+                            <div class="chat-input-area">
+                                <input type="text" id="chat-message-input" placeholder="Digite sua mensagem...">
+                                <button id="chat-send-button">Enviar</button>
+                            </div>
+                        </form>
                     </div>
-                    
                 </div>
             `;
             let id = record.id
@@ -715,6 +791,71 @@
                     fileInput.addEventListener('change', () => {
                         handleFiles(fileInput.files);
                     });
+                    // No seu arquivo index.html, dentro da tag <script>
+                    const recordId = JSON.parse(id);
+                    const chatBox = document.getElementById('chat-box');
+                    const form = document.getElementById(`${id}-chat`);
+                    const chatInput = document.getElementById('chat-message-input');
+                    const chatMessages = document.getElementById('chat-messages');
+
+                    const loggedInUsername = document.getElementById('logged-in-username').textContent
+
+                    const chatSocket = new WebSocket(
+                        'ws://'
+                        + window.location.host
+                        + '/ws/chat/'
+                        + recordId
+                        + '/'
+                    );
+
+                    chatSocket.onmessage = function(e) {
+                        const data = JSON.parse(e.data);
+                        
+                        // Log para verificar se os dados foram recebidos e analisados corretamente
+
+                        const message = data.message;
+                        const author = data.author;
+                        const timestamp = data.timestamp;
+
+                        if (chatMessages) {
+                            const messageElement = document.createElement('div');
+                            messageElement.classList.add('chat-message');
+                            
+                            // Verifique se os elementos estão a ser criados
+                            
+                            if (author === loggedInUsername) {
+                                messageElement.classList.add('my-message');
+                            } else {
+                                messageElement.classList.add('other-message');
+                            }
+                            
+                            messageElement.innerHTML = `
+                                <strong>${author}:</strong> ${message} 
+                                <small>(${new Date(timestamp).toLocaleString()})</small>
+                            `;
+                            // Verifique se o elemento a ser adicionado tem conteúdo
+                            
+                            chatMessages.appendChild(messageElement);
+                            // Desça a barra de rolagem para a mensagem mais recente
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        } else {
+                            console.error("Erro: O elemento com ID 'chat-messages' não foi encontrado!");
+                        }
+                    };
+
+                    chatSocket.onclose = function(e) {
+                        console.error('O socket do chat foi fechado inesperadamente');
+                    };
+
+                    form.onsubmit = function(e) {
+                        e.preventDefault();
+                        const message = chatInput.value;
+                        chatSocket.send(JSON.stringify({
+                            'message': message
+                        }));
+                        chatInput.value = '';
+                    };
+
 
                     // --- FIM DA LÓGICA DE UPLOAD ---
                 }
@@ -2194,8 +2335,20 @@
     document.addEventListener('DOMContentLoaded', function() {
         atualizarContadorNotificacoes();
         
-        // Atualizar contador a cada 30 segundos
-        setInterval(atualizarContadorNotificacoes, 30000);
+        const notificationSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/notifications/'
+        );
+
+        notificationSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log("Evento de notificação recebido:", data);
+            if (data.type === 'chat_notification') {
+                // A sua função já existente para atualizar o contador
+                atualizarContadorNotificacoes();
+            }
+        };
     });
 
 </script>

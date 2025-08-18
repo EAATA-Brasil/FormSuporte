@@ -737,7 +737,7 @@ def alterar_dados(request):
                 setattr(record, field_name, new_value.capitalize())
                 new_display = new_value.capitalize()
             record.save(update_fields=[field_name])
-            
+            print(field_name)
             # Criar notificação se o campo for feedback_manager
             if field_name == 'feedback_manager' and new_value and new_value.strip():
                 criar_notificacao_feedback(record, 'feedback_manager', request.user)
@@ -750,6 +750,7 @@ def alterar_dados(request):
 
 # Alias para compatibilidade com URLs existentes
 update_record_view = alterar_dados
+
 
 @login_required(login_url=URL_LOGIN)
 def download_arquivo(request, arquivo_id):
@@ -870,8 +871,8 @@ def criar_notificacao_feedback(record, tipo_feedback, gestor_user):
                     
                     if not notificacao_existente:
                         # Criar nova notificação
-                        titulo = f"Novo feedback na ocorrência #{record.codigo_externo or record.id}"
-                        resumo = f"O gestor adicionou um feedback na ocorrência {record.device.name if record.device else 'N/A'} - {record.area or 'N/A'}"
+                        titulo = f"Nova mensagem na ocorrência #{record.codigo_externo or record.id}"
+                        resumo = f"{record.responsible} mandou uma nova mensagem"
                         
                         Notificacao.objects.create(
                             user=usuario,
@@ -938,3 +939,8 @@ def contar_notificacoes_nao_lidas(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
+def chat_detail(request, record_id):
+    ocorrencia = get_object_or_404(Record, id=record_id)
+    return render(request, 'ocorrencia/chat_detail.html', {
+        'ocorrencia': ocorrencia,
+    })

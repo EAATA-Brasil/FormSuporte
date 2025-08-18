@@ -293,3 +293,11 @@ class Notificacao(models.Model):
             self.lida_em = timezone.now()
             self.save(update_fields=['lida', 'lida_em'])
 
+class ChatMessage(models.Model):
+    record = models.ForeignKey('ocorrencia_erro.Record', on_delete=models.CASCADE, related_name='chat_messages')
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']

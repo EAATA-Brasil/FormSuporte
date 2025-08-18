@@ -80,7 +80,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'Form_Suporte.wsgi.application'
+# WSGI_APPLICATION = 'Form_Suporte.wsgi.application'
+ASGI_APPLICATION = 'Form_Suporte.asgi.application'
 
 
 # Database
