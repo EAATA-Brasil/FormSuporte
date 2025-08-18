@@ -554,12 +554,10 @@ def subir_ocorrencia(request):
 
             # Processa arquivos anexados
             for file in request.FILES.getlist("arquivo"):
-                ext = os.path.splitext(file.name)[1]
-                novo_nome = f"ocorrencia_{record.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}{ext}"
                 ArquivoOcorrencia.objects.create(
                     record=record,
                     arquivo=file,
-                    nome_original=novo_nome
+                    nome_original=file.name
                 )
 
             return JsonResponse({
