@@ -492,6 +492,7 @@
                             <span style="font-size: 18px;">📎</span>
                             <span style="font-weight: 500; color: #495057;">${arq.nome_original || 'Arquivo'}</span>
                         </div>
+                        <span>
                         <button onclick="deleteFile('${arq.id}', '${arq.nome_original}', ${JSON.stringify(record).replace(/"/g, '&quot;')})"
                                 style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background-color 0.2s;">
                             🗑 Deletar
@@ -500,6 +501,7 @@
                                 style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background-color 0.2s;">
                             ⬇ Download
                         </button>
+                        </span>
                     </div>
                 `).join('')}
                 </div>`
@@ -590,11 +592,7 @@
                             <span style="color: var(--text-light);">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
                         </div>
                     </div>
-                    <div style="margin-bottom: 20px;">
-                        <h4>Arquivos anexados:</h4>
-                        ${arquivosListHTML}
-                        <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">Adicionar novo arquivo:</h5>
-                        
+                    <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">Adicionar novo arquivo:</h5>
                         <div id="file-upload-wrapper-${record.id}" class="file-upload-wrapper full-width">
                             <div id="file-preview-container" class="file-preview-container"></div>
 
@@ -617,7 +615,6 @@
                                 </span>
                             </form>
                         </div>
-                    </div>
                     <div class="chat-container">
                         <h4 style="margin-left: 10px; margin-top: 10px; color: var(--primary);">Chat de feedback</h4>
                         <div id="logged-in-user-id" style="display:none;">{{ request.user.id }}</div>
@@ -630,6 +627,13 @@
                             </div>
                         </form>
                     </div>
+                    <div style="margin-bottom: 20px;">
+                        
+                        <h4>Arquivos anexados:</h4>
+                        ${arquivosListHTML}
+                        
+                    </div>
+                    
                 </div>
             `;
             let id = record.id

@@ -95,10 +95,7 @@ def subir_arquivo(files, record):
         ext = os.path.splitext(file.name)[1]  # inclui o ponto, ex: ".jpg"
 
         # Define o novo nome do arquivo
-        novo_nome = f"image_relatorio_{record.id}{ext}"
-
-        # Opcional: definir o nome dentro do arquivo UploadedFile (não obrigatório para salvar)
-        file.name = novo_nome
+        novo_nome = file.name
 
         # Cria o registro no banco
         ArquivoOcorrencia.objects.create(
@@ -688,8 +685,7 @@ def alterar_dados(request):
                     record = Record.objects.get(id=body.get('record'))
                     for file in files:
                         ext = os.path.splitext(file.name)[1]
-                        novo_nome = f"image_relatorio_{record}{ext}"
-                        file.name = novo_nome
+                        novo_nome = file.name
                         ArquivoOcorrencia.objects.create(
                             record=record,
                             arquivo=file,
