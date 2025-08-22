@@ -27,8 +27,9 @@ class Cliente(models.Model):
 
     def save(self, *args, **kwargs):
         self.clean()  # chama o clean para validar
-        if self.data and self.anos_para_vencimento:
-            self.vencimento = self.data + relativedelta(years=self.anos_para_vencimento)
+        if not self.vencimento:
+            if self.data and self.anos_para_vencimento:
+                self.vencimento = self.data + relativedelta(years=self.anos_para_vencimento)
         super().save(*args, **kwargs)
 
     def __str__(self):

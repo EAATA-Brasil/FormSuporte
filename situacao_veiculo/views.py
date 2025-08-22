@@ -51,6 +51,12 @@ def buscar_serial(request):
         hoje = date.today()
         vencimento_dias = (cliente.vencimento - hoje).days
         
+        if cliente.vencimento < cliente.data :
+            context['status'] = 'vencido'
+            context['mensagem'] = "Não fazer atendimento - INFORMAR AO GESTOR"
+            context['status_message'] = "SUPORTE BLOQUEADO"
+            return render(request, 'situacao/index.html', context)
+
         if vencimento_dias > 30:
             context['status'] = 'direito'
             context['mensagem'] = "Atender normalmente"
