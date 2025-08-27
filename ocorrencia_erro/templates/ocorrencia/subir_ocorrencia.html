@@ -487,7 +487,6 @@
         const nomePais = paises[e.target.value];
         const showTicket = nomePais && ["ESPANHA", "PORTUGAL"].includes(nomePais.toUpperCase());
         inputTicket.style.display = showTicket ? 'block' : 'none';
-        ticketField.required = showTicket;
       });
 
       // Lógica de filtros de selects para admin
