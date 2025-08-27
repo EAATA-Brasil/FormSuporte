@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -261,7 +261,7 @@
             </tr>
             
         </thead>
-        <tbody id="table-body">
+        <tbody id="table-body" translate="no">
         {# O corpo da tabela será preenchido via AJAX #}
         </tbody>
     </table>
@@ -533,63 +533,63 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                         <div>
                             <strong>ID:</strong><br>
-                            <span style="color: var(--text-light);">${record.id || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.id || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Técnico:</strong><br>
-                            <span style="color: var(--text-light);">${record.technical || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.technical || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>País:</strong><br>
-                            <span style="color: var(--text-light);">${record.country || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.country || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Dispositivo:</strong><br>
-                            <span style="color: var(--text-light);">${record.device || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.device || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Área:</strong><br>
-                            <span style="color: var(--text-light);">${record.area || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.area || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Serial:</strong><br>
-                            <span style="color: var(--text-light);">${record.serial || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.serial || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Marca:</strong><br>
-                            <span style="color: var(--text-light);">${record.brand || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.brand || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Modelo:</strong><br>
-                            <span style="color: var(--text-light);">${record.model || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.model || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Ano:</strong><br>
-                            <span style="color: var(--text-light);">${record.year || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.year || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Versão:</strong><br>
-                            <span style="color: var(--text-light);">${record.version || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.version || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Status:</strong><br>
-                            <span style="color: var(--text-light);">${record.status || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.status || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Responsável:</strong><br>
-                            <span style="color: var(--text-light);">${record.responsible || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.responsible || 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Data:</strong><br>
-                            <span style="color: var(--text-light);">${record.data ? formatDateToDisplay(record.data) : 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.data ? formatDateToDisplay(record.data) : 'Não informado'}</span>
                         </div>
                         <div>
                             <strong>Prazo:</strong><br>
-                            <span style="color: var(--text-light);">${record.deadline ? formatDateToDisplay(record.deadline) : 'Não definido'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.deadline ? formatDateToDisplay(record.deadline) : 'Não definido'}</span>
                         </div>
                         <div>
                             <strong>Finalizado:</strong><br>
-                            <span style="color: var(--text-light);">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
+                            <span style="color: var(--text-light);" translate="no">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
                         </div>
                     </div>
                     <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">Adicionar novo arquivo:</h5>
@@ -615,7 +615,7 @@
                                 </span>
                             </form>
                         </div>
-                    <div class="chat-container">
+                    <div class="chat-container" translate="no">
                         <h4 style="margin-left: 10px; margin-top: 10px; color: var(--primary);">Chat de feedback</h4>
                         <div id="logged-in-user-id" style="display:none;">{{ request.user.id }}</div>
                         <div id="logged-in-username" style="display:none;">{{ request.user.username }}</div>
@@ -627,7 +627,7 @@
                             </div>
                         </form>
                     </div>
-                    <div style="margin-bottom: 20px;">
+                    <div style="margin-bottom: 20px;" translate="no">
                         
                         <h4>Arquivos anexados:</h4>
                         ${arquivosListHTML}
