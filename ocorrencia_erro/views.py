@@ -23,6 +23,9 @@ from reportlab.lib.units import inch, mm
 import io
 from django.views.decorators.http import require_http_methods
 import json
+from reportlab.platypus import Paragraph
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_LEFT
 
 from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao
 
@@ -947,63 +950,93 @@ def contar_notificacoes_nao_lidas(request):
 
 # ... (suas importações existentes: FileResponse, canvas, letter, inch, io, etc.)
 
-@login_required(login_url=URL_LOGIN)
+@login_required(login_url='subir_ocorrencia' ) # Adapte 'URL_LOGIN' se necessário
 @require_http_methods(["GET", "POST"] )
 def gerar_pdf_ocorrencia(request, record_id=None):
     """
-    Gera um arquivo PDF com os detalhes COMPLETOS de uma ocorrência.
+    Gera um arquivo PDF com os detalhes COMPLETOS de uma ocorrência,
+    com quebra de linha automática para textos longos. Versão SEM tradução.
     """
     try:
+        # Se a requisição for POST, pega o ID do corpo da requisição
         if request.method == 'POST':
             data = json.loads(request.body)
             record_id = data.get('record_id')
             if not record_id:
                 return JsonResponse({'status': 'error', 'message': 'ID da ocorrência não fornecido.'}, status=400)
 
+        # Busca a ocorrência no banco de dados ou retorna um erro 404
         record = get_object_or_404(Record, id=record_id)
-        buffer = io.BytesIO()
-        p = canvas.Canvas(buffer, pagesize=letter)
-        width, height = letter
 
-        # ==================================================================
-        # INÍCIO DO DESENHO DO PDF - VERSÃO COMPLETA
-        # ==================================================================
-        
-        # Define uma função auxiliar para desenhar um par de "Rótulo: Valor"
+        # Cria um buffer de bytes em memória para o arquivo PDF
+        buffer = io.BytesIO()
+
+        # Cria o objeto PDF (canvas), usando o buffer como seu "arquivo"
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter  # Tamanho da página (8.5 x 11 polegadas)
+
+        # --- ESTILOS PARA OS PARÁGRAFOS ---
+        styles = getSampleStyleSheet()
+        style_body = styles['BodyText']
+        style_label = ParagraphStyle(name='Label', parent=style_body, fontName='Helvetica-Bold')
+
+        # --- FUNÇÕES AUXILIARES INTERNAS ---
         def draw_field(x, y, label, value):
-            # 1. Define a fonte e desenha o rótulo em negrito
+            """Desenha um par de 'Rótulo: Valor' com alinhamento dinâmico."""
             p.setFont("Helvetica-Bold", 11)
             label_text = f"{label}:"
             p.drawString(x, y, label_text)
-
-            # 2. Calcula a largura do texto do rótulo que acabamos de desenhar
+            
             label_width = p.stringWidth(label_text, "Helvetica-Bold", 11)
-
-            # 3. Define a posição X para o valor, adicionando um espaçamento fixo (ex: 10 pontos)
-            #    Isso garante que o valor sempre comece um pouco depois do final do rótulo.
             value_x_position = x + label_width + 10  # 10 pontos de espaçamento
-
-            # 4. Define a fonte e desenha o valor na nova posição calculada
+            
             p.setFont("Helvetica", 11)
             p.drawString(value_x_position, y, str(value or "N/A"))
             
-            # 5. Retorna a próxima posição Y
-            return y - (0.25 * inch)
+            return y - (0.25 * inch) # Retorna a próxima posição Y
 
-        # --- CABEÇALHO ---
+        def draw_long_text_paragraph(x, y, label, text_content):
+            """Desenha um rótulo e um parágrafo de texto longo com quebra de linha automática."""
+            # Desenha o rótulo
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(x, y, f"{label}:")
+            y -= 0.25 * inch
+
+            # Prepara o texto, substituindo quebras de linha \n por   
+
+            if text_content and isinstance(text_content, str) and text_content.strip():
+                prepared_text = text_content.replace('\n', '<br/>')
+            else:
+                prepared_text = "Nenhum conteúdo fornecido."
+
+            paragraph = Paragraph(prepared_text, style_body)
+            
+            available_width = width - (2 * x)
+            w, h = paragraph.wrap(available_width, height)
+            
+            if y - h < 0.75 * inch: # Margem de segurança inferior
+                p.showPage()
+                y = height - 1 * inch # Reinicia no topo da nova página
+
+            paragraph.drawOn(p, x, y - h)
+            return y - h - 0.5 * inch # Retorna a posição Y final
+
+        # ==================================================================
+        # INÍCIO DO DESENHO DO CONTEÚDO DO PDF
+        # ==================================================================
+        
+        # --- Título ---
         p.setFont("Helvetica-Bold", 18)
         p.drawCentredString(width / 2.0, height - 0.75 * inch, "Relatório de Ocorrência")
-        
         p.setFont("Helvetica", 12)
         p.drawCentredString(width / 2.0, height - 1.0 * inch, f"ID da Ocorrência: {record.codigo_externo or record.id}")
 
-        # --- INFORMAÇÕES PRINCIPAIS ---
-        y_start = height - 1.3 * inch
+        # --- Seção de Informações Gerais (2 colunas) ---
+        y_start = height - 1.5 * inch
         p.line(0.5 * inch, y_start + 0.1 * inch, width - 0.5 * inch, y_start + 0.1 * inch)
         
-        # Coluna 1
         x1 = 1 * inch
-        y1 = y_start - 6 *mm
+        y1 = y_start - (6 * mm)
         
         y1 = draw_field(x1, y1, "Tecnhical", record.technical)
         y1 = draw_field(x1, y1, "Responsible", record.responsible)
@@ -1013,7 +1046,7 @@ def gerar_pdf_ocorrencia(request, record_id=None):
 
         # Coluna 2
         x2 = 4.5 * inch
-        y2 = y_start - 6 * mm
+        y2 = y_start - (6 * mm)
 
         y2 = draw_field(x2, y2, "Brand", record.brand)
         y2 = draw_field(x2, y2, "Model", record.model)
@@ -1021,38 +1054,19 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         y2 = draw_field(x2, y2, "Year", record.year)
         y2 = draw_field(x2, y2, "Version", record.version)
 
-        # --- SEÇÃO DE DETALHES (PROBLEMA E FEEDBACKS) ---
+        # --- Seção de Detalhes (Textos Longos) ---
         y_next_section = min(y1, y2) - 0.3 * inch
         p.line(0.5 * inch, y_next_section + 0.1 * inch, width - 0.5 * inch, y_next_section + 0.1 * inch)
-
-        # Função auxiliar para desenhar campos de texto longos com quebra de linha
-        def draw_long_text(x, y, label, text_content):
-            p.setFont("Helvetica-Bold", 12)
-            p.drawString(x, y, f"{label}:")
-            y -= 0.25 * inch
-            
-            p.setFont("Helvetica", 11)
-            text_object = p.beginText(x, y)
-            text_object.setLeading(14)
-            
-            lines = str(text_content or "Nenhum conteúdo fornecido.").split('\n')
-            for line in lines:
-                # Simples quebra de linha (para textos muito longos, seria necessário um algoritmo mais complexo)
-                text_object.textLine(line)
-            
-            p.drawText(text_object)
-            # Retorna a posição Y final do texto para a próxima seção
-            return text_object.getY() - 0.5 * inch
-
         y_text = y_next_section - 0.2 * inch
         y_text = draw_long_text(x1, y_text, "Problem detected", record.problem_detected)
 
         # ==================================================================
-        # FINALIZAÇÃO DO PDF
+        # FINALIZAÇÃO DO ARQUIVO PDF
         # ==================================================================
         p.showPage()
         p.save()
 
+        # Prepara e retorna a resposta HTTP com o arquivo PDF
         buffer.seek(0)
         filename = f'ocorrencia_{record.id}.pdf'
         response = FileResponse(buffer, as_attachment=True, filename=filename)
@@ -1065,6 +1079,5 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         return JsonResponse({'status': 'error', 'message': 'Ocorrência não encontrada.'}, status=404)
     except Exception as e:
         import traceback
-        traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': 'Ocorreu um erro ao gerar o PDF.'}, status=500)
-
+        traceback.print_exc() # Ajuda a ver o erro completo no terminal do servidor
+        return JsonResponse({'status': 'error', 'message': 'Ocorreu um erro interno ao gerar o PDF.'}, status=500)
