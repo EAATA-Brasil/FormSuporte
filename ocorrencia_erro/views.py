@@ -16,6 +16,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.serializers import serialize
 from django.db import IntegrityError
+from django.http import FileResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch, mm
+import io
+from django.views.decorators.http import require_http_methods
+import json
 
 from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao
 
@@ -90,7 +97,6 @@ def get_responsaveis():
 
 def subir_arquivo(files, record):
     for file in files:
-        print(file)
         # Extrai a extensão do arquivo original
         ext = os.path.splitext(file.name)[1]  # inclui o ponto, ex: ".jpg"
 
@@ -661,13 +667,17 @@ def get_paises_por_responsavel(request):
     
     return JsonResponse({'paises': paises_list})
 
+# Em seu arquivo views.py
+
 @login_required(login_url=URL_LOGIN)
 def alterar_dados(request):
     if request.method != 'POST':
-        return JsonResponse({'status': 'error'}, status=405)
+        return JsonResponse({'status': 'error', 'message': 'Método inválido'}, status=405)
 
     try:
+        # Lógica para upload de arquivos (multipart/form-data)
         if request.content_type.startswith('multipart/form-data'):
+            # ... (sua lógica de upload de arquivos permanece a mesma, não precisa mudar)
             body = request.POST
             files = request.FILES.getlist("arquivo")
 
@@ -684,65 +694,65 @@ def alterar_dados(request):
                 try:
                     record = Record.objects.get(id=body.get('record'))
                     for file in files:
-                        ext = os.path.splitext(file.name)[1]
-                        novo_nome = file.name
                         ArquivoOcorrencia.objects.create(
                             record=record,
                             arquivo=file,
-                            nome_original=novo_nome
+                            nome_original=file.name
                         )
                     return JsonResponse({'status': 'success', 'page_num': body.get("page_num")})
                 except Exception as e:
                     return JsonResponse({'status': 'error','message': f'Erro ao salvar arquivos: {str(e)}'}, status=500)
+            
+            # Se não for nenhuma das ações acima, retorna erro.
+            return JsonResponse({'status': 'error', 'message': 'Ação multipart inválida'}, status=400)
 
+        # Lógica para JSON puro (atualização de campos)
+        # Lógica para JSON (atualização de campos)
         else:
-            # JSON puro (sem arquivos)
             data = json.loads(request.body.decode('utf-8'))
-            record = Record.objects.get(id=data.get('id'))
+            record = get_object_or_404(Record, id=data.get('id'))
             field_name = data.get('field')
             new_value = data.get('value')
+            new_display = str(new_value)
 
             if field_name == 'country':
-                new_value = get_object_or_404(Country, id=new_value)
-                setattr(record, field_name, new_value)
-                new_display = new_value.name
-
-            elif field_name in DATE_COLUMNS and new_value:
-                new_value = datetime.strptime(new_value, '%d/%m/%Y').date()
-                setattr(record, field_name, new_value)
-                new_display = new_value.strftime('%Y-%m-%d')
-
-            elif field_name == 'status':
-                if record.finished:
-                    new_value = 'Concluído'
-                elif record.deadline:
-                    if record.deadline < date.today():
-                        new_value = 'Atrasado'
-                    else:
-                        new_value = "Em progresso"
+                if new_value == 'revert':
+                    original_country_name = record.country_original
+                    record.country = Country.objects.filter(name=original_country_name).first()
+                    new_display = original_country_name or ''
                 else:
-                    new_value = 'Requisitado'
-
-                new_display = new_value
-                new_value = STATUS_OCORRENCIA.get(new_value)
-                setattr(record, field_name, new_value)
-
+                    country_obj = get_object_or_404(Country, id=new_value)
+                    record.country = country_obj
+                    new_display = country_obj.name
+            
+            elif field_name in DATE_COLUMNS and new_value:
+                parsed_date = datetime.strptime(new_value, '%d/%m/%Y').date()
+                setattr(record, field_name, parsed_date)
+                new_display = parsed_date.strftime('%Y-%m-%d')
+            
             else:
-                setattr(record, field_name, new_value.capitalize())
-                new_display = new_value.capitalize()
-            record.save(update_fields=[field_name])
-            print(field_name)
-            # Criar notificação se o campo for feedback_manager
-            if field_name == 'feedback_manager' and new_value and new_value.strip():
+                setattr(record, field_name, new_value)
+                new_display = new_value
+
+            # SALVA O REGISTRO UMA ÚNICA VEZ.
+            # O modelo (models.py) irá aplicar toda a lógica de status necessária.
+            record.save()
+
+            if field_name == 'feedback_manager' and new_value and str(new_value).strip():
                 criar_notificacao_feedback(record, 'feedback_manager', request.user)
             
-            return JsonResponse({'status': 'success', 'new_display': new_display, 'page_num': data.get("page_num")})
+            return JsonResponse({
+                'status': 'success',
+                'new_display': new_display,
+                'page_num': data.get("page_num")
+            })
 
     except Exception as e:
-        print(e)
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
-# Alias para compatibilidade com URLs existentes
+# Alias para compatibilidade
 update_record_view = alterar_dados
 
 
@@ -933,8 +943,128 @@ def contar_notificacoes_nao_lidas(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
-def chat_detail(request, record_id):
-    ocorrencia = get_object_or_404(Record, id=record_id)
-    return render(request, 'ocorrencia/chat_detail.html', {
-        'ocorrencia': ocorrencia,
-    })
+# Em seu arquivo views.py
+
+# ... (suas importações existentes: FileResponse, canvas, letter, inch, io, etc.)
+
+@login_required(login_url=URL_LOGIN)
+@require_http_methods(["GET", "POST"] )
+def gerar_pdf_ocorrencia(request, record_id=None):
+    """
+    Gera um arquivo PDF com os detalhes COMPLETOS de uma ocorrência.
+    """
+    try:
+        if request.method == 'POST':
+            data = json.loads(request.body)
+            record_id = data.get('record_id')
+            if not record_id:
+                return JsonResponse({'status': 'error', 'message': 'ID da ocorrência não fornecido.'}, status=400)
+
+        record = get_object_or_404(Record, id=record_id)
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+
+        # ==================================================================
+        # INÍCIO DO DESENHO DO PDF - VERSÃO COMPLETA
+        # ==================================================================
+        
+        # Define uma função auxiliar para desenhar um par de "Rótulo: Valor"
+        def draw_field(x, y, label, value):
+            # 1. Define a fonte e desenha o rótulo em negrito
+            p.setFont("Helvetica-Bold", 11)
+            label_text = f"{label}:"
+            p.drawString(x, y, label_text)
+
+            # 2. Calcula a largura do texto do rótulo que acabamos de desenhar
+            label_width = p.stringWidth(label_text, "Helvetica-Bold", 11)
+
+            # 3. Define a posição X para o valor, adicionando um espaçamento fixo (ex: 10 pontos)
+            #    Isso garante que o valor sempre comece um pouco depois do final do rótulo.
+            value_x_position = x + label_width + 10  # 10 pontos de espaçamento
+
+            # 4. Define a fonte e desenha o valor na nova posição calculada
+            p.setFont("Helvetica", 11)
+            p.drawString(value_x_position, y, str(value or "N/A"))
+            
+            # 5. Retorna a próxima posição Y
+            return y - (0.25 * inch)
+
+        # --- CABEÇALHO ---
+        p.setFont("Helvetica-Bold", 18)
+        p.drawCentredString(width / 2.0, height - 0.75 * inch, "Relatório de Ocorrência")
+        
+        p.setFont("Helvetica", 12)
+        p.drawCentredString(width / 2.0, height - 1.0 * inch, f"ID da Ocorrência: {record.codigo_externo or record.id}")
+
+        # --- INFORMAÇÕES PRINCIPAIS ---
+        y_start = height - 1.3 * inch
+        p.line(0.5 * inch, y_start + 0.1 * inch, width - 0.5 * inch, y_start + 0.1 * inch)
+        
+        # Coluna 1
+        x1 = 1 * inch
+        y1 = y_start - 6 *mm
+        
+        y1 = draw_field(x1, y1, "Tecnhical", record.technical)
+        y1 = draw_field(x1, y1, "Responsible", record.responsible)
+        y1 = draw_field(x1, y1, "Country", record.country.name if record.country else None)
+        y1 = draw_field(x1, y1, "Device", record.device.name if record.device else None)
+        y1 = draw_field(x1, y1, "Area", record.area)
+
+        # Coluna 2
+        x2 = 4.5 * inch
+        y2 = y_start - 6 * mm
+
+        y2 = draw_field(x2, y2, "Brand", record.brand)
+        y2 = draw_field(x2, y2, "Model", record.model)
+        y2 = draw_field(x2, y2, "Serial", record.serial)
+        y2 = draw_field(x2, y2, "Year", record.year)
+        y2 = draw_field(x2, y2, "Version", record.version)
+
+        # --- SEÇÃO DE DETALHES (PROBLEMA E FEEDBACKS) ---
+        y_next_section = min(y1, y2) - 0.3 * inch
+        p.line(0.5 * inch, y_next_section + 0.1 * inch, width - 0.5 * inch, y_next_section + 0.1 * inch)
+
+        # Função auxiliar para desenhar campos de texto longos com quebra de linha
+        def draw_long_text(x, y, label, text_content):
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(x, y, f"{label}:")
+            y -= 0.25 * inch
+            
+            p.setFont("Helvetica", 11)
+            text_object = p.beginText(x, y)
+            text_object.setLeading(14)
+            
+            lines = str(text_content or "Nenhum conteúdo fornecido.").split('\n')
+            for line in lines:
+                # Simples quebra de linha (para textos muito longos, seria necessário um algoritmo mais complexo)
+                text_object.textLine(line)
+            
+            p.drawText(text_object)
+            # Retorna a posição Y final do texto para a próxima seção
+            return text_object.getY() - 0.5 * inch
+
+        y_text = y_next_section - 0.2 * inch
+        y_text = draw_long_text(x1, y_text, "Problem detected", record.problem_detected)
+
+        # ==================================================================
+        # FINALIZAÇÃO DO PDF
+        # ==================================================================
+        p.showPage()
+        p.save()
+
+        buffer.seek(0)
+        filename = f'ocorrencia_{record.id}.pdf'
+        response = FileResponse(buffer, as_attachment=True, filename=filename)
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+        
+        return response
+
+    except Record.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Ocorrência não encontrada.'}, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': 'Ocorreu um erro ao gerar o PDF.'}, status=500)
+

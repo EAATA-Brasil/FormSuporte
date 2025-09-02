@@ -67,7 +67,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'record_id': self.record_id,
                 }
             )
-            print(f"RECEIVE: Notificação enviada para o grupo do usuário: {recipient_group_name}")
+            # print(f"RECEIVE: Notificação enviada para o grupo do usuário: {recipient_group_name}")
             await self.criar_notificacao_feedback(self.record_id, recipient_id, self.user.username)
 
 
@@ -92,7 +92,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 titulo=titulo,
                 resumo=resumo
             )
-            print("Notificação de mensagem criada com sucesso no banco de dados.")
+            # print("Notificação de mensagem criada com sucesso no banco de dados.")
 
         except Exception as e:
             print(f"Erro ao criar notificação de mensagem: {e}")

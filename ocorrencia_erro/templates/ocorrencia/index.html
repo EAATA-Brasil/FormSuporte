@@ -482,7 +482,6 @@
         // Montar lista de arquivos em HTML
         
         // Função para mostrar pop-up com detalhes do problema
-        // Função para mostrar pop-up com detalhes do problema
         function showProblemDetails(record) {
             const arquivosListHTML = (record.arquivos && record.arquivos.length > 0)
             ? `<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
@@ -591,6 +590,11 @@
                             <strong>Finalizado:</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
                         </div>
+                        <div>
+                            <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                                Gerar PDF
+                            </button>
+                        </div>
                     </div>
                     <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">Adicionar novo arquivo:</h5>
                         <div id="file-upload-wrapper-${record.id}" class="file-upload-wrapper full-width">
@@ -636,6 +640,7 @@
                     
                 </div>
             `;
+            
             let id = record.id
             Swal.fire({
                 title: 'Informações Detalhadas',
@@ -656,6 +661,9 @@
                     const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);
                     const feedbackManagerTextarea = document.getElementById(feedbackManagerId);
                     console.log(document.getElementById('form-ocorrencia'))
+                    document.getElementById("button_pdf").addEventListener('click', ()=>{
+                        handleGerarPdf(id)
+                    })
                     document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
                         e.preventDefault();
                         const form = e.target;
@@ -865,56 +873,81 @@
                 }
             });
         }
-        window.showProblemDetails = showProblemDetails;
-    
-        function generateFeedback(record){
-            const feedbackTechnicalValue = record.feedback_technical || '';
-
-            // Gera um ID único para cada textarea para evitar conflitos
-            const feedbackTechnicalId = `feedback_technical_${record.id}`;
-            
-            // Cria o conteúdo HTML do pop-up com informações detalhadas e textareas editáveis
-            const popupContent = `
-                <div style="text-align: left;">
-                    
-                    
-                    <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <textarea id="${feedbackTechnicalId}" 
-                                  data-record-id="${record.id}" 
-                                  data-field-name="feedback_technical" 
-                                  data-initial-value="${feedbackTechnicalValue}"
-                                  style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${feedbackTechnicalValue}</textarea>
-                    </div>
-                    
-                </div>
-            `;
+        
+        function handleGerarPdf(recordId) {
+            // Mostra um feedback de carregamento para o usuário
             Swal.fire({
-                title: 'Escreva seu feedback técnico',
-                html: popupContent,
-                width: '80%',
-                maxWidth: '800px',
-                showCloseButton: true,
-                showConfirmButton: true,
-                confirmButtonText: 'Fechar',
-                confirmButtonColor: '#0056b3',
-                customClass: {
-                    popup: 'feedback-technical-popup',
-                    content: 'feedback-technical-content'
-                },
+                title: 'Gerando PDF...',
+                text: 'Por favor, aguarde um momento.',
+                allowOutsideClick: false,
                 didOpen: () => {
-                    // Adiciona event listeners para os textareas após o SweetAlert ser aberto
-                    const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);
-
-                    if (feedbackTechnicalTextarea) {
-                        feedbackTechnicalTextarea.addEventListener('input', (e) => {
-                            atualizarDadosPopup(e.target);
-                        });
-                    }
-                    
+                    Swal.showLoading();
                 }
             });
-        }
 
+            // URL da nossa nova view que aceita POST
+            const url = '{% url "gerar_pdf_ocorrencia_post" %}';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') // Essencial para requisições POST no Django
+                },
+                body: JSON.stringify({
+                    record_id: recordId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Se a resposta não for OK, tenta ler o erro como JSON
+                    return response.json().then(err => { throw new Error(err.message || 'Erro no servidor') });
+                }
+                // Pega o nome do arquivo do cabeçalho 'Content-Disposition'
+                const disposition = response.headers.get('Content-Disposition');
+                let filename = `ocorrencia_${recordId}.pdf`; // Nome padrão
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+                // Retorna o corpo da resposta como um Blob
+                return response.blob().then(blob => ({ blob, filename }));
+            })
+            .then(({ blob, filename }) => {
+                // Cria uma URL temporária para o Blob (o arquivo PDF em memória)
+                const blobUrl = window.URL.createObjectURL(blob);
+
+                // Cria um elemento de link <a> invisível
+                const link = document.createElement('a');
+                link.style.display = 'none';
+                link.href = blobUrl;
+                link.download = filename; // Define o nome do arquivo para o download
+
+                // Adiciona o link ao corpo do documento e simula um clique
+                document.body.appendChild(link);
+                link.click();
+
+                // Limpa a URL do Blob e remove o link
+                window.URL.revokeObjectURL(blobUrl);
+                document.body.removeChild(link);
+
+                // Fecha o alerta de carregamento
+                Swal.close();
+            })
+            .catch(error => {
+                console.error('Erro ao gerar PDF:', error);
+                Swal.fire(
+                    'Erro!',
+                    'Não foi possível gerar o PDF: ' + error.message,
+                    'error'
+                );
+            });
+        }
+        window.showProblemDetails = showProblemDetails;
+    
         // Nova função para lidar com a atualização de dados no pop-up
         let typingTimerPopup;
         const doneTypingIntervalPopup = 100; // Tempo menor para salvar no pop-up, se desejar
@@ -1498,7 +1531,7 @@
                 if (data.error) throw new Error(data.error);
                 
                 currentFilterOptions = data.filter_options || {};
-                console.log(data)
+                // console.log(data)
                 updateTable(data.records);
                 total_pages = data.num_pages;
                 paginate(data.has_previous, data.has_next);
@@ -1552,6 +1585,12 @@
 
         // Função pura para calcular o status baseado nas datas
         function calculateStatus(record) {
+            // REGRA DA CHINA: Se o país for China, o status é sempre "Aguardando".
+            // Esta é a verificação mais importante e deve vir primeiro.
+            if (record.country === 'China') {
+                return 'Aguardando';
+            }
+
             const deadlineStr = record.deadline; // Formato: DD/MM/YYYY
             const finishedStr = record.finished; // Formato: DD/MM/YYYY
             
@@ -1749,19 +1788,52 @@
             }
             
             const visibleColumns = Array.from(table.querySelectorAll("thead th[data-column]")).map(th => th.getAttribute('data-column'));
-            let has_full_permission = '{{has_full_permission}}'
+            const has_full_permission = '{{has_full_permission}}' === 'True';
 
             records.forEach((record) => {
                 const row = tableBody.insertRow();
                 visibleColumns.forEach(columnName => {
                     const cell = row.insertCell();
                     cell.setAttribute("data-column", columnName);
-                    cell.setAttribute("data-id", record.id)
+                    cell.setAttribute("data-id", record.id);
 
                     let value = record[columnName];
                     const headerInfo = headerData.find(h => h.columnName === columnName);
                     
-                    if (headerInfo?.isDateColumn) {
+                    if (columnName === 'country') {
+                        cell.id = `${columnName}${record.id}`;
+                        cell.classList.add('editable-field-container');
+                        const select = document.createElement('select');
+                        select.id = `${columnName}${record.id}`;
+
+                        select.addEventListener('change', (e) => {
+                            fetch('{% url "update_ocorrencia" %}', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                                body: JSON.stringify({ id: record.id, field: 'country', value: e.target.value, page_num: page_num })
+                            }).then(res => res.json()).then(data => {
+                                if (data.status === 'success') applyFiltersAndSort();
+                                else Swal.fire('Erro', data.message || 'Erro desconhecido', 'error');
+                            }).catch(err => Swal.fire('Erro de Rede', err.toString(), 'error'));
+                        });
+
+                        if (value === 'China') {
+                            select.innerHTML = `
+                                <option value="${record.country_id}" selected>China</option>
+                                <option value="revert">Voltar para ${record.country_original || 'Original'}</option>
+                            `;
+                        } else {
+                            select.innerHTML = `
+                                <option value="${record.country_id || ''}" selected>${value || '-- Selecione --'}</option>
+                                <option value="china_id_placeholder">Mudar para China</option>
+                            `;
+                        }
+                        cell.appendChild(select);
+
+                    } else if (columnName === 'status') {
+                        cell.textContent = record.status; // O status agora vem correto do backend
+
+                    } else if (headerInfo?.isDateColumn) {
                         if (value) {
                             value = formatDateToDisplay(value);
                         } else {
@@ -1771,9 +1843,7 @@
                                 value = 'Não definido'
                             }
                         }
-                    }
-
-                    if (columnName == 'problem_detected') {
+                    } if (columnName == 'problem_detected') {
                         cell.classList.add("no-cursor")
                         
                         const container = document.createElement('div');
@@ -1809,47 +1879,6 @@
                         detailsButton.addEventListener('click', function(e) {
                             e.stopPropagation();
                             showProblemDetails(record);
-                        });
-                        
-                        container.appendChild(detailsButton);
-                        cell.appendChild(container);
-
-                    } else if (columnName == 'feedback_technical') {
-                        cell.classList.add("no-cursor")
-                        
-                        const container = document.createElement('div');
-                        container.style.display = 'flex';
-                        container.style.alignItems = 'center';
-                        container.style.justifyContent = 'center';
-                        
-                        const detailsButton = document.createElement('button');
-                        detailsButton.innerHTML = 'Gerenciar feedback';
-                        detailsButton.style.cssText = `
-                            background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
-                            color: white;
-                            border: none;
-                            padding: 6px 12px;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-size: 0.8rem;
-                            font-weight: 600
-                        `;
-                        
-                        detailsButton.addEventListener('mouseenter', function() {
-                            this.style.background = 'linear-gradient(135deg, #3a7bc8 0%, #0056b3 100%)';
-                            this.style.transform = 'translateY(-1px)';
-                            this.style.boxShadow = '0 4px 12px rgba(0, 86, 179, 0.3)';
-                        });
-                        
-                        detailsButton.addEventListener('mouseleave', function() {
-                            this.style.background = 'linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%)';
-                            this.style.transform = 'translateY(0)';
-                            this.style.boxShadow = 'none';
-                        });
-                        
-                        detailsButton.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            generateFeedback(record);
                         });
                         
                         container.appendChild(detailsButton);
@@ -2023,11 +2052,25 @@
                         cell.appendChild(textArea)
 
                     } else {
-                        cell.textContent = (value !== null && value !== undefined) ? value : "";
+                        if(columnName !== 'country') cell.textContent = (value !== null && value !== undefined) ? value : "";
                     }
                 });
             });
-            
+            fetch('/api/get_china_id/')
+            .then(response => {
+                if (!response.ok) throw new Error('Resposta da API não foi OK');
+                return response.json();
+            })
+            .then(data => {
+                if (data.china_id) {
+                    document.querySelectorAll('option[value="china_id_placeholder"]').forEach(option => {
+                        option.value = data.china_id;
+                    });
+                } else {
+                    console.error("ID da China não recebido da API:", data.error || 'Erro desconhecido');
+                }
+            })
+        .catch(error => console.error("Falha ao buscar ID da China:", error));
             // Configura os observadores após renderizar a tabela
             setTimeout(() => {
                 setupDateInputObservers();
@@ -2252,7 +2295,7 @@
         let html = '';
         notificacoes.forEach(notificacao => {
             html += `
-                <div class="notification-item" onclick="abrirOcorrencia(${notificacao.record_id})">
+                <div class="notification-item" onclick="actionsOcorrencia(${notificacao.record_id},${notificacao.id})">
                     <div class="notification-title">${notificacao.titulo}</div>
                     <div class="notification-summary">
                         ${notificacao.resumo}
@@ -2272,6 +2315,10 @@
         });
         
         notificationList.innerHTML = html;
+    }
+    function actionsOcorrencia(recordId, notificacaoId){
+        lerOcorrencia(notificacaoId)
+        abrirOcorrencia(recordId)
     }
     function lerOcorrencia(notificacaoId){
         // Marcar notificação como lida
@@ -2347,7 +2394,7 @@
 
         notificationSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
-            console.log("Evento de notificação recebido:", data);
+            // console.log("Evento de notificação recebido:", data);
             if (data.type === 'chat_notification') {
                 // A sua função já existente para atualizar o contador
                 atualizarContadorNotificacoes();

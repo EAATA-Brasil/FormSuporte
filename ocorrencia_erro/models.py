@@ -4,6 +4,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.auth.models import User
 import uuid
+import random
+import string
 
 class Country(models.Model):
     class Meta:
@@ -19,6 +21,7 @@ class Device(models.Model):
         verbose_name = "Equipamento"
         verbose_name_plural = "Equipamentos"
     name = models.CharField(max_length=100, unique=True)
+    
     def __str__(self):
         return self.name
 
@@ -29,12 +32,6 @@ class CountryPermission(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.country.name}"
 
-import random
-import string
-from django.db import models
-from django.utils import timezone
-from django.core.exceptions import ValidationError
-
 def gerar_codigo_espanha():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
@@ -44,6 +41,7 @@ class Record(models.Model):
         LATE = "LATE", "Atrasado"
         PROGRESS = "PROGRESS", "Em progresso"
         REQUESTED = "REQUESTED", "Requisitado"
+        AWAITING = "AWAITING", "Aguardando"
 
     # ID padrão autoincremental
     id = models.AutoField(primary_key=True)
@@ -90,7 +88,7 @@ class Record(models.Model):
     )
 
     device = models.ForeignKey(
-        'Device',
+        Device,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -130,11 +128,18 @@ class Record(models.Model):
         verbose_name='Ano'
     )
     country = models.ForeignKey(
-        'Country',
+        Country,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         verbose_name='País'
+    )
+    # FIXED: Removed on_delete from CharField
+    country_original = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        verbose_name='País inicial'
     )
     version = models.CharField(
         max_length=100,
@@ -167,8 +172,17 @@ class Record(models.Model):
         verbose_name="Feedback Manager"
     )
 
+    # Em seu arquivo models.py, dentro da classe Record
+
     def clean(self):
+        """
+        Validações e lógica de status normal (quando o país NÃO é China).
+        """
         super().clean()
+
+        # Se o país for China, a lógica de status será tratada no save(), então pulamos o resto.
+        if self.country and self.country.name == 'China':
+            return
 
         today = timezone.now().date()
 
@@ -179,48 +193,49 @@ class Record(models.Model):
         elif self.status != self.STATUS_OCORRENCIA.DONE and self.finished:
             self.finished = None
 
+        if not self.finished:
+            if self.deadline:
+                if (self.deadline - today).days < 0:
+                    if self.status != self.STATUS_OCORRENCIA.DONE:
+                        self.status = self.STATUS_OCORRENCIA.LATE
+                elif self.status == self.STATUS_OCORRENCIA.REQUESTED:
+                    self.status = self.STATUS_OCORRENCIA.PROGRESS
+            elif self.status not in [self.STATUS_OCORRENCIA.PROGRESS, self.STATUS_OCORRENCIA.DONE]:
+                self.status = self.STATUS_OCORRENCIA.REQUESTED
+
         self.area = self.area.upper() if self.area else ''
         self.brand = self.brand.upper() if self.brand else ''
         self.model = self.model.upper() if self.model else ''
         self.technical = self.technical.capitalize() if self.technical else ''
 
-        if self.finished:
-            if self.data and self.finished < self.data:
-                raise ValidationError({
-                    "finished": "Data de conclusão não pode ser anterior à data de reporte."
-                })
-
-        if self.deadline and not self.finished:
-            if (self.deadline - today).days < 0:
-                self.status = self.STATUS_OCORRENCIA.LATE
-            elif self.status == self.STATUS_OCORRENCIA.REQUESTED:
-                self.status = self.STATUS_OCORRENCIA.PROGRESS
+        if self.finished and self.data and self.finished < self.data:
+            raise ValidationError({"finished": "Data de conclusão não pode ser anterior à data de reporte."})
 
     def save(self, *args, **kwargs):
-        self.full_clean()
+        """
+        Garante a ordem correta de execução e a prioridade da regra da China.
+        """
+        # 1. Armazena o país original se ainda não foi definido
+        if not self.country_original and self.country:
+            self.country_original = self.country.name
+        
+        # 2. Chama clean() para validações
+        self.clean()
 
-        super().save(*args, **kwargs)  # Salva para ter id
+        # 3. REGRA DA CHINA (PRIORIDADE MÁXIMA): Sobrescreve qualquer status anterior
+        if self.country and self.country.name == 'China':
+            self.status = self.STATUS_OCORRENCIA.AWAITING
+        
+        # 4. Salva o registro
+        super().save(*args, **kwargs)
 
-        if not self.codigo_externo:
+        # 5. Lógica para gerar código externo (apenas para novos registros)
+        if not self.codigo_externo and 'codigo_externo' not in (kwargs.get('update_fields') or []):
             self.codigo_externo = str(self.id)
             super().save(update_fields=['codigo_externo'])
 
-    def __str__(self):
-        return f"Ocorrência #{self.codigo_externo or self.id} - {self.device} ({self.get_status_display()})"
-
-    class Meta:
-        verbose_name = "Ocorrência"
-        verbose_name_plural = "Ocorrências"
-        ordering = ["-data"]
-        indexes = [
-            models.Index(fields=['status']),
-            models.Index(fields=['device']),
-            models.Index(fields=['data']),
-        ]
-
-
 class ArquivoOcorrencia(models.Model):
-    record = models.ForeignKey('Record', on_delete=models.CASCADE, related_name='arquivos', null=True)
+    record = models.ForeignKey(Record, on_delete=models.CASCADE, related_name='arquivos', null=True)
     arquivo = models.FileField(upload_to='download_arquivo/')
     nome_original = models.CharField(max_length=255, blank=True)
 
@@ -294,7 +309,8 @@ class Notificacao(models.Model):
             self.save(update_fields=['lida', 'lida_em'])
 
 class ChatMessage(models.Model):
-    record = models.ForeignKey('ocorrencia_erro.Record', on_delete=models.CASCADE, related_name='chat_messages')
+    # FIXED: Removed invalid app reference from ForeignKey
+    record = models.ForeignKey(Record, on_delete=models.CASCADE, related_name='chat_messages')
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     message = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)

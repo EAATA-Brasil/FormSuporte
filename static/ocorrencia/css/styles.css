@@ -12,6 +12,7 @@
     --success: #198754;
     --error: #dc3545;
     --warning: #ffc107;
+    --waiting:#3c3c3c;
     --shadow: rgba(0, 0, 0, 0.1);
     --shadow-hover: rgba(0, 0, 0, 0.15);
 }
@@ -83,27 +84,6 @@ body {
     cursor: pointer;
     white-space: normal;
     overflow: visible;
-}
-
-/* Status-based row coloring */
-.table tbody tr[data-status="Concluído"] {
-    background-color: rgba(25, 135, 84, 0.05) !important;
-    border-left: 3px solid var(--success);
-}
-
-.table tbody tr[data-status="Em progresso"] {
-    background-color: rgba(255, 193, 7, 0.05) !important;
-    border-left: 3px solid var(--warning);
-}
-
-.table tbody tr[data-status="Requisitado"] {
-    background-color: rgba(0, 86, 179, 0.05) !important;
-    border-left: 3px solid var(--primary);
-}
-
-.table tbody tr[data-status="Atrasado"] {
-    background-color: rgba(220, 53, 69, 0.05) !important;
-    border-left: 3px solid var(--error);
 }
 
 /* Keep alternating row colors for even rows */
@@ -800,11 +780,14 @@ body {
 }
 
 /* Melhorar a visualização dos outros status */
-.table td[data-column="status"][data-initial-value="Em progresso"] {
+.table td[data-column="status"][data-initial-value="Em progresso"]{
     background-color: var(--warning) !important;
     color: var(--dark) !important;
 }
-
+.table td[data-column="status"][data-initial-value="Aguardando"] {
+    background-color: var(--waiting) !important;
+    color: var(--light) !important;
+}
 .table td[data-column="status"][data-initial-value="Atrasado"] {
     background-color: var(--error) !important;
     color: white !important;
@@ -854,6 +837,21 @@ body {
 .problem-details-popup textarea.error {
     border-color: var(--error);
     box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+}
+.problem-details-popup button.button_pdf{
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--primary-light);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    font-size: 1rem;
+}
+.problem-details-popup button.button_pdf:hover{
+    background-color: var(--primary);
 }
 
 
