@@ -951,7 +951,7 @@ def contar_notificacoes_nao_lidas(request):
 # ... (suas importações existentes: FileResponse, canvas, letter, inch, io, etc.)
 
 @login_required(login_url='subir_ocorrencia' ) # Adapte 'URL_LOGIN' se necessário
-@require_http_methods(["GET", "POST"] )
+@require_http_methods(["GET", "POST"])
 def gerar_pdf_ocorrencia(request, record_id=None):
     """
     Gera um arquivo PDF com os detalhes COMPLETOS de uma ocorrência,
@@ -997,7 +997,6 @@ def gerar_pdf_ocorrencia(request, record_id=None):
 
         def draw_long_text_paragraph(x, y, label, text_content):
             """Desenha um rótulo e um parágrafo de texto longo com quebra de linha automática."""
-            # Desenha o rótulo
             p.setFont("Helvetica-Bold", 12)
             p.drawString(x, y, f"{label}:")
             y -= 0.25 * inch
@@ -1058,7 +1057,7 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         y_next_section = min(y1, y2) - 0.3 * inch
         p.line(0.5 * inch, y_next_section + 0.1 * inch, width - 0.5 * inch, y_next_section + 0.1 * inch)
         y_text = y_next_section - 0.2 * inch
-        y_text = draw_long_text(x1, y_text, "Problem detected", record.problem_detected)
+        y_text = draw_long_text_paragraph(x1, y_text, "Detected Problem", record.problem_detected) # Corrigido para "Problema Detectado"
 
         # ==================================================================
         # FINALIZAÇÃO DO ARQUIVO PDF
@@ -1066,7 +1065,6 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         p.showPage()
         p.save()
 
-        # Prepara e retorna a resposta HTTP com o arquivo PDF
         buffer.seek(0)
         filename = f'ocorrencia_{record.id}.pdf'
         response = FileResponse(buffer, as_attachment=True, filename=filename)
@@ -1079,5 +1077,5 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         return JsonResponse({'status': 'error', 'message': 'Ocorrência não encontrada.'}, status=404)
     except Exception as e:
         import traceback
-        traceback.print_exc() # Ajuda a ver o erro completo no terminal do servidor
+        traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': 'Ocorreu um erro interno ao gerar o PDF.'}, status=500)
