@@ -74,6 +74,7 @@ uvicorn==0.34.3
 waitress==3.0.2
 watchdog==6.0.0
 watchfiles==1.0.5
+weasyprint==66.0
 webencodings==0.5.1
 websockets==15.0.1
 whitenoise==6.9.0
