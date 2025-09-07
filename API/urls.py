@@ -5,8 +5,8 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'equipamentos', views.EquipamentosViewSet)
-router.register(r'tipos-equipamento', views.TipoEquipamentoViewSet)
-router.register(r'marcas-equipamento', views.MarcaEquipamentoViewSet)
+router.register(r'tiposEquipamento', views.TipoEquipamentoViewSet)
+router.register(r'marcasEquipamento', views.MarcaEquipamentoViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
