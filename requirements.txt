@@ -22,6 +22,7 @@ Django==5.2.3
 django-cors-headers==4.7.0
 django-jazzmin==3.0.1
 django-multiselectfield==0.1.13
+django-weasyprint==2.4.0
 djangorestframework==3.16.0
 dotenv==0.9.9
 fonttools==4.59.0
@@ -78,5 +79,6 @@ weasyprint==66.0
 webencodings==0.5.1
 websockets==15.0.1
 whitenoise==6.9.0
+xhtml2pdf==0.2.17
 zope.interface==7.2
 zopfli==0.2.3.post1
