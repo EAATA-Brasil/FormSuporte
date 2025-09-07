@@ -1,12 +1,14 @@
+# urls.py (do seu app API ou simulador)
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import EquipamentosViewSet, TipoEquipamentoViewSet, MarcaEquipamentoViewSet
+from . import views
 
 router = DefaultRouter()
-router.register(r'equipamentos', EquipamentosViewSet, basename='equipamentos')
-router.register(r'tipoEquipamento', TipoEquipamentoViewSet, basename='tipoEquipamento')
-router.register(r'marcaEquipamento', MarcaEquipamentoViewSet, basename='marcaEquipamento')
+router.register(r'equipamentos', views.EquipamentosViewSet)
+router.register(r'tipos-equipamento', views.TipoEquipamentoViewSet)
+router.register(r'marcas-equipamento', views.MarcaEquipamentoViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('generate-pdf/', views.generate_pdf, name='generate_pdf'),
 ]

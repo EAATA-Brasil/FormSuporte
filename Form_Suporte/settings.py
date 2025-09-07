@@ -12,6 +12,27 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
+
+# Configuração para WeasyPrint
+if sys.platform == 'win32':
+    try:
+        gtk_paths = [
+            r'C:\Program Files\GTK3-Runtime Win64\bin',
+            r'C:\Program Files (x86)\GTK3-Runtime Win64\bin',
+            r'C:\gtk\bin',
+        ]
+        
+        for path in gtk_paths:
+            if os.path.exists(path):
+                os.add_dll_directory(path)
+                os.environ['PATH'] = path + os.pathsep + os.environ['PATH']
+                break
+    except Exception as e:
+        print(f"Erro na configuração do GTK: {e}")
+elif sys.platform.startswith('linux'):
+    # Linux funciona nativamente - nada especial necessário
+    print("✅ Ambiente Linux detectado - WeasyPrint funcionará nativamente")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -56,7 +77,8 @@ INSTALLED_APPS = [
     'ocorrencia_erro',
     'API',
     'rest_framework',
-    'simulador'
+    'simulador',
+    'weasyprint'
 ]
 
 
