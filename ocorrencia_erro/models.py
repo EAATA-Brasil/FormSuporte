@@ -120,6 +120,13 @@ class Record(models.Model):
         default="N/A",
         verbose_name='Modelo'
     )
+    contact = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default="N/A",
+        verbose_name='Contato'
+    )
     year = models.CharField(
         max_length=100,
         blank=True,
@@ -173,7 +180,12 @@ class Record(models.Model):
     )
 
     # Em seu arquivo models.py, dentro da classe Record
-
+    def clear_finished_date(self):
+        """Método para limpar explicitamente a data de finished"""
+        self.finished = None
+        self._explicitly_cleared_finished = True  # Flag para evitar auto-preencher
+        if self.status == self.STATUS_OCORRENCIA.DONE:
+            self.status = self.STATUS_OCORRENCIA.PROGRESS
     def clean(self):
         """
         Validações e lógica de status normal (quando o país NÃO é China).
@@ -186,9 +198,7 @@ class Record(models.Model):
 
         today = timezone.now().date()
 
-        if self.status == self.STATUS_OCORRENCIA.DONE and not self.finished:
-            self.finished = today
-        elif self.finished and self.status != self.STATUS_OCORRENCIA.DONE:
+        if self.finished and self.status != self.STATUS_OCORRENCIA.DONE:
             self.status = self.STATUS_OCORRENCIA.DONE
         elif self.status != self.STATUS_OCORRENCIA.DONE and self.finished:
             self.finished = None

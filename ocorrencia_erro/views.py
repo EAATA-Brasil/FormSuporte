@@ -11,7 +11,7 @@ from django.db.models import Q
 from django.core.paginator import Paginator
 from django.urls import reverse
 from django.contrib.auth import authenticate, login as login_django, logout as logout_django
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.serializers import serialize
@@ -35,7 +35,8 @@ STATUS_OCORRENCIA = {
     'Concluído': 'DONE',
     'Atrasado': 'LATE',
     'Em progresso': 'PROGRESS',
-    'Requisitado': 'REQUESTED'
+    'Requisitado': 'REQUESTED',
+    'Aguardando': 'AWAITING',
 }
 STATUS_MAP_REVERSED = {v: k for k, v in STATUS_OCORRENCIA.items()}
 
@@ -58,15 +59,21 @@ def get_responsaveis():
     responsaveis_por_pais = {}
     todos_responsaveis = []
     
-    # Buscar todos os usuários que têm permissões de país (são responsáveis)
-    usuarios_com_permissao = User.objects.filter(
+    # Buscar o grupo "Técnicos responsáveis"
+    try:
+        grupo_tecnicos = Group.objects.get(name='Técnicos responsáveis')
+    except Group.DoesNotExist:
+        # Se o grupo não existir, retorna estruturas vazias
+        return json.dumps({}), json.dumps([])
+    
+    # Buscar apenas usuários que são técnicos responsáveis E têm permissões de país
+    usuarios_tecnicos = grupo_tecnicos.user_set.filter(
         country_permissions__isnull=False
     ).distinct().values('id', 'first_name', 'last_name', 'username')
     
-
-    # Criar lista de todos os responsáveis
+    # Criar lista de todos os responsáveis (apenas técnicos)
     responsaveis_dict = {}
-    for user in usuarios_com_permissao:
+    for user in usuarios_tecnicos:
         nome_completo = f"{user['first_name']} {user['last_name']}".strip()
         if not nome_completo:
             nome_completo = user['username']
@@ -79,10 +86,13 @@ def get_responsaveis():
         todos_responsaveis.append(responsavel_data)
         responsaveis_dict[user['id']] = responsavel_data
             
-    # Mapear responsáveis por país usando CountryPermission
+    # Mapear responsáveis por país usando CountryPermission (apenas técnicos)
     for pais in paises:
-        # Buscar usuários que têm permissão neste país
-        permissoes = CountryPermission.objects.filter(country=pais).select_related('user')
+        # Buscar usuários técnicos que têm permissão neste país
+        permissoes = CountryPermission.objects.filter(
+            country=pais,
+            user__groups=grupo_tecnicos  # Filtra apenas usuários do grupo técnicos
+        ).select_related('user')
         
         responsaveis_por_pais[pais.name] = []
         for permissao in permissoes:
@@ -94,9 +104,10 @@ def get_responsaveis():
             responsaveis_por_pais[pais.name].append({
                 'name': nome_completo,
             })
+    
     responsaveis_por_pais_json = json.dumps(responsaveis_por_pais)
     todos_responsaveis_json = json.dumps(todos_responsaveis)
-    return(responsaveis_por_pais_json, todos_responsaveis_json)
+    return (responsaveis_por_pais_json, todos_responsaveis_json)
 
 def subir_arquivo(files, record):
     for file in files:
@@ -125,7 +136,8 @@ def index(request):
         Record.STATUS_OCORRENCIA.DONE: "Concluído",
         Record.STATUS_OCORRENCIA.LATE: "Atrasado",
         Record.STATUS_OCORRENCIA.PROGRESS: "Em progresso",
-        Record.STATUS_OCORRENCIA.REQUESTED: "Requisitado"
+        Record.STATUS_OCORRENCIA.REQUESTED: "Requisitado",
+        Record.STATUS_OCORRENCIA.AWAITING: "Aguardando"
     }
 
     # 3. Inicializa dicionário de contagem
@@ -284,6 +296,7 @@ def filter_data_view(request):
                     'serial': record.serial or '',
                     'brand': record.brand or '',
                     'model': record.model or '',
+                    'contact': record.contact or '',
                     'year': record.year or '',
                     'version': record.version or '',
                     'problem_detected': record.problem_detected or '',
@@ -412,6 +425,7 @@ def criar_usuario(request):
     if request.method == "POST":
         username = request.POST.get('username', '').strip().capitalize()
         password = request.POST.get('password', '')
+        tipo_usuario = request.POST.get('tipo_usuario', 'responsavel')  # Default é 'responsavel'
         paises_responsavel = request.POST.getlist('paises_responsavel')
 
         if not username or not password:
@@ -422,7 +436,21 @@ def criar_usuario(request):
             messages.warning(request, "Usuário já existe.")
             return redirect('criar_usuario')
 
+        # Criar o usuário
         user = User.objects.create_user(username=username, password=password)
+        
+        # Adicionar o usuário ao grupo correspondente
+        try:
+            if tipo_usuario == 'responsavel':
+                grupo, created = Group.objects.get_or_create(name='Técnicos responsáveis')
+            else:  # tipo_usuario == 'reporte'
+                grupo, created = Group.objects.get_or_create(name='Técnicos de reporte')
+            
+            user.groups.add(grupo)
+        except Exception as e:
+            messages.warning(request, f"Usuário criado, mas houve um erro ao adicionar ao grupo: {str(e)}")
+        
+        # Adicionar permissões de países
         for pais_id in paises_responsavel:
             try:
                 country = Country.objects.get(id=pais_id)
@@ -430,10 +458,8 @@ def criar_usuario(request):
             except Country.DoesNotExist:
                 continue
 
-        messages.success(request, f"Usuário {username} criado com sucesso.")
+        messages.success(request, f"Usuário {username} criado com sucesso como {tipo_usuario}.")
         return redirect('criar_usuario')
-
-
 
 # @login_required(login_url='subir_ocorrencia')
 def subir_ocorrencia(request):
@@ -443,10 +469,22 @@ def subir_ocorrencia(request):
     todos_responsaveis = []
     todos_equipamentos = []
 
-    # Prepara lista de responsáveis
-    usuarios_com_permissao = User.objects.filter(
-        country_permissions__isnull=False
-    ).distinct().values('id', 'first_name', 'last_name', 'username')
+    # Buscar os dois grupos
+    grupo_responsaveis = Group.objects.filter(name='Técnicos responsáveis').first()
+
+    # Prepara lista de responsáveis (usuários de QUALQUER UM dos dois grupos)
+    usuarios_query = User.objects.all()
+    
+    # Filtra usuários que estão em pelo menos um dos grupos
+    if  grupo_responsaveis:
+        from django.db.models import Q
+        query_filter = Q()
+        if grupo_responsaveis:
+            query_filter |= Q(groups=grupo_responsaveis)
+        
+        usuarios_com_permissao = usuarios_query.filter(query_filter).distinct().values('id', 'first_name', 'last_name', 'username')
+    else:
+        usuarios_com_permissao = []
 
     for user in usuarios_com_permissao:
         nome_completo = f"{user['first_name']} {user['last_name']}".strip()
@@ -457,10 +495,22 @@ def subir_ocorrencia(request):
     # Prepara lista de equipamentos
     todos_equipamentos = list(Device.objects.all().values('id', 'name'))
 
-    # Mapeia responsáveis por país
+    # Mapeia responsáveis por país (usuários de qualquer um dos dois grupos)
     for pais in paises:
         responsaveis_por_pais[pais.id] = []
-        for permissao in CountryPermission.objects.filter(country=pais).select_related('user'):
+        
+        # Filtra CountryPermission pelos usuários dos grupos
+        permissoes_query = CountryPermission.objects.filter(country=pais)
+        
+        if grupo_responsaveis:
+            from django.db.models import Q
+            user_filter = Q()
+            if grupo_responsaveis:
+                user_filter |= Q(user__groups=grupo_responsaveis)
+            
+            permissoes_query = permissoes_query.filter(user_filter).distinct()
+        
+        for permissao in permissoes_query.select_related('user'):
             user = permissao.user
             nome_completo = f"{user.first_name} {user.last_name}".strip() or user.username
             responsaveis_por_pais[pais.id].append({'id': user.id, 'name': nome_completo})
@@ -475,6 +525,7 @@ def subir_ocorrencia(request):
                 'serial': 'Serial',
                 'brand': 'Marca',
                 'model': 'Modelo',
+                'contact': 'Contato',
                 'year': 'Ano',
                 'version': 'Versão',
                 'problem_detected': 'Problema Detectado'
@@ -515,6 +566,7 @@ def subir_ocorrencia(request):
                 'serial': request.POST.get("serial"),
                 'brand': request.POST.get("brand"),
                 'model': request.POST.get("model"),
+                'contato': request.POST.get("contato"),
                 'year': request.POST.get("year"),
                 'country': country,
                 'version': request.POST.get("version"),
@@ -532,6 +584,7 @@ def subir_ocorrencia(request):
                 'Concluído': Record.STATUS_OCORRENCIA.DONE,
                 'Em progresso': Record.STATUS_OCORRENCIA.PROGRESS,
                 'Atrasado': Record.STATUS_OCORRENCIA.LATE,
+                'Aguardando': Record.STATUS_OCORRENCIA.AWAITING,
             }
             if status_input in status_mapping:
                 record_data['status'] = status_mapping[status_input]
@@ -717,8 +770,11 @@ def alterar_dados(request):
             field_name = data.get('field')
             new_value = data.get('value')
             new_display = str(new_value)
-
-            if field_name == 'country':
+            if field_name == 'finished' and not new_value:
+                record.clear_finished_date()  # Usa o método especial
+                new_display = ''
+                
+            elif field_name == 'country':
                 if new_value == 'revert':
                     original_country_name = record.country_original
                     record.country = Country.objects.filter(name=original_country_name).first()
@@ -825,6 +881,7 @@ def get_record(request, pk):
             "serial": record.serial,
             "brand": record.brand,
             "model": record.model,
+            "contact": record.contact,
             "year": record.year,
             "version": record.version,
             "country": record.country.name if record.country else None,

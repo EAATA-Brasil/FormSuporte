@@ -17,6 +17,21 @@
             right: 20px;
             z-index: 1000;
         }
+        .clear-date-btn {
+            margin-bottom:15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 15px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .clear-date-btn:hover {
+            background: #c82333;
+        }
         /* Estilos para o chat */
 .chat-container {
     display: flex;
@@ -527,12 +542,18 @@
                                   data-field-name="problem_detected" 
                                   data-initial-value="${problemDetectedValue}"
                                   style="width: 100%; min-height: 100px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${problemDetectedValue}</textarea>
+                        <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                           Gerar PDF
+                        </button>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                         <div>
                             <strong>ID:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.id || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">
+                            ${record.id || 'Não informado'}
+                            
+                            </span>
                         </div>
                         <div>
                             <strong>Técnico:</strong><br>
@@ -542,6 +563,12 @@
                             <strong>País:</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.country || 'Não informado'}</span>
                         </div>
+                        {%if has_full_permission %}
+                        <div>
+                            <strong>Contato:</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.contact || 'Não informado'}</span>
+                        </div>
+                        {%endif%}
                         <div>
                             <strong>Dispositivo:</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.device || 'Não informado'}</span>
@@ -589,11 +616,6 @@
                         <div>
                             <strong>Finalizado:</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
-                        </div>
-                        <div>
-                            <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
-                                Gerar PDF
-                            </button>
                         </div>
                     </div>
                     <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">Adicionar novo arquivo:</h5>
@@ -1991,8 +2013,70 @@
                         })
                         
                         if (textInput.classList[0] == 'date-text-input') {
-                            flatpickr('.date-text-input', { 'allowInput': true, 'dateFormat': 'd/m/Y', 'minDate': 'today' })
-                        }
+                            if (columnName == 'finished' && value) {
+                                const fpConfig = {
+                                    'allowInput': true,
+                                    'dateFormat': 'd/m/Y',
+                                    'minDate': 'today',
+                                    'plugins': [function(instance) {
+                                        return {
+                                            onReady: function() {
+                                                // Cria botão de limpar
+                                                const clearButton = document.createElement('button');
+                                                clearButton.className = 'clear-date-btn';
+                                                clearButton.textContent = 'Limpar';
+                                                clearButton.type = 'button';
+                                                
+                                                // Adiciona evento para limpar a data
+                                                clearButton.addEventListener('click', function(e) {
+                                                    e.stopPropagation();
+                                                    instance.clear();
+                                                    instance.input.value = '';
+                                                    instance.close()
+                                                    const recordId = instance.input.closest('[data-id]').getAttribute('data-id');
+                                                    const fieldName = instance.input.closest('[data-column]').getAttribute('data-column');
+                                                    saveField(instance.input);
+                                                    // Atualiza visualmente o campo - SUCESSO (verde)
+                                                    fetch('{% url "update_ocorrencia" %}', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'X-CSRFToken': getCookie('csrftoken')
+                                                        },
+                                                        body: JSON.stringify({
+                                                            id: recordId,
+                                                            field: fieldName,
+                                                            value: '',
+                                                            page_num: page_num
+                                                        })
+                                                    })
+                                                    .then(response => response.json())
+                                                    .then(data => {
+                                                        if (data.status === 'success') {
+                                                            // SÓ AQUI, após o servidor confirmar, atualiza a interface
+                                                            const changeEvent = new Event('change', { bubbles: true });
+                                                            instance.input.dispatchEvent(changeEvent);
+                                                            applyFiltersAndSort(false);
+                                                        }
+                                                    });
+                                                });
+                                                
+                                                // Adiciona o botão ao flatpickr
+                                                instance.calendarContainer.appendChild(clearButton);
+                                            }
+                                        };
+                                    }]
+                                };
+                                flatpickr(textInput, fpConfig);
+                            } else {
+                                // Configuração padrão para outros campos
+                                flatpickr(textInput, { 
+                                    'allowInput': true, 
+                                    'dateFormat': 'd/m/Y', 
+                                    'minDate': columnName === 'deadline' ? 'today' : null 
+                                });
+                            }
+                        }   
 
                     } else if ((columnName == 'responsible' && '{{has_full_permission}}' === 'True')) {
                         cell.id = `${columnName}${record.id}`;
@@ -2198,7 +2282,6 @@
             const reportID = container.getAttribute('data-id');
             const fieldName = container.getAttribute('data-column');
             const newValue = inputElement.value
-            
             
             fetch('{% url "update_ocorrencia" %}', {
                 method: 'POST',
