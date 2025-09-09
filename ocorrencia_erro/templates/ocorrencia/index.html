@@ -32,6 +32,21 @@
         .clear-date-btn:hover {
             background: #c82333;
         }
+        .today-date-btn {
+            margin-bottom:15px;
+            background: #569ff7;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 15px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .today-date-btn:hover {
+            background: #4682ccff;
+        }
         /* Estilos para o chat */
 .chat-container {
     display: flex;
@@ -231,6 +246,11 @@
         .notification-summary button:active {
             background-color: #02367d;
             transform: scale(0.98);
+        }
+        .containerFooterPopup{
+            display: flex;
+            align-items: center;    
+            justify-content: space-around;
         }
     </style>
 </head>
@@ -609,13 +629,33 @@
                             <strong>Data:</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.data ? formatDateToDisplay(record.data) : 'Não informado'}</span>
                         </div>
-                        <div>
-                            <strong>Prazo:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.deadline ? formatDateToDisplay(record.deadline) : 'Não definido'}</span>
-                        </div>
+                        {% if has_full_permission %}
+                            <div>
+                                <strong>Prazo:</strong><br>
+                                <input type="text"
+                                    class="date-input flatpickr"
+                                    data-record-id="${record.id}"
+                                    data-field-name="deadline"
+                                    value="${record.deadline ? formatDateToDisplay(record.deadline) : ''}"
+                                    placeholder="dd/mm/aaaa" />
+                            </div>
+                            
+                            {% else %}
+                            <div>
+                                <strong>Prazo:</strong><br>
+                                <span style="color: var(--text-light);" translate="no">
+                                    ${record.deadline ? formatDateToDisplay(record.deadline) : 'Não definido'}
+                                </span>
+                            </div>
+                        {% endif %}
                         <div>
                             <strong>Finalizado:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
+                            <input type="text"
+                                class="date-input flatpickr"
+                                data-record-id="${record.id}"
+                                data-field-name="finished"
+                                value="${record.finished ? formatDateToDisplay(record.finished) : ''}"
+                                placeholder="dd/mm/aaaa" />
                         </div>
                     </div>
                     <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">Adicionar novo arquivo:</h5>
@@ -892,6 +932,84 @@
 
 
                     // --- FIM DA LÓGICA DE UPLOAD ---
+                    document.querySelectorAll('.flatpickr').forEach(input => {
+                        const fpConfig = {
+                            allowInput: true,
+                            dateFormat: 'd/m/Y',
+                            plugins: [function(instance) {
+                                return {
+                                    onReady: function() {
+                                        // Botão LIMPAR
+                                        const containerFooterPopup = document.createElement('div')
+                                        containerFooterPopup.className = 'containerFooterPopup'
+                                        
+                                        const clearButton = document.createElement('button');
+                                        clearButton.className = 'clear-date-btn';
+                                        clearButton.textContent = 'Limpar';
+                                        clearButton.type = 'button';
+
+                                        const todayButton = document.createElement('button');
+                                        todayButton.className = 'today-date-btn';
+                                        todayButton.textContent = 'Hoje';
+                                        todayButton.type = 'button';
+
+                                        clearButton.addEventListener('click', function(e) {
+                                            e.stopPropagation();
+                                            instance.clear();
+                                            instance.input.value = '';
+                                            instance.close();
+
+                                            const recordId = instance.input.closest('[data-id]')?.getAttribute('data-id');
+                                            const fieldName = instance.input.closest('[data-column]')?.getAttribute('data-column');
+                                            
+                                            fetch('{% url "update_ocorrencia" %}', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'X-CSRFToken': getCookie('csrftoken')
+                                                },
+                                                body: JSON.stringify({
+                                                    id: recordId,
+                                                    field: fieldName,
+                                                    value: '',
+                                                    page_num: page_num
+                                                })
+                                            })
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.status === 'success') {
+                                                    const changeEvent = new Event('change', { bubbles: true });
+                                                    instance.input.dispatchEvent(changeEvent);
+                                                    applyFiltersAndSort(false);
+                                                }
+                                            });
+                                        });
+
+                                        todayButton.addEventListener('click', function(e) {
+                                            e.stopPropagation();
+                                            const today = new Date();
+                                            instance.setDate(today, true); // true => dispara onChange
+                                            instance.close();
+                                        });
+
+                                        // Adiciona os dois botões
+                                        containerFooterPopup.appendChild(todayButton)
+                                        containerFooterPopup.appendChild(clearButton)
+                                        instance.calendarContainer.appendChild(containerFooterPopup);
+                                       
+                                    }
+                                };
+                            }]
+                        };
+
+                        flatpickr(input, fpConfig);
+
+                        // já usa a lógica existente de salvar
+                        input.addEventListener('change', (e) => {
+                            atualizarDadosPopup(e.target);
+                        });
+                    });
+
                 }
             });
         }
@@ -2014,49 +2132,65 @@
                                     'plugins': [function(instance) {
                                         return {
                                             onReady: function() {
-                                                // Cria botão de limpar
-                                                const clearButton = document.createElement('button');
-                                                clearButton.className = 'clear-date-btn';
-                                                clearButton.textContent = 'Limpar';
-                                                clearButton.type = 'button';
+                                            // Botão LIMPAR
+                                            const containerFooterPopup = document.createElement('div')
+                                            containerFooterPopup.className = 'containerFooterPopup'
+                                            
+                                            const clearButton = document.createElement('button');
+                                            clearButton.className = 'clear-date-btn';
+                                            clearButton.textContent = 'Limpar';
+                                            clearButton.type = 'button';
+
+                                            const todayButton = document.createElement('button');
+                                            todayButton.className = 'today-date-btn';
+                                            todayButton.textContent = 'Hoje';
+                                            todayButton.type = 'button';
+
+                                            clearButton.addEventListener('click', function(e) {
+                                                e.stopPropagation();
+                                                instance.clear();
+                                                instance.input.value = '';
+                                                instance.close();
+
+                                                const recordId = instance.input.closest('[data-id]')?.getAttribute('data-id');
+                                                const fieldName = instance.input.closest('[data-column]')?.getAttribute('data-column');
                                                 
-                                                // Adiciona evento para limpar a data
-                                                clearButton.addEventListener('click', function(e) {
-                                                    e.stopPropagation();
-                                                    instance.clear();
-                                                    instance.input.value = '';
-                                                    instance.close()
-                                                    const recordId = instance.input.closest('[data-id]').getAttribute('data-id');
-                                                    const fieldName = instance.input.closest('[data-column]').getAttribute('data-column');
-                                                    saveField(instance.input);
-                                                    // Atualiza visualmente o campo - SUCESSO (verde)
-                                                    fetch('{% url "update_ocorrencia" %}', {
-                                                        method: 'POST',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                            'X-CSRFToken': getCookie('csrftoken')
-                                                        },
-                                                        body: JSON.stringify({
-                                                            id: recordId,
-                                                            field: fieldName,
-                                                            value: '',
-                                                            page_num: page_num
-                                                        })
+                                                fetch('{% url "update_ocorrencia" %}', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'X-CSRFToken': getCookie('csrftoken')
+                                                    },
+                                                    body: JSON.stringify({
+                                                        id: recordId,
+                                                        field: fieldName,
+                                                        value: '',
+                                                        page_num: page_num
                                                     })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        if (data.status === 'success') {
-                                                            // SÓ AQUI, após o servidor confirmar, atualiza a interface
-                                                            const changeEvent = new Event('change', { bubbles: true });
-                                                            instance.input.dispatchEvent(changeEvent);
-                                                            applyFiltersAndSort(false);
-                                                        }
-                                                    });
+                                                })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    if (data.status === 'success') {
+                                                        const changeEvent = new Event('change', { bubbles: true });
+                                                        instance.input.dispatchEvent(changeEvent);
+                                                        applyFiltersAndSort(false);
+                                                    }
                                                 });
-                                                
-                                                // Adiciona o botão ao flatpickr
-                                                instance.calendarContainer.appendChild(clearButton);
-                                            }
+                                            });
+
+                                            todayButton.addEventListener('click', function(e) {
+                                                e.stopPropagation();
+                                                const today = new Date();
+                                                instance.setDate(today, true); // true => dispara onChange
+                                                instance.close();
+                                            });
+
+                                            // Adiciona os dois botões
+                                            containerFooterPopup.appendChild(todayButton)
+                                            containerFooterPopup.appendChild(clearButton)
+                                            instance.calendarContainer.appendChild(containerFooterPopup);
+                                        
+                                        }
                                         };
                                     }]
                                 };
