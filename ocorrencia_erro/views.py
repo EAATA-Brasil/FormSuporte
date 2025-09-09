@@ -525,7 +525,6 @@ def subir_ocorrencia(request):
                 'serial': 'Serial',
                 'brand': 'Marca',
                 'model': 'Modelo',
-                'contact': 'Contato',
                 'year': 'Ano',
                 'version': 'Versão',
                 'problem_detected': 'Problema Detectado'
