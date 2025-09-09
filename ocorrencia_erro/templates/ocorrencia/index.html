@@ -2017,7 +2017,6 @@
                                 const fpConfig = {
                                     'allowInput': true,
                                     'dateFormat': 'd/m/Y',
-                                    'minDate': 'today',
                                     'plugins': [function(instance) {
                                         return {
                                             onReady: function() {
@@ -2073,7 +2072,6 @@
                                 flatpickr(textInput, { 
                                     'allowInput': true, 
                                     'dateFormat': 'd/m/Y', 
-                                    'minDate': columnName === 'deadline' ? 'today' : null 
                                 });
                             }
                         }   

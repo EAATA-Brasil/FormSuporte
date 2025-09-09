@@ -566,7 +566,7 @@ def subir_ocorrencia(request):
                 'serial': request.POST.get("serial"),
                 'brand': request.POST.get("brand"),
                 'model': request.POST.get("model"),
-                'contato': request.POST.get("contato"),
+                'contact': request.POST.get("contact"),
                 'year': request.POST.get("year"),
                 'country': country,
                 'version': request.POST.get("version"),
