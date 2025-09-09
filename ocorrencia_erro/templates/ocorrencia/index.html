@@ -1994,13 +1994,7 @@
                                     var data = new Date(record['data'])
                                     var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
                                     
-                                    if (input_data < data) {
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-                                    } else if (finished && input_data > finished) {
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-                                    } else if (value.split('/')[2].length == 4 && isValidDate(value)) {
+                                    if (value.split('/')[2].length == 4 && isValidDate(value)) {
                                         e.target.classList.remove("erro")
                                         e.target.classList.add("success")
                                         atualizarDados(e)
@@ -2013,7 +2007,7 @@
                         })
                         
                         if (textInput.classList[0] == 'date-text-input') {
-                            if (columnName == 'finished' && value) {
+                            if (value) {
                                 const fpConfig = {
                                     'allowInput': true,
                                     'dateFormat': 'd/m/Y',

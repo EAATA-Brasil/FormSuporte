@@ -218,9 +218,6 @@ class Record(models.Model):
         self.model = self.model.upper() if self.model else ''
         self.technical = self.technical.capitalize() if self.technical else ''
 
-        if self.finished and self.data and self.finished < self.data:
-            raise ValidationError({"finished": "Data de conclusão não pode ser anterior à data de reporte."})
-
     def save(self, *args, **kwargs):
         """
         Garante a ordem correta de execução e a prioridade da regra da China.
