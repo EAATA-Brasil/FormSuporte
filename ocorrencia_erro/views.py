@@ -204,7 +204,7 @@ def filter_data_view(request):
 
                 column_q = Q()
                 has_empty = '' in values
-                non_empty = [v for v in values if v != '']
+                non_empty = [v.strip() for v in values if v != ""]
 
                 TEXT_CASE_INSENSITIVE_COLUMNS = [
                     'codigo_externo', 'technical', 'area', 'serial', 'brand', 'model',
@@ -233,17 +233,17 @@ def filter_data_view(request):
                     elif column == 'country':
                         country_q_objects = Q()
                         for val in non_empty:
-                            country_q_objects |= Q(country__name__iexact=val)
+                            country_q_objects |= Q(country__name__iexact=val.strip())
                         column_q |= country_q_objects
                     elif column == 'device':
                         device_q_objects = Q()
                         for val in non_empty:
-                            device_q_objects |= Q(device__name__iexact=val)
+                            device_q_objects |= Q(device__name__iexact=val.strip())
                         column_q |= device_q_objects
                     elif column in TEXT_CASE_INSENSITIVE_COLUMNS:
                         text_q_objects = Q()
                         for val in non_empty:
-                            text_q_objects |= Q(**{f'{column}__iexact': val})
+                            text_q_objects |= Q(**{f'{column}__iexact': val.strip()})
                         column_q |= text_q_objects
                     else:
                         column_q |= Q(**{f'{column}__in': non_empty})
