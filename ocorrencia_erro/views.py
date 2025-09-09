@@ -243,7 +243,7 @@ def filter_data_view(request):
                     elif column in TEXT_CASE_INSENSITIVE_COLUMNS:
                         text_q_objects = Q()
                         for val in non_empty:
-                            text_q_objects |= Q(**{f'{column}__iexact': val.strip()})
+                            text_q_objects |= Q(**{f'{column}__contains': val.strip()})
                         column_q |= text_q_objects
                     else:
                         column_q |= Q(**{f'{column}__in': non_empty})
@@ -287,25 +287,25 @@ def filter_data_view(request):
             for record in page_obj.object_list:
                 record_data = {
                     'id': record.id,
-                    'codigo_externo': record.codigo_externo or str(record.id),
+                    'codigo_externo': record.codigo_externo.strip() if record.codigo_externo else str(record.id),
                     'data': record.data,
-                    'technical': record.technical or '',
-                    'country': record.country.name if record.country else '',
-                    'device': record.device.name if record.device else '',
-                    'area': record.area or '',
-                    'serial': record.serial or '',
-                    'brand': record.brand or '',
-                    'model': record.model or '',
-                    'contact': record.contact or '',
-                    'year': record.year or '',
-                    'version': record.version or '',
-                    'problem_detected': record.problem_detected or '',
+                    'technical': record.technical.strip() if record.technical else '',
+                    'country': record.country.name.strip() if record.country else '',
+                    'device': record.device.name.strip() if record.device else '',
+                    'area': record.area.strip() if record.area else '',
+                    'serial': record.serial.strip() if record.serial else '',
+                    'brand': record.brand.strip() if record.brand else '',
+                    'model': record.model.strip() if record.model else '',
+                    'contact': record.contact.strip() if record.contact else '',
+                    'year': record.year.strip() if record.year else '',
+                    'version': record.version.strip() if record.version else '',
+                    'problem_detected': record.problem_detected.strip() if record.problem_detected else '',
                     'status': STATUS_MAP_REVERSED.get(record.status, record.status or ''),
                     'deadline': record.deadline.strftime('%d/%m/%Y') if record.deadline else '',
-                    'responsible': record.responsible or '',
+                    'responsible': record.responsible.strip() if record.responsible else '',
                     'finished': record.finished.strftime('%d/%m/%Y') if record.finished else '',
-                    'feedback_technical': record.feedback_technical or '',
-                    'feedback_manager': record.feedback_manager or '',
+                    'feedback_technical': record.feedback_technical.strip() if record.feedback_technical else '',
+                    'feedback_manager': record.feedback_manager.strip() if record.feedback_manager else '',
                     'arquivos': [
                         {
                             'id': arquivo.id,
