@@ -186,6 +186,12 @@ class Record(models.Model):
         self._explicitly_cleared_finished = True  # Flag para evitar auto-preencher
         if self.status == self.STATUS_OCORRENCIA.DONE:
             self.status = self.STATUS_OCORRENCIA.PROGRESS
+    def clear_deadline_date(self):
+        """Método para limpar explicitamente a data de finished"""
+        self.deadline= None
+        self._explicitly_cleared_deadline = True  # Flag para evitar auto-preencher
+        if self.status != self.STATUS_OCORRENCIA.AWAITING:
+            self.status = self.STATUS_OCORRENCIA.REQUESTED
     def clean(self):
         """
         Validações e lógica de status normal (quando o país NÃO é China).

@@ -773,6 +773,9 @@ def alterar_dados(request):
             if field_name == 'finished' and not new_value:
                 record.clear_finished_date()  # Usa o método especial
                 new_display = ''
+            elif field_name == 'deadline' and not new_value:
+                record.clear_deadline_date()  # Usa o método especial
+                new_display = ''
                 
             elif field_name == 'country':
                 if new_value == 'revert':
