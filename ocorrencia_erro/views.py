@@ -243,7 +243,8 @@ def filter_data_view(request):
                     elif column in TEXT_CASE_INSENSITIVE_COLUMNS:
                         text_q_objects = Q()
                         for val in non_empty:
-                            text_q_objects |= Q(**{f'{column}__iexact': val.strip()})
+                            # Use __icontains para buscar valores que contenham o texto, ignorando espaços extras
+                            text_q_objects |= Q(**{f'{column}__icontains': val.strip()})
                         column_q |= text_q_objects
                     else:
                         column_q |= Q(**{f'{column}__in': non_empty})
