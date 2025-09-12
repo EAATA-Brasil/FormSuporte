@@ -43,94 +43,98 @@
             cursor: pointer;
             z-index: 1000;
         }
-
+        .headerFiles{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;    
+        }
         .today-date-btn:hover {
             background: #4682ccff;
         }
         /* Estilos para o chat */
-.chat-container {
-    display: flex;
-    flex-direction: column;
-    height: 400px; /* Altura fixa para o chat */
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #f9f9f9;
-    padding: 10px;
-    margin-top: 20px;
-}
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 400px; /* Altura fixa para o chat */
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            margin-top: 20px;
+        }
 
-.chat-messages {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 10px;
-    display: flex;
-    flex-direction: column; /* Para que as mensagens novas apareçam na parte inferior */
-}
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column; /* Para que as mensagens novas apareçam na parte inferior */
+        }
 
-.chat-message {
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    border-radius: 18px;
-    max-width: 80%;
-    word-wrap: break-word;
-}
+        .chat-message {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
 
-.chat-message.my-message {
-    background-color: #0459B5;
-    color: white;
-    align-self: flex-end; /* Alinha a sua mensagem à direita */
-}
+        .chat-message.my-message {
+            background-color: #0459B5;
+            color: white;
+            align-self: flex-end; /* Alinha a sua mensagem à direita */
+        }
 
-.chat-message.other-message {
-    background-color: #e5e5e5;
-    color: #333;
-    align-self: flex-start; /* Alinha a mensagem do outro à esquerda */
-}
+        .chat-message.other-message {
+            background-color: #e5e5e5;
+            color: #333;
+            align-self: flex-start; /* Alinha a mensagem do outro à esquerda */
+        }
 
-.chat-message-author {
-    font-size: 10px;
-    color: #999;
-    margin-bottom: 2px;
-}
+        .chat-message-author {
+            font-size: 10px;
+            color: #999;
+            margin-bottom: 2px;
+        }
 
-.chat-input-area {
-    display: flex;
-    padding-top: 10px;
-    border-top: 1px solid #eee;
-}
+        .chat-input-area {
+            display: flex;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
 
-.chat-input-area input {
-    flex-grow: 1;
-    border: 1px solid #ccc;
-    border-radius: 20px;
-    padding: 8px 15px;
-    margin-right: 8px;
-}
+        .chat-input-area input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 8px 15px;
+            margin-right: 8px;
+        }
 
-.chat-input-area button {
-    background-color: #0459B5;
-    color: white;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 15px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
+        .chat-input-area button {
+            background-color: #0459B5;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
 
-.chat-input-area button:hover {
-    background-color: #0347a0;
-}
-.chat-message-time {
-    display: block; /* Garante que a hora fique em uma nova linha */
-    font-size: 10px;
-    color: #999;
-    margin-top: 5px;
-    text-align: right;
-}
+        .chat-input-area button:hover {
+            background-color: #0347a0;
+        }
+        .chat-message-time {
+            display: block; /* Garante que a hora fique em uma nova linha */
+            font-size: 10px;
+            color: #999;
+            margin-top: 5px;
+            text-align: right;
+        }
 
-.chat-message.my-message .chat-message-time {
-    color: rgba(255, 255, 255, 0.7); /* Cor da hora para suas mensagens */
-}
+        .chat-message.my-message .chat-message-time {
+            color: rgba(255, 255, 255, 0.7); /* Cor da hora para suas mensagens */
+        }
         .notification-bell {
             position: relative;
             background: #0459B5;
@@ -694,8 +698,14 @@
                         </form>
                     </div>
                     <div style="margin-bottom: 20px;" translate="no">
-                        
-                        <h4>Arquivos anexados:</h4>
+                        <div class="headerFiles">
+                            <h4>Arquivos anexados:</h4>
+                            ${record.arquivos.length > 0 ? `
+                                <button id="allDownload"style="background: #007bff; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                                    Baixar Todos
+                                </button>
+                            ` : ''}
+                        </div>
                         ${arquivosListHTML}
                         
                     </div>
@@ -718,6 +728,16 @@
                     content: 'problem-details-content'
                 },
                 didOpen: () => {
+                    try{
+                        const allDownload = document.getElementById("allDownload")
+                        allDownload.addEventListener('click', ()=>{
+                            window.open(`/ocorrencia/download_todos/${id}/`, '_blank');
+                        })
+                    }
+                    catch(e){
+                        //
+                    }
+
                     // Adiciona event listeners para os textareas após o SweetAlert ser aberto
                     const problemDetectedTextarea = document.getElementById(problemDetectedId);
                     const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);

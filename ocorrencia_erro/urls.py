@@ -27,5 +27,5 @@ urlpatterns = [
     path('api/get_china_id/', get_china_id_view, name='get_china_id'),
     path('gerar_pdf/<int:record_id>/', views.gerar_pdf_ocorrencia, name='gerar_pdf_ocorrencia'),
     path('gerar_pdf/', views.gerar_pdf_ocorrencia, name='gerar_pdf_ocorrencia_post'),
+    path("ocorrencia/download_todos/<int:record_id>/", views.download_todos_arquivos, name="download_todos_arquivos"),
 ]
-

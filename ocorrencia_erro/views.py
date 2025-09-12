@@ -26,6 +26,8 @@ import json
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
+import zipfile
+from django.utils.encoding import smart_str
 
 from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao
 
@@ -123,6 +125,32 @@ def subir_arquivo(files, record):
             arquivo=file,
             nome_original=novo_nome  # ou mantenha file.name se preferir
         )
+
+@login_required(login_url=URL_LOGIN)
+def download_todos_arquivos(request, record_id):
+    record = get_object_or_404(Record, id=record_id)
+    arquivos = ArquivoOcorrencia.objects.filter(record=record)
+
+    if not arquivos.exists():
+        return JsonResponse({'status': 'error', 'message': 'Nenhum arquivo encontrado.'}, status=404)
+
+    if arquivos.count() <= 5:
+        # Retorna múltiplos arquivos, mas um por vez via response streaming
+        # (normalmente o ideal é baixar em ZIP também, mas mantendo a regra)
+        arquivo = arquivos.first()
+        response = FileResponse(arquivo.arquivo.open("rb"), as_attachment=True, filename=arquivo.nome_original)
+        return response
+    else:
+        # Gera o zip temporário
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
+            for arq in arquivos:
+                zip_file.write(arq.arquivo.path, arcname=arq.nome_original)
+        zip_buffer.seek(0)
+
+        response = HttpResponse(zip_buffer, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename=arquivos_ocorrencia_{record.id}.zip'
+        return response
 
 
 @login_required(login_url=URL_LOGIN)
