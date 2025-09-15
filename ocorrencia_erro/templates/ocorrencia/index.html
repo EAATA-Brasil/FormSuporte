@@ -522,6 +522,11 @@
         
         // Função para mostrar pop-up com detalhes do problema
         function showProblemDetails(record) {
+            try{
+                lerOcorrencia(record.id);
+            }catch(e){
+                console.log(e)
+            }
             const arquivosListHTML = (record.arquivos && record.arquivos.length > 0)
             ? `<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
                 ${record.arquivos.map(arq => `
