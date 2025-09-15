@@ -28,6 +28,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 import zipfile
 from django.utils.encoding import smart_str
+from time import timezone
 
 from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao
 
@@ -1020,6 +1021,28 @@ def marcar_notificacao_lida(request, notificacao_id):
         notificacao.marcar_como_lida()
         
         return JsonResponse({'status': 'success', 'message': 'Notificação marcada como lida'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+@login_required(login_url=URL_LOGIN)
+def marcar_notificacoes_por_record_como_lidas(request, record_id):
+    """
+    API para marcar todas as notificações não lidas de um record como lidas
+    """
+    try:
+        notificacoes = Notificacao.objects.filter(
+            user =request.user,
+            record_id=record_id,
+        )
+        count = notificacoes.count()
+        for notificacao in notificacoes :
+            notificacao.marcar_como_lida()
+        
+        return JsonResponse({
+            'status': 'success', 
+            'message': f'{count} notificação(s) marcada(s) como lida(s)',
+            'count': count
+        })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 

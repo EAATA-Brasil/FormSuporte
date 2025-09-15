@@ -24,6 +24,7 @@ urlpatterns = [
     path('notificacoes/', views.listar_notificacoes, name='listar_notificacoes'),
     path('notificacoes/contar/', views.contar_notificacoes_nao_lidas, name='contar_notificacoes'),
     path('notificacoes/<int:notificacao_id>/marcar_lida/', views.marcar_notificacao_lida, name='marcar_notificacao_lida'),
+    path('notificacoes/record/<int:record_id>/marcar_lidas/', views.marcar_notificacoes_por_record_como_lidas, name='marcar_notificacoes_record_lidas'),
     path('api/get_china_id/', get_china_id_view, name='get_china_id'),
     path('gerar_pdf/<int:record_id>/', views.gerar_pdf_ocorrencia, name='gerar_pdf_ocorrencia'),
     path('gerar_pdf/', views.gerar_pdf_ocorrencia, name='gerar_pdf_ocorrencia_post'),

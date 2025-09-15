@@ -522,11 +522,22 @@
         
         // Função para mostrar pop-up com detalhes do problema
         function showProblemDetails(record) {
-            try{
-                lerOcorrencia(record.id);
-            }catch(e){
-                console.log(e)
-            }
+            fetch(`/ocorrencia/notificacoes/record/${record.id}/marcar_lidas/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success' && data.count > 0) {
+                    // Atualizar o contador de notificações
+                    atualizarContadorNotificacoes();
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao marcar notificações como lidas:', error);
+            });
             const arquivosListHTML = (record.arquivos && record.arquivos.length > 0)
             ? `<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
                 ${record.arquivos.map(arq => `
@@ -580,7 +591,7 @@
                         <div>
                             <strong>ID:</strong><br>
                             <span style="color: var(--text-light);" translate="no">
-                            ${record.id || 'Não informado'}
+                            ${record.codigo_externo || 'Não informado'}
                             
                             </span>
                         </div>

@@ -317,9 +317,10 @@ class Notificacao(models.Model):
     def marcar_como_lida(self):
         """Marca a notificação como lida"""
         if not self.lida:
-            self.lida = True
-            self.lida_em = timezone.now()
-            self.save(update_fields=['lida', 'lida_em'])
+            self.delete()
+            # self.lida = True
+            # self.lida_em = timezone.now()
+            # self.save(update_fields=['lida', 'lida_em'])
 
 class ChatMessage(models.Model):
     # FIXED: Removed invalid app reference from ForeignKey
