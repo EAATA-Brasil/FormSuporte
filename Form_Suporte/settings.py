@@ -52,12 +52,13 @@ ALLOWED_HOSTS = [
     '0.0.0.0',
     'localhost',
     '*.ngrok-free.app',
+    '*.ngrok-free.dev',
     '*',
 	'82.25.71.76'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://4cd687ce291b.ngrok-free.app'
+    'https://jodi-nonbathing-cherise.ngrok-free.dev'
 ]
 
 # Application definition
