@@ -15,24 +15,33 @@ import os
 import sys
 
 # Configuração para WeasyPrint
+# Configuração específica para WeasyPrint
+# No Windows, pode ser necessário adicionar o caminho do GTK+ ao PATH.
+# No Linux, geralmente funciona nativamente.
 if sys.platform == 'win32':
     try:
+        # Lista de possíveis caminhos para a instalação do GTK+ no Windows
         gtk_paths = [
             r'C:\Program Files\GTK3-Runtime Win64\bin',
             r'C:\Program Files (x86)\GTK3-Runtime Win64\bin',
             r'C:\gtk\bin',
         ]
         
+        # Adiciona o primeiro caminho GTK+ encontrado ao PATH do sistema
         for path in gtk_paths:
             if os.path.exists(path):
-                os.add_dll_directory(path)
+                os.add_dll_directory(path) # Para Python 3.8+
                 os.environ['PATH'] = path + os.pathsep + os.environ['PATH']
+                print(f"✅ GTK+ encontrado e adicionado ao PATH: {path}")
                 break
+        else:
+            print("⚠️ GTK+ não encontrado em caminhos comuns. WeasyPrint pode não funcionar.")
     except Exception as e:
-        print(f"Erro na configuração do GTK: {e}")
+        print(f"❌ Erro na configuração do GTK para WeasyPrint: {e}")
 elif sys.platform.startswith('linux'):
-    # Linux funciona nativamente - nada especial necessário
-    print("✅ Ambiente Linux detectado - WeasyPrint funcionará nativamente")
+    print("✅ Ambiente Linux detectado. WeasyPrint funcionará nativamente.")
+else:
+    print("ℹ️ Sistema operacional não Windows/Linux. Verifique a compatibilidade do WeasyPrint.")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -47,51 +56,64 @@ SECRET_KEY = 'django-insecure-6u$z58nj9!@tqbyx5$f103&-jj3^%1ve=p@z@aomo89#ugn6wp
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Lista de hosts permitidos para acessar a aplicação.
+# Em produção, esta lista deve ser o mais restrita possível.
 ALLOWED_HOSTS = [
-    '127.0.0.1',
-    '0.0.0.0',
-    'localhost',
-    '*.ngrok-free.app',
-    '*.ngrok-free.dev',
-    '*',
-	'82.25.71.76'
+    '127.0.0.1',  # Endereço de loopback padrão
+    '0.0.0.0',    # Permite acesso de qualquer interface de rede (cuidado em produção)
+    'localhost',  # Nome de host local
+    '*.ngrok-free.app', # Domínios para tunelamento ngrok
+    '*.ngrok-free.dev', # Domínios para tunelamento ngrok
+    '*',          # CUIDADO: Permite qualquer host. Usar apenas em desenvolvimento.
+    '82.25.71.76' # Exemplo de IP específico
 ]
 
+# Origens confiáveis para requisições CSRF.
+# Importante para segurança em ambientes de produção.
 CSRF_TRUSTED_ORIGINS = [
-    'https://jodi-nonbathing-cherise.ngrok-free.dev'
+    'https://jodi-nonbathing-cherise.ngrok-free.dev' # Exemplo de domínio ngrok confiável
 ]
 
 # Application definition
 
+# Definição das aplicações instaladas no projeto Django.
+# Inclui aplicações padrão do Django, bibliotecas de terceiros e aplicações customizadas.
 INSTALLED_APPS = [
-    'daphne',
-    'channels',
-    'corsheaders',
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'form',
-    'situacao_veiculo',
-    'ocorrencia_erro',
-    'API',
-    'rest_framework',
-    'simulador',
-    'weasyprint'
+    # Aplicações de terceiros para funcionalidades específicas
+    'daphne',         # Servidor ASGI para Django Channels
+    'channels',       # Suporte a WebSockets e comunicação assíncrona
+    'corsheaders',    # Lida com Cross-Origin Resource Sharing (CORS)
+    'rest_framework', # Django REST Framework para construção de APIs
+    'weasyprint',     # Geração de PDFs a partir de HTML/CSS
+
+    # Aplicações padrão do Django
+    'django.contrib.admin',          # Interface de administração do Django
+    'django.contrib.auth',           # Sistema de autenticação e permissões
+    'django.contrib.contenttypes',   # Framework para tipos de conteúdo
+    'django.contrib.sessions',       # Gerenciamento de sessões
+    'django.contrib.messages',       # Framework de mensagens
+    'django.contrib.staticfiles',    # Gerenciamento de arquivos estáticos
+
+    # Aplicações customizadas do projeto
+    'form',             # Aplicação para formulários de suporte
+    'situacao_veiculo', # Aplicação para gerenciar situação de veículos
+    'ocorrencia_erro',  # Aplicação para registrar ocorrências de erro
+    'API',              # Aplicação para a API REST customizada
+    'simulador',        # Aplicação para funcionalidades de simulação
 ]
 
 
 # WSGI_APPLICATION = 'Form_Suporte.wsgi.application'
 ASGI_APPLICATION = 'Form_Suporte.asgi.application'
 
+# Configuração do Django Channels para comunicação em tempo real.
+# Utiliza Redis como backend para o Channel Layer.
 CHANNEL_LAYERS = {
     'default': {
-        # O Django Channels usará o Redis para gerenciar a comunicação entre os consumidores
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('localhost', 6379)], # Ajuste o host e a porta do seu servidor Redis
+            # O host e a porta do servidor Redis. Ajuste conforme seu ambiente.
+            'hosts': [('localhost', 6379)], 
         },
     },
 }
@@ -137,33 +159,37 @@ TEMPLATES = [
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db2.sqlite3',
-#     }
-# }
+# Configurações de banco de dados.
+# Veja https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
-        'NAME': 'servidorEaata',          # nome do banco de dados MySQL
-        'USER': 'root',           # usuário do MySQL
-        'PASSWORD': 'eaata360',         # senha do usuário
-        'HOST': 'localhost',                    # ou IP do servidor MySQL
-        'PORT': '3306',                        # porta padrão do MySQL
+        'ENGINE': 'django.db.backends.mysql',  # Define MySQL como o backend do banco de dados
+        'NAME': 'servidorEaata',          # Nome do banco de dados MySQL
+        'USER': 'root',                   # Usuário do MySQL
+        'PASSWORD': 'eaata360',           # Senha do usuário do MySQL
+        'HOST': 'localhost',              # Host do servidor MySQL (pode ser 'localhost' ou um IP)
+        'PORT': '3306',                   # Porta padrão do MySQL
     }
 }
 
-
+# Exemplo de configuração para SQLite (descomente para usar em desenvolvimento local simples)
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
-#         'NAME': 'servidorEaata',          # nome do banco de dados MySQL
-#         'USER': 'remote',           # usuário do MySQL
-#         'PASSWORD': 'eaata360',         # senha do usuário
-#         'HOST': '0.tcp.sa.ngrok.io',                    # ou IP do servidor MySQL
-#         'PORT': '13024',                        # porta padrão do MySQL
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3', # Nome do arquivo do banco de dados SQLite
+#     }
+# }
+
+# Exemplo de configuração para MySQL remoto via ngrok (descomente se necessário para tunelamento)
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'servidorEaata',
+#         'USER': 'remote',
+#         'PASSWORD': 'eaata360',
+#         'HOST': '0.tcp.sa.ngrok.io', # Host fornecido pelo ngrok
+#         'PORT': '13024',             # Porta fornecida pelo ngrok
 #     }
 # }
 

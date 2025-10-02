@@ -19,11 +19,21 @@ from django.urls import path, include
 from . import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path("", include("ocorrencia_erro.urls")),
+    # URL para a interface de administração do Django
+    path("admin/", admin.site.urls),
+
+    # Inclui as URLs da aplicação 'form' para formulários de suporte
     path("form/", include("form.urls")),
+
+    # Inclui as URLs da aplicação 'situacao_veiculo' para gerenciamento de veículos
     path("situacao/", include("situacao_veiculo.urls")),
+
+    # Inclui as URLs da aplicação 'ocorrencia_erro' para registro de ocorrências
     path("ocorrencia/", include("ocorrencia_erro.urls")),
+
+    # Inclui as URLs da aplicação 'API' para endpoints REST
     path("api/", include("API.urls")),
+
+    # Inclui as URLs da aplicação 'simulador' para funcionalidades de simulação
     path("simulador/", include("simulador.urls")),
 ]
