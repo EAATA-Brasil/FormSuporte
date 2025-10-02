@@ -158,9 +158,22 @@ def download_todos_arquivos(request, record_id):
 def index(request):
     responsaveis_por_pais_json, todos_responsaveis_json = get_responsaveis()
     
-    responsaveis = json.loads(todos_responsaveis_json)
+    ocorrencias_queryset = Record.objects.all()
+    user = request.user
 
-    # 2. Mapeia status técnicos para nomes legíveis
+    if not user.is_superuser:
+        paises_permitidos_ids = CountryPermission.objects.filter(user=user).values_list('country_id', flat=True)
+        is_semi_admin = user.groups.filter(name='Semi Admin').exists()
+
+        if is_semi_admin:
+            ocorrencias_queryset = ocorrencias_queryset.filter(country_id__in=list(paises_permitidos_ids))
+        else:
+            nome_completo_usuario = f"{user.first_name} {user.last_name}".strip() or user.username
+            ocorrencias_queryset = ocorrencias_queryset.filter(
+                Q(country_id__in=list(paises_permitidos_ids)) & 
+                Q(responsible=nome_completo_usuario)
+            )
+
     status_map = {
         Record.STATUS_OCORRENCIA.DONE: "Concluído",
         Record.STATUS_OCORRENCIA.LATE: "Atrasado",
@@ -169,38 +182,44 @@ def index(request):
         Record.STATUS_OCORRENCIA.AWAITING: "Aguardando"
     }
 
-    # 3. Inicializa dicionário de contagem
-    ocorrencias_dict = {}
+    ocorrencias_dict = defaultdict(lambda: {label: 0 for label in status_map.values()})
 
-    for responsavel in responsaveis:
-        nome = responsavel.get('name') or responsavel.get('nome') or responsavel.get('responsible')
-        if nome:
-            ocorrencias_dict[nome] = {label: 0 for label in status_map.values()}
-
-    # 4. Consulta todos os registros e agrupa por responsável e status
-    for record in Record.objects.all().values('responsible', 'status'):
+    for record in ocorrencias_queryset.values('responsible', 'status'):
         nome = record['responsible']
         status_codigo = record['status']
         status_legivel = status_map.get(status_codigo)
 
-        if nome in ocorrencias_dict and status_legivel:
+        if nome and nome != "Não identificado" and status_legivel:
             ocorrencias_dict[nome][status_legivel] += 1
 
-    # 5. Resultado final
     ocorrencias_json = json.dumps(ocorrencias_dict, ensure_ascii=False)
 
-    is_super = request.user.is_superuser
+    # --- INÍCIO DA ALTERAÇÃO NECESSÁRIA ---
+
+    is_super = user.is_superuser
+    # 1. Reutiliza a verificação de 'is_semi_admin' que já fizemos
+    is_semi_admin = user.groups.filter(name='Semi Admin').exists() 
+    
+    # 2. Cria a nova variável de permissão
+    has_edit_permission = is_super or is_semi_admin
+
+    # --- FIM DA ALTERAÇÃO NECESSÁRIA ---
+
     permitted_countries = Country.objects.filter(
-        countrypermission__user=request.user
-    ).values_list('name', flat=True)
+        id__in=CountryPermission.objects.filter(user=user).values_list('country_id', flat=True)
+    ).values_list('name', flat=True) if not is_super else Country.objects.all().values_list('name', flat=True)
 
     context = {
-        'user': request.user,
-        'paises_permitidos': permitted_countries,
+        'user': user,
+        'paises_permitidos': list(permitted_countries),
         'has_full_permission': is_super,
+        
+        # 3. Adiciona a nova variável ao contexto para ser usada no template
+        'has_edit_permission': has_edit_permission,
+        
         'responsaveis_por_pais': responsaveis_por_pais_json,
         'todos_responsaveis': todos_responsaveis_json,
-        'ocorrencias_json':ocorrencias_json,
+        'ocorrencias_json': ocorrencias_json,
     }
     return render(request, 'ocorrencia/index.html', context)
 
@@ -213,19 +232,50 @@ def filter_data_view(request):
             sort_info = data.get('sort', {'column': 'data', 'direction': 'asc'})
             page_number = data.get('page', 1)
 
-            # Consulta base otimizada
+            # 1. Consulta base otimizada
             base_queryset = Record.objects.select_related('device', 'country')
+            
             user = request.user
-            has_full_permission = user.is_superuser
+            
+            # --- INÍCIO DA DEPURAÇÃO ---
+            print(f"--- Iniciando depuração para o usuário: {user.username} ---")
+            
+            if not user.is_superuser:
+                # 1. Quais países este usuário pode ver?
+                paises_permitidos_ids = CountryPermission.objects.filter(user=user).values_list('country_id', flat=True)
+                paises_permitidos_lista = list(paises_permitidos_ids)
+                print(f"IDs dos países permitidos: {paises_permitidos_lista}")
+
+                # 2. O usuário é Semi Admin?
+                is_semi_admin = user.groups.filter(name='Semi Admin').exists()
+                print(f"É Semi Admin? {is_semi_admin}")
+                
+                # 3. Quais são TODOS os grupos do usuário?
+                grupos_usuario = list(user.groups.all().values_list('name', flat=True))
+                print(f"Grupos do usuário: {grupos_usuario}")
+
+                if is_semi_admin:
+                    print("Lógica de Semi Admin ativada. Filtrando por países...")
+                    base_queryset = base_queryset.filter(country_id__in=paises_permitidos_lista)
+                else:
+                    print("Lógica de Técnico Padrão ativada. Filtrando por países E responsável...")
+                    nome_completo_usuario = f"{user.first_name} {user.last_name}".strip() or user.username
+                    print(f"Filtrando por responsável: '{nome_completo_usuario}'")
+                    base_queryset = base_queryset.filter(
+                        Q(country_id__in=paises_permitidos_lista) & 
+                        Q(responsible=nome_completo_usuario)
+                    )
+                
+                print(f"Total de registros após filtro de permissão: {base_queryset.count()}")
+            else:
+                print("Usuário é Superuser. Nenhuma permissão aplicada.")
+            
+            print("--- Fim da depuração ---")
+            # --- FIM DA DEPURAÇÃO ---
 
             queryset = base_queryset
             
-            # Aplica permissões de país antes de qualquer outro filtro
-            if not has_full_permission:
-                permitted_countries = CountryPermission.objects.filter(user=user).values_list('country__name', flat=True)
-                queryset = queryset.filter(country__name__in=permitted_countries)
-
-            # Construção dos filtros
+            # 2. Construção dos filtros selecionados pelo usuário na interface
             q_objects = Q()
             for column, values in filters.items():
                 if not isinstance(values, list) or not values:
@@ -272,7 +322,6 @@ def filter_data_view(request):
                     elif column in TEXT_CASE_INSENSITIVE_COLUMNS:
                         text_q_objects = Q()
                         for val in non_empty:
-                            # Use __icontains para buscar valores que contenham o texto, ignorando espaços extras
                             text_q_objects |= Q(**{f'{column}__icontains': val.strip()})
                         column_q |= text_q_objects
                     else:
@@ -295,7 +344,7 @@ def filter_data_view(request):
             if q_objects:
                 queryset = queryset.filter(q_objects)
 
-            # Ordenação (mantida igual)
+            # 3. Ordenação
             sort_column = sort_info.get('column', 'data')
             sort_direction = sort_info.get('direction', 'asc')
             
@@ -308,11 +357,11 @@ def filter_data_view(request):
                     order_field = f"{'-' if sort_direction == 'desc' else ''}{sort_column}"
                 queryset = queryset.order_by(order_field)
 
-            # Paginação
+            # 4. Paginação
             paginator = Paginator(queryset, 11)
             page_obj = paginator.get_page(page_number)
 
-            # Prepara os dados para resposta
+            # 5. Preparação dos dados para a resposta JSON
             records_data = []
             for record in page_obj.object_list:
                 record_data = {
@@ -321,6 +370,11 @@ def filter_data_view(request):
                     'data': record.data,
                     'technical': record.technical or '',
                     'country': record.country.name if record.country else '',
+                    
+                    # --- ADICIONE ESTA LINHA ---
+                    'country_id': record.country.id if record.country else None,
+                    # -------------------------
+
                     'device': record.device.name if record.device else '',
                     'area': record.area or '',
                     'serial': record.serial or '',
@@ -334,8 +388,6 @@ def filter_data_view(request):
                     'deadline': record.deadline.strftime('%d/%m/%Y') if record.deadline else '',
                     'responsible': record.responsible or '',
                     'finished': record.finished.strftime('%d/%m/%Y') if record.finished else '',
-                    'feedback_technical': record.feedback_technical or '',
-                    'feedback_manager': record.feedback_manager or '',
                     'arquivos': [
                         {
                             'id': arquivo.id,
@@ -348,7 +400,7 @@ def filter_data_view(request):
                 }
                 records_data.append(record_data)
 
-            # Atualizar FILTERABLE_COLUMNS_FOR_OPTIONS para incluir codigo_externo
+            # 6. Geração de opções de filtro dinâmicas
             FILTERABLE_COLUMNS_FOR_OPTIONS = [
                 'codigo_externo', 'technical', 'country', 'device', 'area', 'serial', 'brand',
                 'model', 'year', 'version', 'status', 'responsible',
@@ -356,13 +408,13 @@ def filter_data_view(request):
             ]
 
             filter_options = {}
+            # IMPORTANTE: As opções de filtro são geradas a partir do `queryset` que já foi
+            # filtrado por permissão, garantindo que o usuário só veja opções relevantes.
             for col in FILTERABLE_COLUMNS_FOR_OPTIONS:
                 if col == 'country':
-                    # Agora, as opções de país são derivadas do queryset filtrado.
                     options = queryset.exclude(country__isnull=True).values_list('country__name', flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
                 elif col == 'device':
-                    # As opções de dispositivo também são derivadas do queryset filtrado.
                     options = queryset.exclude(device__isnull=True).values_list('device__name', flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
                 elif col == 'status':
@@ -397,6 +449,7 @@ def filter_data_view(request):
                     options = queryset.exclude(**{f'{col}__isnull': True}).exclude(**{f'{col}__exact': ''}).values_list(col, flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt is not None])))
 
+            # 7. Resposta final
             return JsonResponse({
                 'records': records_data,
                 'filter_options': filter_options,
@@ -455,7 +508,8 @@ def criar_usuario(request):
     if request.method == "POST":
         username = request.POST.get('username', '').strip().capitalize()
         password = request.POST.get('password', '')
-        tipo_usuario = request.POST.get('tipo_usuario', 'responsavel')  # Default é 'responsavel'
+        # O valor 'semi_admin' agora pode vir do formulário
+        tipo_usuario = request.POST.get('tipo_usuario', 'responsavel') 
         paises_responsavel = request.POST.getlist('paises_responsavel')
 
         if not username or not password:
@@ -471,16 +525,32 @@ def criar_usuario(request):
         
         # Adicionar o usuário ao grupo correspondente
         try:
+            # ======================================================
+            # INÍCIO DA ALTERAÇÃO: Lógica para os grupos
+            # ======================================================
             if tipo_usuario == 'responsavel':
-                grupo, created = Group.objects.get_or_create(name='Técnicos responsáveis')
-            else:  # tipo_usuario == 'reporte'
-                grupo, created = Group.objects.get_or_create(name='Técnicos de reporte')
-            
+                nome_grupo = 'Técnicos responsáveis'
+            elif tipo_usuario == 'reporte':
+                nome_grupo = 'Técnicos de reporte'
+            elif tipo_usuario == 'semi_admin':
+                # O nome do grupo deve ser exatamente este para a lógica de permissão funcionar
+                nome_grupo = 'Semi Admin'
+            else:
+                # Um fallback seguro, caso algo inesperado aconteça
+                nome_grupo = 'Técnicos de reporte'
+
+            # Busca ou cria o grupo e adiciona o usuário a ele
+            grupo, created = Group.objects.get_or_create(name=nome_grupo)
             user.groups.add(grupo)
+            # ======================================================
+            # FIM DA ALTERAÇÃO
+            # ======================================================
+
         except Exception as e:
+            # Se der erro, o usuário ainda é criado, mas informamos sobre o problema no grupo
             messages.warning(request, f"Usuário criado, mas houve um erro ao adicionar ao grupo: {str(e)}")
         
-        # Adicionar permissões de países
+        # Adicionar permissões de países (funciona para todos os tipos de usuário)
         for pais_id in paises_responsavel:
             try:
                 country = Country.objects.get(id=pais_id)
@@ -1190,3 +1260,59 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         import traceback
         traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': 'Ocorreu um erro interno ao gerar o PDF.'}, status=500)
+
+
+
+
+@login_required(login_url=URL_LOGIN)
+def download_arquivo(request, arquivo_id):
+    """
+    View para download seguro de arquivos anexados às ocorrências
+    """
+    try:
+        # Busca o arquivo no banco de dados
+        arquivo = get_object_or_404(ArquivoOcorrencia, id=arquivo_id)
+        
+        # Verifica se o usuário tem permissão para acessar este arquivo
+        # (baseado nas permissões de país da ocorrência)
+        record = arquivo.record
+        user = request.user
+        
+        if not user.is_superuser:
+            # Verifica se o usuário tem permissão para o país da ocorrência
+            if record.country:
+                has_permission = CountryPermission.objects.filter(
+                    user=user,
+                    country=record.country
+                ).exists()
+                if not has_permission:
+                    raise Http404("Arquivo não encontrado ou sem permissão")
+        
+        # Caminho completo do arquivo
+        file_path = arquivo.arquivo.path
+        
+        # Verifica se o arquivo existe fisicamente
+        if not os.path.exists(file_path):
+            raise Http404("Arquivo não encontrado no sistema")
+        
+        # Determina o tipo MIME do arquivo
+        content_type, _ = mimetypes.guess_type(file_path)
+        if content_type is None:
+            content_type = 'application/octet-stream'
+        
+        # Lê o arquivo
+        with open(file_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type=content_type)
+        
+        # Define o cabeçalho para forçar download
+        filename = arquivo.nome_original or os.path.basename(file_path)
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except ArquivoOcorrencia.DoesNotExist:
+        raise Http404("Arquivo não encontrado")
+    except Exception as e:
+        # Log do erro (em produção, usar logging adequado)
+        print(f"Erro no download do arquivo {arquivo_id}: {str(e)}")
+        raise Http404("Erro ao processar download")

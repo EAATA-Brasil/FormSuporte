@@ -293,7 +293,7 @@
                 {% include 'ocorrencia/components/lineHead.html' with name='Detalhes' ID="problem_detected" checbox='false'%}
                 {% include 'ocorrencia/components/lineHead.html' with name='status' ID="status"%}
                 {% include 'ocorrencia/components/lineHead.html' with name='prazo' ID="deadline"%}
-                {% if has_full_permission%}
+                {% if has_edit_permission%}
                     {% include 'ocorrencia/components/lineHead.html' with name='responsável' ID="responsible"%}
                 {%endif%}
                 {% include 'ocorrencia/components/lineHead.html' with name='finalizado' ID="finished"%}
@@ -501,7 +501,7 @@
         }
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
-    const responsaveisPorPais = {{ responsaveis_por_pais|safe }};
+    const responsaveisPorPais = JSON.parse('{{ responsaveis_por_pais|escapejs }}');
     const todosResponsaveis = {{ todos_responsaveis|safe }};
     const paisesPorResponsavel = {};
     Object.keys(responsaveisPorPais).forEach(paisId => {
@@ -649,7 +649,7 @@
                             <strong>Data:</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.data ? formatDateToDisplay(record.data) : 'Não informado'}</span>
                         </div>
-                        {% if has_full_permission %}
+                        {% if has_edit_permission %}
                             <div>
                                 <strong>Prazo:</strong><br>
                                 <input type="text"
@@ -1673,7 +1673,7 @@
                 sort: currentSort,
                 page: page_num
             };
-            if('{{has_full_permission}}' == 'False'){
+            if('{{has_edit_permission}}' == 'False'){
                 filterData.filters['responsible'] = []
                 filterData.filters['responsible'].push('{{user}}'.toUpperCase())
             }
@@ -1965,6 +1965,7 @@
             
             const visibleColumns = Array.from(table.querySelectorAll("thead th[data-column]")).map(th => th.getAttribute('data-column'));
             const has_full_permission = '{{has_full_permission}}' === 'True';
+            const has_edit_permission = '{{ has_edit_permission }}' === 'True';
 
             records.forEach((record) => {
                 const row = tableBody.insertRow();
@@ -2083,7 +2084,7 @@
                             }
                         }
 
-                    } else if ((columnName == 'deadline' && '{{has_full_permission}}' === 'True') || columnName == 'finished') {
+                    } else if ((columnName == 'deadline' && '{{has_edit_permission}}' === 'True') || columnName == 'finished') {
                         cell.id = `${columnName}${record.id}`
                         cell.classList.add('editable-field-container')
                         cell.classList.add('date-input-container')
@@ -2240,7 +2241,7 @@
                             }
                         }   
 
-                    } else if ((columnName == 'responsible' && '{{has_full_permission}}' === 'True')) {
+                    } else if ((columnName == 'responsible' && '{{has_edit_permission}}' === 'True')) {
                         cell.id = `${columnName}${record.id}`;
                         cell.classList.add('editable-field-container');
                         cell.classList.add('date-input-container');
@@ -2259,14 +2260,14 @@
                         select.appendChild(optionPlaceholder);
 
                         cell.appendChild(select);
-
+                        console.log("Estrutura de responsaveisPorPais:", responsaveisPorPais);
                         const responsaveis = responsaveisPorPais[record.country]
 
                         if (responsaveis) {
                             responsaveis.forEach(responsavel => {
                                 const opt = document.createElement('option');
-                                opt.textContent = capitalizeFirstLetter(responsavel.name)
-                                opt.value = responsavel.name
+                                opt.textContent = capitalizeFirstLetter(responsavel.name);
+                                opt.value = responsavel.name; // ou responsavel.id se preferir
                                 if (value && responsavel.name.toUpperCase() === value.toUpperCase()) {
                                     opt.selected = true;
                                 }
@@ -2316,7 +2317,8 @@
                     console.error("ID da China não recebido da API:", data.error || 'Erro desconhecido');
                 }
             })
-        .catch(error => console.error("Falha ao buscar ID da China:", error));
+        
+            .catch(error => console.error("Falha ao buscar ID da China:", error));
             // Configura os observadores após renderizar a tabela
             setTimeout(() => {
                 setupDateInputObservers();
