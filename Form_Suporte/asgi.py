@@ -4,7 +4,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from . import routing # Importe seu arquivo de rotas
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'seu_projeto.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Form_Suporte.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
