@@ -10,6 +10,7 @@ from django.conf import settings
 from .models import Equipamentos, TipoEquipamento, MarcaEquipamento
 from .serializers import EquipamentosSerializer, TipoEquipamentoSerializer, MarcaEquipamentoSerializer
 from datetime import datetime
+from django.views.decorators.csrf import csrf_exempt
 
 # Configuração para WeasyPrint
 if sys.platform == 'win32':
@@ -75,7 +76,8 @@ def html_to_pdf_weasyprint(html_string):
     except Exception as e:
         print(f"Erro ao gerar PDF com WeasyPrint: {e}")
         return None
-
+    
+@csrf_exempt
 @api_view(['POST'])
 def generate_pdf(request):
     """Gera PDF a partir dos dados de simulação"""
