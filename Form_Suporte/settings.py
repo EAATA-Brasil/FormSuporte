@@ -54,7 +54,10 @@ ALLOWED_HOSTS = [
     '*.ngrok-free.app',
     '*.ngrok-free.dev',
     '*',
-	'82.25.71.76'
+	'82.25.71.76',
+    'http://82.25.71.76',
+    'http://127.0.0.1',
+    'http://localhost',
 ]
 
 CSRF_TRUSTED_ORIGINS = [

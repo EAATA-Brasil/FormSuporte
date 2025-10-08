@@ -51,6 +51,7 @@ class MarcaEquipamentoViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = MarcaEquipamento.objects.all().order_by('nome')
     serializer_class = MarcaEquipamentoSerializer
 
+@csrf_exempt
 def format_currency(value):
     """Formata valor para moeda brasileira R$ 1.000,00"""
     try:
@@ -59,6 +60,7 @@ def format_currency(value):
     except (ValueError, TypeError):
         return "R$ 0,00"
 
+@csrf_exempt
 def html_to_pdf_weasyprint(html_string):
     """Converte HTML para PDF usando WeasyPrint"""
     if not WEASYPRINT_AVAILABLE:
@@ -186,5 +188,6 @@ def generate_pdf(request):
         return Response({'error': str(e)}, status=500)
 
 # Função compatível com nome antigo
+@csrf_exempt
 def html_to_pdf(html_string):
     return html_to_pdf_weasyprint(html_string)
