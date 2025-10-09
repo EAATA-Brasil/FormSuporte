@@ -784,10 +784,15 @@ body {
     background-color: var(--warning) !important;
     color: var(--dark) !important;
 }
-.table td[data-column="status"][data-initial-value="Aguardando"] {
+.table td[data-column="status"][data-initial-value="Aguardando China"] {
     background-color: var(--waiting) !important;
     color: var(--light) !important;
 }
+.table td[data-column="status"][data-initial-value="China Atrasada"] {
+    background-color: var(--error) !important;
+    color: white !important;
+}
+
 .table td[data-column="status"][data-initial-value="Atrasado"] {
     background-color: var(--error) !important;
     color: white !important;
@@ -1021,6 +1026,14 @@ footer select {
 
 .status-requisitado {
   background-color: #3498db; /* azul */
+}
+
+.awaiting-china-late{
+    background-color: #e74c3c;
+}
+
+.status-awaiting{
+
 }
 
 /* Estilização do container de upload de arquivos no popup */

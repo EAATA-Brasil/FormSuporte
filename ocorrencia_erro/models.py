@@ -1,3 +1,5 @@
+# ocorrencia/models.py
+
 from django.db import models
 from datetime import timedelta
 from django.core.exceptions import ValidationError
@@ -36,12 +38,16 @@ def gerar_codigo_espanha():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
 class Record(models.Model):
+    def is_awaiting_china_late(self):
+        return self.status == self.STATUS_OCORRENCIA.AWAITING_CHINA and self.deadline and self.deadline < timezone.now().date()
+    
     class STATUS_OCORRENCIA(models.TextChoices):
         DONE = "DONE", "Concluído"
         LATE = "LATE", "Atrasado"
         PROGRESS = "PROGRESS", "Em progresso"
         REQUESTED = "REQUESTED", "Requisitado"
-        AWAITING = "AWAITING", "Aguardando"
+        AWAITING_CHINA = "AWAITING_CHINA", "Aguardando China"
+        AWAITING_CHINA_LATE = "AWAITING_CHINA_LATE", "China Atrasada"
 
     # ID padrão autoincremental
     id = models.AutoField(primary_key=True)
@@ -161,7 +167,7 @@ class Record(models.Model):
         verbose_name="Problema detectado"
     )
     status = models.CharField(
-        max_length=20,
+        max_length=25,
         choices=STATUS_OCORRENCIA.choices,
         default=STATUS_OCORRENCIA.REQUESTED
     )
@@ -190,20 +196,31 @@ class Record(models.Model):
         """Método para limpar explicitamente a data de finished"""
         self.deadline= None
         self._explicitly_cleared_deadline = True  # Flag para evitar auto-preencher
-        if self.status != self.STATUS_OCORRENCIA.AWAITING:
+        if self.status != self.STATUS_OCORRENCIA.AWAITING_CHINA:
             self.status = self.STATUS_OCORRENCIA.REQUESTED
+            
     def clean(self):
         """
-        Validações e lógica de status normal (quando o país NÃO é China).
+        Validações e lógica de status com a ordem de prioridade correta.
         """
         super().clean()
-
-        # Se o país for China, a lógica de status será tratada no save(), então pulamos o resto.
-        if self.country and self.country.name == 'China':
-            return
-
         today = timezone.now().date()
 
+        # --- INÍCIO DA CORREÇÃO DEFINITIVA ---
+        # 1. LÓGICA DE PRIORIDADE MÁXIMA: VERIFICAÇÃO DOS STATUS DA CHINA
+        # Esta verificação tem de vir ANTES de todas as outras.
+        if self.status in [self.STATUS_OCORRENCIA.AWAITING_CHINA, self.STATUS_OCORRENCIA.AWAITING_CHINA_LATE]:
+            # Se o prazo existe e já passou, o status DEVE ser AWAITING_CHINA_LATE.
+            if self.deadline and self.deadline < today:
+                self.status = self.STATUS_OCORRENCIA.AWAITING_CHINA_LATE
+            # Caso contrário (se não há prazo ou o prazo está no futuro), deve ser AWAITING_CHINA.
+            else:
+                self.status = self.STATUS_OCORRENCIA.AWAITING_CHINA
+            # Retornamos para garantir que a lógica de status geral abaixo não seja executada e não sobrescreva a nossa decisão.
+            return
+        # --- FIM DA CORREÇÃO DEFINITIVA ---
+
+        # 2. LÓGICA DE STATUS GERAL (só é executada se o status não for relacionado à China)
         if self.finished and self.status != self.STATUS_OCORRENCIA.DONE:
             self.status = self.STATUS_OCORRENCIA.DONE
         elif self.status != self.STATUS_OCORRENCIA.DONE and self.finished:
@@ -211,6 +228,7 @@ class Record(models.Model):
 
         if not self.finished:
             if self.deadline:
+                # Esta verificação agora não interfere mais com os status da China.
                 if (self.deadline - today).days < 0:
                     if self.status != self.STATUS_OCORRENCIA.DONE:
                         self.status = self.STATUS_OCORRENCIA.LATE
@@ -224,25 +242,15 @@ class Record(models.Model):
         self.model = self.model.upper() if self.model else ''
         self.technical = self.technical.capitalize() if self.technical else ''
 
+    # O método save() não precisa de alterações.
     def save(self, *args, **kwargs):
-        """
-        Garante a ordem correta de execução e a prioridade da regra da China.
-        """
-        # 1. Armazena o país original se ainda não foi definido
         if not self.country_original and self.country:
             self.country_original = self.country.name
         
-        # 2. Chama clean() para validações
         self.clean()
-
-        # 3. REGRA DA CHINA (PRIORIDADE MÁXIMA): Sobrescreve qualquer status anterior
-        if self.country and self.country.name == 'China':
-            self.status = self.STATUS_OCORRENCIA.AWAITING
         
-        # 4. Salva o registro
         super().save(*args, **kwargs)
 
-        # 5. Lógica para gerar código externo (apenas para novos registros)
         if not self.codigo_externo and 'codigo_externo' not in (kwargs.get('update_fields') or []):
             self.codigo_externo = str(self.id)
             super().save(update_fields=['codigo_externo'])

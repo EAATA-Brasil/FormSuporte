@@ -512,6 +512,101 @@
         paisesPorResponsavel[responsavel.name].push(parseInt(paisId));
         });
     });
+    // ===== SISTEMA DE ATUALIZAÇÃO DINÂMICA DE STATUS (ESCOPO GLOBAL) =====
+    // Estado global para controlar atualizações
+    let statusUpdateSystem = {
+        records: [],
+        isInitialized: false,
+        observers: new Map(),
+        debounceTimers: new Map()
+    };
+
+    // ===== SISTEMA DE OBSERVERS PARA FUNCIONALIDADES CHINA (ESCOPO GLOBAL) =====
+    let chinaStatusObserver = {
+        records: new Map(),
+        timers: new Map(),
+        
+        // Observa mudanças no status China
+        observe(recordId, record) {
+            this.records.set(recordId, record);
+            this.scheduleUpdate(recordId, record);
+        },
+        
+        // Remove observação
+        unobserve(recordId) {
+            if (this.timers.has(recordId)) {
+                clearTimeout(this.timers.get(recordId));
+                this.timers.delete(recordId);
+            }
+            this.records.delete(recordId);
+        },
+        
+        // Agenda atualização com debounce
+        scheduleUpdate(recordId, record, delay = 1000) {
+            if (this.timers.has(recordId)) {
+                clearTimeout(this.timers.get(recordId));
+            }
+            
+            const timer = setTimeout(() => {
+                //this.updateChinaStatus(recordId, record);
+                this.timers.delete(recordId);
+            }, delay);
+            
+            this.timers.set(recordId, timer);
+        },
+        
+        
+        
+        // Limpa todos os observers
+        clear() {
+            this.timers.forEach(timer => clearTimeout(timer));
+            this.timers.clear();
+            this.records.clear();
+        }
+    };
+
+    // Função para calcular status específico da China (ESCOPO GLOBAL)
+    function calculateChinaStatus(record) {
+        const currentStatus = record.status;
+        
+        // Se não é status relacionado à China, retorna null
+        if (currentStatus !== 'Aguardando China' && currentStatus !== 'China Atrasada') {
+            return null;
+        }
+        
+        const parseDate = (dateStr) => {
+            if (!dateStr || dateStr === "Não definido" || dateStr === "Não finalizado") return null;
+            const [day, month, year] = dateStr.split('/').map(Number);
+            return new Date(year, month - 1, day);
+        };
+        
+        const deadlineDate = parseDate(record.deadline);
+        if (!deadlineDate) return currentStatus; // Mantém status atual se não há prazo
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const deadline = new Date(deadlineDate);
+        deadline.setHours(0, 0, 0, 0);
+        
+        // Se já está finalizado, não muda o status China
+        if (record.finished && record.finished !== "Não finalizado") {
+            return currentStatus;
+        }
+        
+        // Lógica de transição: se passou do prazo e está "Aguardando China", vira "China Atrasada"
+        if (currentStatus === 'Aguardando China' && today > deadline) {
+            return 'China Atrasada';
+        }
+        
+        // Se está "China Atrasada" mas não passou do prazo, volta para "Aguardando China"
+        if (currentStatus === 'China Atrasada' && today <= deadline) {
+            return 'Aguardando China';
+        }
+        
+        return currentStatus; // Mantém status atual
+    }
+
     document.addEventListener("DOMContentLoaded", function ( ) {
         "use strict";
 
@@ -639,7 +734,13 @@
                         </div>
                         <div>
                             <strong>Status:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.status || 'Não informado'}</span>
+
+                                <select class="editable-select-status" data-record-id="${record.id}" data-field-name="status">
+                                    <!-- INÍCIO DA CORREÇÃO NO POPUP -->
+                                    <option value="REQUESTED" ${record.status_code === 'REQUESTED' ? 'selected' : ''}>Aguardando Responsável</option>
+                                    <option value="AWAITING_CHINA" ${record.status_code === 'AWAITING_CHINA' || record.status_code === 'AWAITING_CHINA_LATE' ? 'selected' : ''}>Aguardando China</option>
+                                    <!-- FIM DA CORREÇÃO NO POPUP -->
+                                </select>
                         </div>
                         <div>
                             <strong>Responsável:</strong><br>
@@ -758,7 +859,6 @@
                     const problemDetectedTextarea = document.getElementById(problemDetectedId);
                     const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);
                     const feedbackManagerTextarea = document.getElementById(feedbackManagerId);
-                    console.log(document.getElementById('form-ocorrencia'))
                     document.getElementById("button_pdf").addEventListener('click', ()=>{
                         handleGerarPdf(id)
                     })
@@ -1750,59 +1850,52 @@
         */
         // ===== SISTEMA DE ATUALIZAÇÃO DINÂMICA DE STATUS =====
         // Simula o comportamento de useEffect do React em JavaScript puro
+        // (Definições movidas para escopo global)
 
-        // Estado global para controlar atualizações
-        let statusUpdateSystem = {
-            records: [],
-            isInitialized: false,
-            observers: new Map(),
-            debounceTimers: new Map()
-        };
-
-        // Função pura para calcular o status baseado nas datas
+        // Função pura para calcular o status baseado nas datas (MODIFICADA)
         function calculateStatus(record) {
-            // REGRA DA CHINA: Se o país for China, o status é sempre "Aguardando".
-            // Esta é a verificação mais importante e deve vir primeiro.
-            if (record.country === 'China') {
-                return 'Aguardando';
-            }
-
-            const deadlineStr = record.deadline; // Formato: DD/MM/YYYY
-            const finishedStr = record.finished; // Formato: DD/MM/YYYY
+            const deadlineStr = record.deadline;
+            const finishedStr = record.finished;
             
-            // Se tem data de finalização, sempre é "Concluído"
+            const parseDate = (dateStr) => {
+                if (!dateStr || dateStr === "Não definido" || dateStr === "Não finalizado") return null;
+                const [day, month, year] = dateStr.split('/').map(Number);
+                return new Date(year, month - 1, day);
+            };
+            
+            // PRIORIDADE 1: Verificar se é um caso especial da China
+            const chinaStatus = calculateChinaStatus(record);
+            if (chinaStatus) {
+                // Registrar no observer para monitoramento contínuo
+                chinaStatusObserver.observe(record.id, record);
+                return chinaStatus;
+            }
+            
+            // PRIORIDADE 2: Lógica original para outros status
+            const deadlineDate = parseDate(deadlineStr);
+            // if (!deadlineDate) return 'Requisitado';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const deadline = new Date(deadlineDate);
+            deadline.setHours(0, 0, 0, 0);
+
             if (finishedStr && finishedStr !== "Não finalizado") {
                 return 'Concluído';
             }
             
-            // Se não tem prazo definido, é "Requisitado"
             if (!deadlineStr || deadlineStr === "Não definido") {
                 return 'Requisitado';
             }
             
-            // Converte data do formato DD/MM/YYYY para Date
-            const parseDate = (dateStr) => {
-                if (!dateStr || dateStr === "Não definido" || dateStr === "Não finalizado") return null;
-                const [day, month, year] = dateStr.split('/').map(Number);
-                return new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
-            };
-            
-            const deadlineDate = parseDate(deadlineStr);
-            if (!deadlineDate) return 'Requisitado';
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas a data
-            
-            const deadline = new Date(deadlineDate);
-            deadline.setHours(0, 0, 0, 0);
-            
-            // Compara as datas
             if (today > deadline) {
                 return 'Atrasado';
             } else {
                 return 'Em progresso';
             }
         }
+
 
         // Função para atualizar o status de um registro específico
         function updateRecordStatus(recordId, newStatus) {
@@ -1815,20 +1908,38 @@
             if (currentStatus !== newStatus) {
                 statusCell.textContent = newStatus;
                 
-                // Cria um elemento mock para usar com a função saveField existente
-                const mockElement = {
-                    value: newStatus,
-                    closest: () => statusCell,
-                    classList: { add: () => {}, remove: () => {} },
-                    setAttribute: () => {}
-                };
+                // CORREÇÃO: Persistir status China no backend usando a API correta
+                const statusCode = newStatus === 'China Atrasada' ? 'AWAITING_CHINA_LATE' : 
+                                 newStatus === 'Aguardando China' ? 'AWAITING_CHINA' : newStatus;
                 
-                // Chama a função saveField para persistir no backend
-                if (typeof saveField === 'function') {
-                    saveField(mockElement);
-                }
-                statusCell.setAttribute('data-initial-value', newStatus)
-                //console.log(`Status atualizado para registro ${recordId}: ${currentStatus} → ${newStatus}`);
+                fetch('{% url "update_ocorrencia" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        id: recordId,
+                        field: 'status',
+                        value: statusCode,
+                        page_num: page_num
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        statusCell.setAttribute('data-initial-value', newStatus);
+                    } else {
+                        console.error('Erro ao persistir status China:', data.message);
+                        // Reverte o status na interface se falhou no backend
+                        statusCell.textContent = currentStatus;
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro de rede ao persistir status China:', error);
+                    // Reverte o status na interface se falhou no backend
+                    statusCell.textContent = currentStatus;
+                });
             }
         }
 
@@ -1951,6 +2062,9 @@
             // Armazena os records no sistema de status
             statusUpdateSystem.records = records || [];
             
+            // HOOK: Limpar observers China antes de recriar a tabela
+            chinaStatusObserver.clear();
+            
             tableBody.innerHTML = "";
             if (!records || records.length === 0) {
                 const colspan = table.querySelectorAll("thead th[data-column]").length;
@@ -1967,7 +2081,7 @@
             const has_full_permission = '{{has_full_permission}}' === 'True';
             const has_edit_permission = '{{ has_edit_permission }}' === 'True';
 
-            records.forEach((record) => {
+           records.forEach((record) => {
                 const row = tableBody.insertRow();
                 visibleColumns.forEach(columnName => {
                     const cell = row.insertCell();
@@ -1977,40 +2091,21 @@
                     let value = record[columnName];
                     const headerInfo = headerData.find(h => h.columnName === columnName);
                     
-                    if (columnName === 'country') {
-                        cell.id = `${columnName}${record.id}`;
-                        cell.classList.add('editable-field-container');
-                        const select = document.createElement('select');
-                        select.id = `${columnName}${record.id}`;
+                    // --- INÍCIO DA CORREÇÃO 2: SIMPLIFICAR A LÓGICA DA COLUNA DE STATUS ---
+                    if (columnName === 'status') {
+                        // LÓGICA FINAL E SIMPLIFICADA:
+                        // 1. Apenas exibe o texto do status que o backend enviou.
+                        cell.textContent = record.status_display; 
 
-                        select.addEventListener('change', (e) => {
-                            fetch('{% url "update_ocorrencia" %}', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-                                body: JSON.stringify({ id: record.id, field: 'country', value: e.target.value, page_num: page_num })
-                            }).then(res => res.json()).then(data => {
-                                if (data.status === 'success') applyFiltersAndSort();
-                                else Swal.fire('Erro', data.message || 'Erro desconhecido', 'error');
-                            }).catch(err => Swal.fire('Erro de Rede', err.toString(), 'error'));
-                        });
-
-                        if (value === 'China') {
-                            select.innerHTML = `
-                                <option value="${record.country_id}" selected>China</option>
-                                <option value="revert">Voltar para ${record.country_original || 'Original'}</option>
-                            `;
-                        } else {
-                            select.innerHTML = `
-                                <option value="${record.country_id || ''}" selected>${value || '-- Selecione --'}</option>
-                                <option value="china_id_placeholder">Mudar para China</option>
-                            `;
+                        // 2. Adiciona a classe de estilo para qualquer status de atraso.
+                        // Usamos o 'status_code' que vem do backend para uma verificação fiável.
+                        if (record.status_code === 'AWAITING_CHINA_LATE' || record.status_code === 'LATE') {
+                            cell.classList.add("awaiting-china-late"); // Reutiliza a classe de estilo vermelha
                         }
-                        cell.appendChild(select);
-
-                    } else if (columnName === 'status') {
-                        cell.textContent = record.status; // O status agora vem correto do backend
-
-                    } else if (headerInfo?.isDateColumn) {
+                    } 
+                    // --- FIM DA CORREÇÃO 2 ---
+                    
+                    else if (headerInfo?.isDateColumn) {
                         if (value) {
                             value = formatDateToDisplay(value);
                         } else {
@@ -2062,26 +2157,24 @@
                         cell.appendChild(container);
 
                     } else if (columnName == 'status') {
-                        // === NOVA LÓGICA DE STATUS DINÂMICA ===
+                        // === LÓGICA DE STATUS CORRIGIDA ===
                         cell.id = `${columnName}${record.id}`;
                         cell.classList.add('field-container');
                         
-                        // Calcula o status correto baseado nas datas
-                        const calculatedStatus = calculateStatus(record);
-                        cell.textContent = calculatedStatus;
-                        cell.setAttribute('data-initial-value', calculatedStatus);
-                        // Se o status calculado for diferente do que veio do backend, atualiza
-                        if (calculatedStatus !== record[columnName]) {
-                            const mockElement = {
-                                value: calculatedStatus,
-                                closest: () => cell,
-                                classList: { add: () => {}, remove: () => {} },
-                                setAttribute: () => {}
-                            };
-                            
-                            if (typeof saveField === 'function') {
-                                saveField(mockElement);
-                            }
+                        // CORREÇÃO: Usar o status que vem do backend (record.status_display)
+                        // e apenas registrar no observer se for status China
+                        const displayStatus = record.status_display || record.status;
+                        cell.textContent = displayStatus;
+                        cell.setAttribute('data-initial-value', displayStatus);
+                        
+                        // Se é status China, registra no observer para monitoramento
+                        if (record.status === 'Aguardando China' || record.status === 'China Atrasada') {
+                            chinaStatusObserver.observe(record.id, record);
+                        }
+                        
+                        // Adiciona classe de estilo para status atrasados
+                        if (record.status_code === 'AWAITING_CHINA_LATE' || record.status_code === 'LATE') {
+                            cell.classList.add("awaiting-china-late");
                         }
 
                     } else if ((columnName == 'deadline' && '{{has_edit_permission}}' === 'True') || columnName == 'finished') {
@@ -2260,7 +2353,6 @@
                         select.appendChild(optionPlaceholder);
 
                         cell.appendChild(select);
-                        console.log("Estrutura de responsaveisPorPais:", responsaveisPorPais);
                         const responsaveis = responsaveisPorPais[record.country]
 
                         if (responsaveis) {
@@ -2299,26 +2391,10 @@
                         cell.appendChild(textArea)
 
                     } else {
-                        if(columnName !== 'country') cell.textContent = (value !== null && value !== undefined) ? value : "";
+                        cell.textContent = (value !== null && value !== undefined) ? value : "";
                     }
                 });
             });
-            fetch('/api/get_china_id/')
-            .then(response => {
-                if (!response.ok) throw new Error('Resposta da API não foi OK');
-                return response.json();
-            })
-            .then(data => {
-                if (data.china_id) {
-                    document.querySelectorAll('option[value="china_id_placeholder"]').forEach(option => {
-                        option.value = data.china_id;
-                    });
-                } else {
-                    console.error("ID da China não recebido da API:", data.error || 'Erro desconhecido');
-                }
-            })
-        
-            .catch(error => console.error("Falha ao buscar ID da China:", error));
             // Configura os observadores após renderizar a tabela
             setTimeout(() => {
                 setupDateInputObservers();
@@ -2326,6 +2402,13 @@
                     recalculateAllStatus();
                     statusUpdateSystem.isInitialized = true;
                 }
+                
+                // HOOK: Inicializar observers China para registros com status China
+                records.forEach(record => {
+                    if (record.status === 'Aguardando China' || record.status === 'China Atrasada') {
+                        chinaStatusObserver.observe(record.id, record);
+                    }
+                });
             }, 100);
         }
 
@@ -2648,7 +2731,55 @@
             }
         };
     });
+        document.addEventListener("change", function(event) {
+            if (event.target.classList.contains("editable-select-status")) {
+                const selectElement = event.target;
+                const recordID = selectElement.getAttribute("data-record-id");
+                const fieldName = selectElement.getAttribute("data-field-name");
+                const newValue = selectElement.value;
 
+                fetch("{% url 'update_ocorrencia' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({
+                        id: recordID,
+                        field: fieldName,
+                        value: newValue,
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        // HOOK: Atualizar observers China quando status é alterado
+                        const record = statusUpdateSystem.records.find(r => r.id == recordID);
+                        if (record) {
+                            record.status = newValue; // Atualiza o status no record local
+                            
+                            // Se o novo status é relacionado à China, adiciona ao observer
+                            if (newValue === 'Aguardando China' || newValue === 'China Atrasada') {
+                                chinaStatusObserver.observe(recordID, record);
+                            } else {
+                                // Se não é mais status China, remove do observer
+                                chinaStatusObserver.unobserve(recordID);
+                            }
+                        }
+                        
+                        applyFiltersAndSort(); // Atualiza a tabela principal
+                        // Opcional: Atualizar o pop-up se ele ainda estiver aberto
+                        // Swal.update({ html: updatedPopupContent });
+                    } else {
+                        Swal.fire("Erro", data.message || "Erro desconhecido ao atualizar status.", "error");
+                    }
+                })
+                .catch(error => {
+                    console.error("Erro ao salvar status no pop-up:", error);
+                    Swal.fire("Erro de Rede", "Não foi possível conectar ao servidor para atualizar o status.", "error");
+                });
+            }
+        });
 </script>
 
 </body>

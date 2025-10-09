@@ -39,7 +39,8 @@ STATUS_OCORRENCIA = {
     'Atrasado': 'LATE',
     'Em progresso': 'PROGRESS',
     'Requisitado': 'REQUESTED',
-    'Aguardando': 'AWAITING',
+    'Aguardando China': 'AWAITING_CHINA',
+    'China Atrasada': 'AWAITING_CHINA_LATE', # Adicionado novo status
 }
 STATUS_MAP_REVERSED = {v: k for k, v in STATUS_OCORRENCIA.items()}
 
@@ -179,7 +180,9 @@ def index(request):
         Record.STATUS_OCORRENCIA.LATE: "Atrasado",
         Record.STATUS_OCORRENCIA.PROGRESS: "Em progresso",
         Record.STATUS_OCORRENCIA.REQUESTED: "Requisitado",
-        Record.STATUS_OCORRENCIA.AWAITING: "Aguardando"
+        Record.STATUS_OCORRENCIA.AWAITING_CHINA: "Aguardando China",
+        Record.STATUS_OCORRENCIA.AWAITING_CHINA_LATE: "China Atrasada",
+
     }
 
     ocorrencias_dict = defaultdict(lambda: {label: 0 for label in status_map.values()})
@@ -295,6 +298,9 @@ def filter_data_view(request):
                 if non_empty:
                     if column == 'status':
                         status_values = [STATUS_OCORRENCIA.get(v, v) for v in non_empty]
+                        # Adiciona AWAITING_CHINA ao filtro se AWAITING for selecionado
+                        if 'AWAITING' in status_values and 'AWAITING_CHINA' not in status_values:
+                            status_values.append('AWAITING_CHINA')
                         column_q |= Q(status__in=status_values)
                     elif column in DATE_COLUMNS:
                         dates = []
@@ -373,6 +379,7 @@ def filter_data_view(request):
                     
                     # --- ADICIONE ESTA LINHA ---
                     'country_id': record.country.id if record.country else None,
+                    'is_awaiting_china_late': record.is_awaiting_china_late(),
                     # -------------------------
 
                     'device': record.device.name if record.device else '',
@@ -385,6 +392,10 @@ def filter_data_view(request):
                     'version': record.version or '',
                     'problem_detected': record.problem_detected or '',
                     'status': STATUS_MAP_REVERSED.get(record.status, record.status or ''),
+
+                    'status_display': STATUS_MAP_REVERSED.get(record.status, record.status or ''),
+                    'status_code': record.status,
+
                     'deadline': record.deadline.strftime('%d/%m/%Y') if record.deadline else '',
                     'responsible': record.responsible or '',
                     'finished': record.finished.strftime('%d/%m/%Y') if record.finished else '',
@@ -398,6 +409,7 @@ def filter_data_view(request):
                         for arquivo in ArquivoOcorrencia.objects.filter(record=record)
                     ],
                 }
+                record_data['status'] = record_data['status_display']
                 records_data.append(record_data)
 
             # 6. Geração de opções de filtro dinâmicas
@@ -683,7 +695,7 @@ def subir_ocorrencia(request):
                 'Concluído': Record.STATUS_OCORRENCIA.DONE,
                 'Em progresso': Record.STATUS_OCORRENCIA.PROGRESS,
                 'Atrasado': Record.STATUS_OCORRENCIA.LATE,
-                'Aguardando': Record.STATUS_OCORRENCIA.AWAITING,
+                'Aguardando China': Record.STATUS_OCORRENCIA.AWAITING_CHINA,
             }
             if status_input in status_mapping:
                 record_data['status'] = status_mapping[status_input]
