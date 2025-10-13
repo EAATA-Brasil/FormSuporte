@@ -2,6 +2,7 @@ from django.db import models
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from datetime import date
 
 class Cliente(models.Model):
     data = models.DateField(verbose_name="Data", blank=False, default=timezone.now)
@@ -18,7 +19,7 @@ class Cliente(models.Model):
     equipamento = models.CharField(verbose_name='Equipamento', max_length=100, blank=True, default="")
 
     def clean(self):
-        if self.serial:
+       if self.serial:
             qs = Cliente.objects.filter(serial=self.serial)
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
@@ -26,7 +27,6 @@ class Cliente(models.Model):
                 raise ValidationError({'serial': 'Este serial já está cadastrado para outro cliente.'})
 
     def save(self, *args, **kwargs):
-        self.clean()  # chama o clean para validar
         if not self.vencimento:
             if self.data and self.anos_para_vencimento:
                 self.vencimento = self.data + relativedelta(years=self.anos_para_vencimento)
@@ -34,3 +34,43 @@ class Cliente(models.Model):
 
     def __str__(self):
         return f"{self.nome} - {self.vencimento}"
+
+    @property
+    def _vencimento_dias(self):
+        if not self.vencimento:
+            return -999999 # Um valor muito baixo para indicar que não há vencimento definido
+        return (self.vencimento - date.today()).days
+
+    @property
+    def status(self):
+        if not self.vencimento:
+            return 'indefinido'
+        
+        if self.vencimento < self.data:
+            return 'bloqueado_data_invalida'
+
+        dias = self._vencimento_dias
+        if dias > 30:
+            return 'direito'
+        elif dias < 1:
+            return 'vencido'
+        else:
+            return 'vencendo'
+
+    @property
+    def status_message(self):
+        status = self.status
+        if status == 'direito':
+            return "SUPORTE LIBERADO - Atender normalmente"
+        elif status == 'vencido':
+            return "SUPORTE VENCIDO - Não fazer atendimento - BLOQUEADO"
+        elif status == 'vencendo':
+            return "SUPORTE A VENCER - Atender normalmente - Passar para o comercial"
+        elif status == 'bloqueado_data_invalida':
+            return "Não fazer atendimento - INFORMAR AO GESTOR"
+        else:
+            return "Status de suporte indefinido. Contatar administrador."
+
+
+
+      

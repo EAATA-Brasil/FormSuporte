@@ -34,7 +34,7 @@ As views gerenciam a lógica de apresentação e manipulação de dados.
 
 ### 3.1. `buscar_serial(request)`
 
-- **URL:** `/buscar/`
+- **URL:** `/situacao/buscar/`
 - **Métodos:** `POST`
 - **Funcionalidade:**
     - Recebe um número de série via `POST`.
@@ -47,7 +47,7 @@ As views gerenciam a lógica de apresentação e manipulação de dados.
 
 ### 3.2. `index(request)`
 
-- **URL:** `/`
+- **URL:** `/situacao`
 - **Métodos:** `GET`
 - **Funcionalidade:** Renderiza a página inicial do aplicativo (`situacao/index.html`). Inicialmente, não exibe nenhum cliente, aguardando a entrada de um número de série para busca.
 
@@ -57,8 +57,8 @@ O aplicativo `situacao_veiculo` define os seguintes padrões de URL:
 
 | Padrão de URL | View Associada | Nome da URL | Descrição |
 |---|---|---|---|
-| `/` | `views.index` | `index` | Página inicial para verificar o status do suporte. |
-| `buscar/` | `views.buscar_serial` | `buscar_serial` | Endpoint para buscar o status do suporte por número de série. |
+| `/situacao` | `views.index` | `index` | Página inicial para verificar o status do suporte. |
+| `/situacao/buscar/` | `views.buscar_serial` | `buscar_serial` | Endpoint para buscar o status do suporte por número de série. |
 
 ## 5. Configuração (`apps.py`)
 

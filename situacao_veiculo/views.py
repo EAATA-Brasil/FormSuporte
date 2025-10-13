@@ -1,6 +1,5 @@
 from django.shortcuts import render, redirect
 from .models import Cliente
-from datetime import datetime, date
 
 def buscar_serial(request):
     context = {}
@@ -16,59 +15,24 @@ def buscar_serial(request):
             return render(request, 'situacao/index.html', context)
         
         if clientes.count() > 1:
-            # Há duplicatas - mostrar lista com status de cada um
             lista_clientes = []
-            hoje = date.today()
             for cliente in clientes:
-                data_vencimento = cliente.vencimento
-                vencimento_dias = (data_vencimento - hoje).days
-                
-                if vencimento_dias > 30:
-                    status = 'direito'
-                    mensagem_status = "SUPORTE LIBERADO - Atender normalmente"
-                elif vencimento_dias < 1:
-                    status = 'vencido'
-                    mensagem_status = "SUPORTE VENCIDO - Não fazer atendimento - BLOQUEADO"
-                else:
-                    status = 'vencendo'
-                    mensagem_status = "SUPORTE A VENCER - Atender normalmente - Passar para o comercial"
-                
                 lista_clientes.append({
                     'cliente': cliente,
-                    'status': status,
-                    'vencimento_dias': vencimento_dias,
-                    'status_message': mensagem_status,
+                    'status': cliente.status,
+                    'vencimento_dias': cliente._vencimento_dias,
+                    'status_message': cliente.status_message,
                 })
             
             context['clientes_duplicados'] = lista_clientes
             context['mensagem'] = 'Encontradas múltiplas ocorrências para esse serial. Verifique os dados abaixo:'
             return render(request, 'situacao/index.html', context)
         
-        # Caso tenha exatamente 1 cliente, continua igual antes
         cliente = clientes.first()
         context['cliente'] = cliente
-        
-        hoje = date.today()
-        vencimento_dias = (cliente.vencimento - hoje).days
-        
-        if cliente.vencimento < cliente.data :
-            context['status'] = 'vencido'
-            context['mensagem'] = "Não fazer atendimento - INFORMAR AO GESTOR"
-            context['status_message'] = "SUPORTE BLOQUEADO"
-            return render(request, 'situacao/index.html', context)
-
-        if vencimento_dias > 30:
-            context['status'] = 'direito'
-            context['mensagem'] = "Atender normalmente"
-            context['status_message'] = "SUPORTE LIBERADO"
-        elif vencimento_dias < 1:
-            context['status'] = 'vencido'
-            context['mensagem'] = "Não fazer atendimento - BLOQUEADO"
-            context['status_message'] = "SUPORTE VENCIDO"
-        else:
-            context['status'] = 'vencendo'
-            context['mensagem'] = "Atender normalmente - Passar para o comercial"
-            context['status_message'] = "SUPORTE A VENCER"
+        context['status'] = cliente.status
+        context['mensagem'] = cliente.status_message
+        context['status_message'] = cliente.status_message
         
         return render(request, 'situacao/index.html', context)
     
@@ -76,5 +40,5 @@ def buscar_serial(request):
 
 
 def index(request):
-    # Pode manter esta view para exibir todos os clientes inicialmente
     return render(request, 'situacao/index.html', {'clientes': None})
+
