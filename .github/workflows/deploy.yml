@@ -17,18 +17,33 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-              cd /home/ubuntu/Sistema_Suporte
-              
-              echo "=== DEBUG DO AMBIENTE ==="
-              whoami
-              pwd
-              env | grep -i db
-              env | grep -i django
-              
-              echo "=== VERIFICANDO .env ==="
-              ls -la .env
-              cat .env
-              
-              echo "=== VERIFICANDO CONEXÃO MYSQL ==="
-              mysql --version
-              mysql -u root -p -e "SHOW DATABASES;" || echo "Erro MySQL"
+            cd /home/ubuntu/Sistema_Suporte
+            
+            # Garantir que não tem .env
+            rm -f .env
+            
+            git fetch origin main
+            git reset --hard origin/main
+            
+            if [ ! -d "env" ]; then
+                python3 -m venv env
+            fi
+            
+            ./env/bin/pip install -r requirements.txt
+            
+            echo "=== VERIFICANDO CONFIGURAÇÕES DO DJANGO ==="
+            ./env/bin/python -c "
+            import os
+            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'seu_projeto.settings')
+            import django
+            django.setup()
+            from django.conf import settings
+            print('DATABASE:', settings.DATABASES['default']['ENGINE'])
+            print('DB_NAME:', settings.DATABASES['default']['NAME'])
+            print('DB_USER:', settings.DATABASES['default']['USER'])
+            print('DB_HOST:', settings.DATABASES['default']['HOST'])
+            "
+            
+            ./env/bin/python manage.py migrate --noinput
+            ./env/bin/python manage.py collectstatic --noinput
+            sudo systemctl restart django_runserver
