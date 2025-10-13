@@ -154,7 +154,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
         'NAME': 'servidorEaata',          # nome do banco de dados MySQL
-        'USER': 'root',           # usuário do MySQL
+        'USER': 'remote',           # usuário do MySQL
         'PASSWORD': 'eaata360',         # senha do usuário
         'HOST': 'localhost',                    # ou IP do servidor MySQL
         'PORT': '3306',                        # porta padrão do MySQL
