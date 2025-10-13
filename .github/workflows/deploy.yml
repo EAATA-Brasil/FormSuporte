@@ -18,11 +18,29 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /home/ubuntu/Sistema_Suporte
+            
+            echo "=== ATUALIZANDO CÓDIGO ==="
             git fetch origin main
             git reset --hard origin/main
-            source venv/bin/activate
-            pip install -r requirements.txt
-            python manage.py makemigrations --noinput
-            python manage.py migrate --noinput
-            python manage.py collectstatic --noinput
+            
+            echo "=== VERIFICANDO/CRIANDO VIRTUAL ENVIRONMENT ==="
+            # Verificar se venv existe, se não, criar
+            if [ ! -d "venv" ]; then
+                echo "Criando novo virtual environment..."
+                python3 -m venv venv
+            fi
+            
+            echo "=== ATIVANDO VENV E INSTALANDO DEPENDÊNCIAS ==="
+            # Usar caminhos absolutos para evitar problemas
+            /home/ubuntu/Sistema_Suporte/venv/bin/pip install --upgrade pip
+            /home/ubuntu/Sistema_Suporte/venv/bin/pip install -r requirements.txt
+            
+            echo "=== EXECUTANDO COMANDOS DJANGO ==="
+            # Usar Python do venv diretamente
+            /home/ubuntu/Sistema_Suporte/venv/bin/python manage.py migrate --noinput
+            /home/ubuntu/Sistema_Suporte/venv/bin/python manage.py collectstatic --noinput
+            
+            echo "=== REINICIANDO SERVIÇO ==="
             sudo systemctl restart django_runserver
+            
+            echo "✅ DEPLOY CONCLUÍDO!"
