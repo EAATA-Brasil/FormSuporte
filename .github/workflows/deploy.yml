@@ -24,21 +24,21 @@ jobs:
             git reset --hard origin/main
             
             echo "=== VERIFICANDO/CRIANDO VIRTUAL ENVIRONMENT ==="
-            # Verificar se venv existe, se não, criar
-            if [ ! -d "venv" ]; then
+            # Verificar se env existe, se não, criar
+            if [ ! -d "env" ]; then
                 echo "Criando novo virtual environment..."
-                python3 -m venv venv
+                python3 -m venv env
             fi
             
-            echo "=== ATIVANDO VENV E INSTALANDO DEPENDÊNCIAS ==="
+            echo "=== ATIVANDO ENV E INSTALANDO DEPENDÊNCIAS ==="
             # Usar caminhos absolutos para evitar problemas
-            /home/ubuntu/Sistema_Suporte/venv/bin/pip install --upgrade pip
-            /home/ubuntu/Sistema_Suporte/venv/bin/pip install -r requirements.txt
+            /home/ubuntu/Sistema_Suporte/env/bin/pip install --upgrade pip
+            /home/ubuntu/Sistema_Suporte/env/bin/pip install -r requirements.txt
             
             echo "=== EXECUTANDO COMANDOS DJANGO ==="
-            # Usar Python do venv diretamente
-            /home/ubuntu/Sistema_Suporte/venv/bin/python manage.py migrate --noinput
-            /home/ubuntu/Sistema_Suporte/venv/bin/python manage.py collectstatic --noinput
+            # Usar Python do env diretamente
+            /home/ubuntu/Sistema_Suporte/env/bin/python manage.py migrate --noinput
+            /home/ubuntu/Sistema_Suporte/env/bin/python manage.py collectstatic --noinput
             
             echo "=== REINICIANDO SERVIÇO ==="
             sudo systemctl restart django_runserver
