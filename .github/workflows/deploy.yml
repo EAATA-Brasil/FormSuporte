@@ -19,31 +19,28 @@ jobs:
           script: |
             cd /home/ubuntu/Sistema_Suporte
             
-            # Garantir que não tem .env
-            rm -f .env
-            
+            echo "=== ATUALIZANDO CÓDIGO ==="
             git fetch origin main
             git reset --hard origin/main
             
+            echo "=== VERIFICANDO/CRIANDO VIRTUAL ENVIRONMENT ==="
+            # CORREÇÃO: usando 'env' em vez de 'venv'
             if [ ! -d "env" ]; then
+                echo "Criando novo virtual environment..."
                 python3 -m venv env
             fi
             
-            ./env/bin/pip install -r requirements.txt
+            echo "=== ATIVANDO ENV E INSTALANDO DEPENDÊNCIAS ==="
+            # CORREÇÃO: caminhos com 'env'
+            /home/ubuntu/Sistema_Suporte/env/bin/pip install --upgrade pip
+            /home/ubuntu/Sistema_Suporte/env/bin/pip install -r requirements.txt
             
-            echo "=== VERIFICANDO CONFIGURAÇÕES DO DJANGO ==="
-            ./env/bin/python -c "
-            import os
-            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'seu_projeto.settings')
-            import django
-            django.setup()
-            from django.conf import settings
-            print('DATABASE:', settings.DATABASES['default']['ENGINE'])
-            print('DB_NAME:', settings.DATABASES['default']['NAME'])
-            print('DB_USER:', settings.DATABASES['default']['USER'])
-            print('DB_HOST:', settings.DATABASES['default']['HOST'])
-            "
+            echo "=== EXECUTANDO COMANDOS DJANGO ==="
+            # CORREÇÃO: Python do 'env'
+            /home/ubuntu/Sistema_Suporte/env/bin/python manage.py migrate --noinput
+            /home/ubuntu/Sistema_Suporte/env/bin/python manage.py collectstatic --noinput
             
-            ./env/bin/python manage.py migrate --noinput
-            ./env/bin/python manage.py collectstatic --noinput
+            echo "=== REINICIANDO SERVIÇO ==="
             sudo systemctl restart django_runserver
+            
+            echo "✅ DEPLOY CONCLUÍDO!"
