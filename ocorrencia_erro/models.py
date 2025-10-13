@@ -206,9 +206,7 @@ class Record(models.Model):
         super().clean()
         today = timezone.now().date()
 
-        # --- INÍCIO DA CORREÇÃO DEFINITIVA ---
         # 1. LÓGICA DE PRIORIDADE MÁXIMA: VERIFICAÇÃO DOS STATUS DA CHINA
-        # Esta verificação tem de vir ANTES de todas as outras.
         if self.status in [self.STATUS_OCORRENCIA.AWAITING_CHINA, self.STATUS_OCORRENCIA.AWAITING_CHINA_LATE]:
             # Se o prazo existe e já passou, o status DEVE ser AWAITING_CHINA_LATE.
             if self.deadline and self.deadline < today:
@@ -218,7 +216,6 @@ class Record(models.Model):
                 self.status = self.STATUS_OCORRENCIA.AWAITING_CHINA
             # Retornamos para garantir que a lógica de status geral abaixo não seja executada e não sobrescreva a nossa decisão.
             return
-        # --- FIM DA CORREÇÃO DEFINITIVA ---
 
         # 2. LÓGICA DE STATUS GERAL (só é executada se o status não for relacionado à China)
         if self.finished and self.status != self.STATUS_OCORRENCIA.DONE:
@@ -331,11 +328,13 @@ class Notificacao(models.Model):
             # self.save(update_fields=['lida', 'lida_em'])
 
 class ChatMessage(models.Model):
-    # FIXED: Removed invalid app reference from ForeignKey
-    record = models.ForeignKey(Record, on_delete=models.CASCADE, related_name='chat_messages')
+    record = models.ForeignKey(Record, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-    message = models.TextField()
+    message = models.TextField(blank=True)
+    image_base64 = models.TextField(blank=True, null=True)  # Para armazenar Base64
+    image_type = models.CharField(max_length=50, blank=True, null=True)
+    image_name = models.CharField(max_length=255, blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-
+    
     class Meta:
         ordering = ['timestamp']

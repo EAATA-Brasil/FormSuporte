@@ -11,6 +11,7 @@
     --hover-bg: #e9ecef;
     --success: #198754;
     --error: #dc3545;
+    --error-china: #f17815;
     --warning: #ffc107;
     --waiting:#3c3c3c;
     --shadow: rgba(0, 0, 0, 0.1);
@@ -789,7 +790,7 @@ body {
     color: var(--light) !important;
 }
 .table td[data-column="status"][data-initial-value="China Atrasada"] {
-    background-color: var(--error) !important;
+    background-color: var(--error-china) !important;
     color: white !important;
 }
 

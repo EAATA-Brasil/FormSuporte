@@ -1141,8 +1141,6 @@ def contar_notificacoes_nao_lidas(request):
 
 # Em seu arquivo views.py
 
-# ... (suas importações existentes: FileResponse, canvas, letter, inch, io, etc.)
-
 @login_required(login_url='subir_ocorrencia' ) # Adapte 'URL_LOGIN' se necessário
 @require_http_methods(["GET", "POST"])
 def gerar_pdf_ocorrencia(request, record_id=None):
@@ -1272,8 +1270,6 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         import traceback
         traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': 'Ocorreu um erro interno ao gerar o PDF.'}, status=500)
-
-
 
 
 @login_required(login_url=URL_LOGIN)

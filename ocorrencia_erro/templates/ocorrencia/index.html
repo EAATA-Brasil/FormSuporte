@@ -10,6 +10,92 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+    /* Estilos para o modal de imagem */
+    #image-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #expanded-image {
+        max-width: 90%;
+        max-height: 90%;
+        border-radius: 8px;
+    }
+
+    #close-modal {
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+        font-size: 18px;
+    }
+
+    #download-image {
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    }
+
+    #download-image:hover {
+        background: #218838;
+    }
+
+    /* Estilo para imagens clicáveis no chat */
+    .chat-message img {
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 8px;
+        margin-top: 5px;
+        border: 1px solid #ddd;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+
+    .chat-message img:hover {
+        transform: scale(1.05);
+    }
+
+    /* Restante do CSS permanece igual */
+    .chat-image-button {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        font-size: 16px;
+        margin-right: 8px;
+    }
+
+    .chat-image-button:hover {
+        background-color: #218838;
+    }
+
+    .image-indicator {
+        background-color: #007bff;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 12px;
+        margin-left: 8px;
+    }
         /* Estilos para o sistema de notificações */
         .notification-container {
             position: fixed;
@@ -357,17 +443,17 @@
     {%endif%}
 <script>
     function getCookie(name) { 
-             if (document.cookie && document.cookie !== "") {
-                const cookies = document.cookie.split(";");
-                for (let i = 0; i < cookies.length; i++) {
-                    let cookie = cookies[i].trim();
-                    if (cookie.startsWith(name + "=")) {
-                        return decodeURIComponent(cookie.substring(name.length + 1));
-                    }
+        if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.startsWith(name + "=")) {
+                    return decodeURIComponent(cookie.substring(name.length + 1));
                 }
             }
-            return null;
         }
+        return null;
+    }
     if("{{has_full_permission}}" == "True"){
         const ocorrenciasData = {{ ocorrencias_json | safe }};
         
@@ -402,18 +488,6 @@
             const percent = total > 0 ? ((qtd / total) * 100).toFixed(1) : 0;
             const li = document.createElement('li');
             li.textContent = `${status}: ${qtd} (${percent}%)`;
-        
-            const statusLower = status.toLowerCase();
-        
-            if (statusLower.includes("atrasado")) {
-              li.classList.add("status-atrasado");
-            } else if (statusLower.includes("concluido") || statusLower.includes("concluído")) {
-              li.classList.add("status-concluido");
-            } else if (statusLower.includes("progresso")) {
-              li.classList.add("status-progresso");
-            } else if (statusLower.includes("requisitado")) {
-              li.classList.add("status-requisitado");
-            }
         
             statusList.appendChild(li);
           });
@@ -581,7 +655,7 @@
         };
         
         const deadlineDate = parseDate(record.deadline);
-        if (!deadlineDate) return currentStatus; // Mantém status atual se não há prazo
+        if (!deadlineDate) return currentStatus;
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -604,7 +678,7 @@
             return 'Aguardando China';
         }
         
-        return currentStatus; // Mantém status atual
+        return currentStatus;
     }
 
     document.addEventListener("DOMContentLoaded", function ( ) {
@@ -736,10 +810,8 @@
                             <strong>Status:</strong><br>
 
                                 <select class="editable-select-status" data-record-id="${record.id}" data-field-name="status">
-                                    <!-- INÍCIO DA CORREÇÃO NO POPUP -->
                                     <option value="REQUESTED" ${record.status_code === 'REQUESTED' ? 'selected' : ''}>Aguardando Responsável</option>
                                     <option value="AWAITING_CHINA" ${record.status_code === 'AWAITING_CHINA' || record.status_code === 'AWAITING_CHINA_LATE' ? 'selected' : ''}>Aguardando China</option>
-                                    <!-- FIM DA CORREÇÃO NO POPUP -->
                                 </select>
                         </div>
                         <div>
@@ -803,17 +875,24 @@
                             </form>
                         </div>
                     <div class="chat-container" translate="no">
-                        <h4 style="margin-left: 10px; margin-top: 10px; color: var(--primary);">Chat de feedback</h4>
-                        <div id="logged-in-user-id" style="display:none;">{{ request.user.id }}</div>
-                        <div id="logged-in-username" style="display:none;">{{ request.user.username }}</div>
-                        <div id="chat-messages" class="chat-messages"></div>
-                        <form id="${record.id}-chat">
-                            <div class="chat-input-area">
-                                <input type="text" id="chat-message-input" placeholder="Digite sua mensagem...">
-                                <button id="chat-send-button">Enviar</button>
-                            </div>
-                        </form>
-                    </div>
+                    <h4 style="margin-left: 10px; margin-top: 10px; color: var(--primary);">Chat de feedback</h4>
+                    <div id="logged-in-user-id" style="display:none;">{{ request.user.id }}</div>
+                    <div id="logged-in-username" style="display:none;">{{ request.user.username }}</div>
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <form id="${record.id}-chat">
+                        <div class="chat-input-area">
+                            <input type="text" id="chat-message-input" placeholder="Digite sua mensagem...">
+                            
+                            <!-- Botão para upload de imagem -->
+                            <label for="chat-image-input-${record.id}" class="chat-image-button" title="Enviar imagem">
+                                📷
+                            </label>
+                            <input type="file" id="chat-image-input-${record.id}" accept="image/*" style="display: none;">
+                            
+                            <button id="chat-send-button">Enviar</button>
+                        </div>
+                    </form>
+                </div>
                     <div style="margin-bottom: 20px;" translate="no">
                         <div class="headerFiles">
                             <h4>Arquivos anexados:</h4>
@@ -1017,21 +1096,290 @@
                         + recordId
                         + '/'
                     );
+                    chatSocket.onclose = function(e) {
+                        console.error('O socket do chat foi fechado inesperadamente');
+                    };
+                    const imageInput = document.getElementById(`chat-image-input-${id}`);
+                    let selectedImageBase64 = null;
 
+                    // Adicionar suporte para drag and drop no input do chat
+                    chatInput.addEventListener('dragover', function(e) {
+                        e.preventDefault();
+                        this.style.backgroundColor = '#f0f8ff';
+                    });
+
+                    chatInput.addEventListener('dragleave', function(e) {
+                        e.preventDefault();
+                        this.style.backgroundColor = '';
+                    });
+
+                    chatInput.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        this.style.backgroundColor = '';
+                        
+                        const files = e.dataTransfer.files;
+                        if (files.length > 0) {
+                            handleImageSelection(files[0]);
+                        }
+                    });
+
+                    // Sistema de modal para expandir imagens
+                    function setupImageModal() {
+                    const modal = document.getElementById('image-modal');
+                    const expandedImg = document.getElementById('expanded-image');
+                    const closeBtn = document.getElementById('close-modal');
+                    const downloadBtn = document.getElementById('download-image');
+                    
+                    let currentImageBase64 = '';
+                    let currentImageName = 'imagem_chat.png';
+                    
+                    // Fechar modal ao clicar no X
+                    closeBtn.addEventListener('click', function() {
+                        modal.style.display = 'none';
+                    });
+                    
+                    // Fechar modal ao clicar fora da imagem
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === modal) {
+                            modal.style.display = 'none';
+                        }
+                    });
+                    
+                    // Fechar modal com ESC
+                    document.addEventListener('keydown', function(e) {
+                        if (e.key === 'Escape' && modal.style.display === 'flex') {
+                            modal.style.display = 'none';
+                        }
+                    });
+                    
+                    // Função para download da imagem
+                    function downloadImage() {
+                        if (!currentImageBase64) return;
+                        
+                        // Cria um link temporário para download
+                        const link = document.createElement('a');
+                        link.href = currentImageBase64;
+                        link.download = currentImageName;
+                        
+                        // Adiciona ao DOM, clica e remove
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // Feedback visual
+                        const originalText = downloadBtn.textContent;
+                        downloadBtn.textContent = '✅ Baixado!';
+                        downloadBtn.style.background = '#17a2b8';
+                        
+                        setTimeout(() => {
+                            downloadBtn.textContent = originalText;
+                            downloadBtn.style.background = '#28a745';
+                        }, 2000);
+                    }
+                    
+                    // Event listener para o botão de download
+                    downloadBtn.addEventListener('click', downloadImage);
+                    
+                    // Função para expandir imagem (agora também armazena dados para download)
+                    function expandImage(base64Data, imageName = 'imagem_chat.png') {
+                        currentImageBase64 = base64Data;
+                        currentImageName = imageName;
+                        expandedImg.src = base64Data;
+                        modal.style.display = 'flex';
+                        
+                        // Foca no modal para funcionar o ESC
+                        modal.focus();
+                    }
+                    
+                    return { modal, expandedImg, expandImage, downloadImage };
+                }
+
+                // Inicializar modal
+                const { modal, expandedImg, expandImage } = setupImageModal();
+
+                // Event listener para seleção de imagem via botão
+                imageInput.addEventListener('change', function(e) {
+                    handleImageSelection(e.target.files[0]);
+                });
+
+                // Função para lidar com seleção de imagem (reutilizável)
+                function handleImageSelection(file) {
+                    if (file) {
+                        // Verifica se é uma imagem
+                        if (!file.type.startsWith('image/')) {
+                            alert('Por favor, selecione apenas arquivos de imagem.');
+                            return;
+                        }
+                        
+                        // Verifica o tamanho do arquivo (limite de 2MB para Base64)
+                        if (file.size > 10 * 1024 * 1024) {
+                            alert('A imagem deve ter no máximo 2MB.');
+                            return;
+                        }
+                        
+                        // Converte a imagem para Base64
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            selectedImageBase64 = e.target.result;
+                            
+                            // Mostra indicador visual que uma imagem foi selecionada
+                            const imageButton = document.querySelector(`label[for="chat-image-input-${id}"]`);
+                            if (!imageButton.querySelector('.image-indicator')) {
+                                const indicator = document.createElement('span');
+                                indicator.className = 'image-indicator';
+                                indicator.textContent = '1';
+                                imageButton.appendChild(indicator);
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+
+                    // Função para lidar com Ctrl+V
+                    function handlePaste(event) {
+                    // Verifica se Ctrl+V foi pressionado e se o foco está no input do chat
+                    if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+                        const activeElement = document.activeElement;
+                        const chatInput = document.getElementById('chat-message-input');
+                        
+                        if (activeElement === chatInput) {
+                            event.preventDefault(); // IMPORTANTE: Previne o comportamento padrão
+                            
+                            // Usa o event.clipboardData em vez de navigator.clipboard (mais confiável)
+                            const clipboardItems = event.clipboardData || window.clipboardData;
+                            
+                            if (clipboardItems && clipboardItems.items) {
+                                for (let i = 0; i < clipboardItems.items.length; i++) {
+                                    const item = clipboardItems.items[i];
+                                    
+                                    if (item.type.startsWith('image/')) {
+                                        const blob = item.getAsFile();
+                                        handleImageSelection(blob);
+                                        
+                                        // Feedback visual
+                                        const originalPlaceholder = chatInput.placeholder;
+                                        chatInput.placeholder = '✅ Imagem colada! Digite uma mensagem (opcional)...';
+                                        setTimeout(() => {
+                                            chatInput.placeholder = originalPlaceholder;
+                                        }, 2000);
+                                        break;
+                                    }
+                                }
+                            } else {
+                                // Fallback para navegadores mais antigos
+                                console.log('Clipboard API não suportada, tentando método alternativo...');
+                                tryPasteAlternativeMethod();
+                            }
+                        }
+                    }
+                }
+
+                                    // Adicionar event listener para Ctrl+V
+                                    // Remove event listener antigo se existir
+                document.removeEventListener('keydown', handlePaste);
+
+                // Adiciona o event listener corrigido
+                document.addEventListener('keydown', handlePaste);
+
+                // Adiciona também suporte para o evento 'paste' nativo
+                document.addEventListener('paste', function(e) {
+                    const activeElement = document.activeElement;
+                    const chatInput = document.getElementById('chat-message-input');
+                    
+                    if (activeElement === chatInput) {
+                        const clipboardData = e.clipboardData || window.clipboardData;
+                        
+                        if (clipboardData && clipboardData.items) {
+                            for (let i = 0; i < clipboardData.items.length; i++) {
+                                const item = clipboardData.items[i];
+                                
+                                if (item.type.startsWith('image/')) {
+                                    e.preventDefault(); // Importante: previne o colar padrão de texto
+                                    const blob = item.getAsFile();
+                                    handleImageSelection(blob);
+                                    
+                                    // Feedback visual melhorado
+                                    showPasteFeedback(chatInput, '✅ Imagem colada com sucesso!');
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+
+                    // Função para mostrar feedback visual
+                    function showPasteFeedback(inputElement, message) {
+                        const feedback = document.createElement('div');
+                        feedback.className = 'image-paste-feedback';
+                        feedback.textContent = message;
+                        
+                        const rect = inputElement.getBoundingClientRect();
+                        feedback.style.left = rect.left + 'px';
+                        feedback.style.top = (rect.top - 30) + 'px';
+                        
+                        document.body.appendChild(feedback);
+                        
+                        setTimeout(() => {
+                            if (document.body.contains(feedback)) {
+                                document.body.removeChild(feedback);
+                            }
+                        }, 2000);
+                    }
+
+                    // Modificar o evento de submit do formulário do chat
+                   form.onsubmit = function(e) {
+                        e.preventDefault();
+                        const message = chatInput.value.trim();
+                        
+                        // Só envia se tiver mensagem OU imagem
+                        if (message || selectedImageBase64) {
+                            // Prepara os dados para enviar
+                            const messageData = {
+                                'message': message
+                            };
+                            
+                            // Adiciona a imagem em Base64 se existir
+                            if (selectedImageBase64) {
+                                messageData.image_base64 = selectedImageBase64;
+                                // Tenta obter informações do arquivo, mas usa valores padrão se não disponível
+                                const file = imageInput.files && imageInput.files[0];
+                                messageData.image_type = file ? file.type : 'image/png';
+                                messageData.image_name = file ? file.name : 'imagem_colada.png';
+                            }
+                            
+                            // Envia via WebSocket
+                            chatSocket.send(JSON.stringify(messageData));
+                            
+                            // Limpa os inputs
+                            chatInput.value = '';
+                            selectedImageBase64 = null;
+                            imageInput.value = '';
+                            
+                            // Remove o indicador visual da imagem
+                            const imageButton = document.querySelector(`label[for="chat-image-input-${id}"]`);
+                            const indicator = imageButton?.querySelector('.image-indicator');
+                            if (indicator) {
+                                indicator.remove();
+                            }
+                            
+                            console.log('Mensagem enviada:', message ? 'com texto' : 'apenas imagem');
+                        }
+                    };
+
+                    // Modificar o handler de mensagens para exibir imagens em Base64 com funcionalidade de expandir
                     chatSocket.onmessage = function(e) {
                         const data = JSON.parse(e.data);
                         
-                        // Log para verificar se os dados foram recebidos e analisados corretamente
-
                         const message = data.message;
                         const author = data.author;
                         const timestamp = data.timestamp;
+                        const imageBase64 = data.image_base64;
+                        const imageType = data.image_type;
+                        const imageName = data.image_name;
 
                         if (chatMessages) {
                             const messageElement = document.createElement('div');
                             messageElement.classList.add('chat-message');
-                            
-                            // Verifique se os elementos estão a ser criados
                             
                             if (author === loggedInUsername) {
                                 messageElement.classList.add('my-message');
@@ -1039,33 +1387,31 @@
                                 messageElement.classList.add('other-message');
                             }
                             
-                            messageElement.innerHTML = `
-                                <strong>${author}:</strong> ${message} 
-                                <small>(${new Date(timestamp).toLocaleString()})</small>
-                            `;
-                            // Verifique se o elemento a ser adicionado tem conteúdo
+                            let messageContent = `<div><strong>${author}:</strong> ${message || ''}`;
                             
+                            // Adicionar imagem se existir (usando Base64 diretamente)
+                            if (imageBase64) {
+                                messageContent += `<br><img src="${imageBase64}" alt="${imageName || 'Imagem'}" class="chat-image" onclick="expandImage('${imageBase64}')">`;
+                            }
+                            
+                            messageContent += `</div><small class="chat-message-time">${new Date(timestamp).toLocaleString()}</small>`;
+                            
+                            messageElement.innerHTML = messageContent;
                             chatMessages.appendChild(messageElement);
-                            // Desça a barra de rolagem para a mensagem mais recente
                             chatMessages.scrollTop = chatMessages.scrollHeight;
-                        } else {
-                            console.error("Erro: O elemento com ID 'chat-messages' não foi encontrado!");
+                            
+                            // Adicionar event listener para as imagens recém-criadas
+                            const newImages = messageElement.querySelectorAll('.chat-image');
+                            newImages.forEach(img => {
+                                img.addEventListener('click', function() {
+                                    expandImage(this.src);
+                                });
+                            });
                         }
                     };
 
-                    chatSocket.onclose = function(e) {
-                        console.error('O socket do chat foi fechado inesperadamente');
-                    };
-
-                    form.onsubmit = function(e) {
-                        e.preventDefault();
-                        const message = chatInput.value;
-                        chatSocket.send(JSON.stringify({
-                            'message': message
-                        }));
-                        chatInput.value = '';
-                    };
-
+                    // Também adicione esta função globalmente para funcionar em todas as imagens
+                    window.expandImage = expandImage;
 
                     // --- FIM DA LÓGICA DE UPLOAD ---
                     document.querySelectorAll('.flatpickr').forEach(input => {
@@ -2781,6 +3127,19 @@
             }
         });
 </script>
+
+<!-- Modal para expandir imagens -->
+<div id="image-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; justify-content: center; align-items: center;">
+    <div style="position: relative; max-width: 90%; max-height: 90%;">
+        <img id="expanded-image" src="" style="max-width: 100%; max-height: 100%; border-radius: 8px;">
+        <div style="position: absolute; top: -50px; right: 0; display: flex; gap: 10px;">
+            <button id="download-image" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 14px;">
+                ⬇️ Download
+            </button>
+            <button id="close-modal" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 18px;">×</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>

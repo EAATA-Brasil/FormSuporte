@@ -234,18 +234,9 @@ O aplicativo `ocorrencia_erro` define os seguintes padrões de URL:
 | `notificacoes/contar/` | `views.contar_notificacoes_nao_lidas` | `contar_notificacoes` | Contar notificações não lidas. |
 | `notificacoes/<int:notificacao_id>/marcar_lida/` | `views.marcar_notificacao_lida` | `marcar_notificacao_lida` | Marcar notificação como lida. |
 | `notificacoes/record/<int:record_id>/marcar_lidas/` | `views.marcar_notificacoes_por_record_como_lidas` | `marcar_notificacoes_record_lidas` | Marcar notificações de um registro como lidas. |
-| `api/get_china_id/` | `get_china_id_view` | `get_china_id` | Endpoint AJAX para obter o ID do país "China". |
 | `gerar_pdf/<int:record_id>/` | `views.gerar_pdf_ocorrencia` | `gerar_pdf_ocorrencia_get` | Gerar PDF de ocorrência (GET). |
 | `gerar_pdf/` | `views.gerar_pdf_ocorrencia` | `gerar_pdf_ocorrencia_post` | Gerar PDF de ocorrência (POST). |
 | `ocorrencia/download_todos/<int:record_id>/` | `views.download_todos_arquivos` | `download_todos_arquivos` | Download de todos os arquivos de uma ocorrência. |
-
-## 5. Sinais
-
-### 5.1. `grant_china_permission`
-
-- **Em:** `ocorrencia_erro/signals.py`
-- **Disparado por:** `post_save` do modelo `User`.
-- **Funcionalidade:** Garante que todo usuário, ao ser criado ou salvo, tenha uma permissão associada ao país "China". Isso é feito buscando ou criando o país "China" e, em seguida, criando ou atualizando uma `CountryPermission` para o usuário e este país. Isso assegura que a lógica de negócio específica para a China (status `AWAITING`) possa ser aplicada a todos os usuários.
 
 ## 6. Configuração (`apps.py`)
 

@@ -1,16 +1,6 @@
 from django.urls import path
 from . import views
 
-def get_china_id_view(request):
-    from django.http import JsonResponse
-    from .models import Country
-    try:
-        china = Country.objects.get(name='China' )
-        return JsonResponse({'china_id': china.id})
-    except Country.DoesNotExist:
-        return JsonResponse({'error': 'País "China" não encontrado no banco de dados.'}, status=404)
-
-
 urlpatterns = [
     path('', views.index, name='index'),
     path('subir_ocorrencia/', views.subir_ocorrencia, name='subir_ocorrencia'),
@@ -25,7 +15,6 @@ urlpatterns = [
     path('notificacoes/contar/', views.contar_notificacoes_nao_lidas, name='contar_notificacoes'),
     path('notificacoes/<int:notificacao_id>/marcar_lida/', views.marcar_notificacao_lida, name='marcar_notificacao_lida'),
     path('notificacoes/record/<int:record_id>/marcar_lidas/', views.marcar_notificacoes_por_record_como_lidas, name='marcar_notificacoes_record_lidas'),
-    path('api/get_china_id/', get_china_id_view, name='get_china_id'),
     
     # --- ALTERAÇÃO AQUI ---
     # Rota para gerar PDF via GET (ex: link direto com ID na URL)

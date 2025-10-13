@@ -22,6 +22,7 @@ jobs:
             git reset --hard origin/main
             source venv/bin/activate
             pip install -r requirements.txt
+            python manage.py makemigrations --noinput
             python manage.py migrate --noinput
             python manage.py collectstatic --noinput
-            sudo systemctl restart gunicorn
+            sudo systemctl restart django_runserver
