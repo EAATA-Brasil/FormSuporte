@@ -17,30 +17,18 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /home/ubuntu/Sistema_Suporte
-            
-            echo "=== ATUALIZANDO CÓDIGO ==="
-            git fetch origin main
-            git reset --hard origin/main
-            
-            echo "=== VERIFICANDO/CRIANDO VIRTUAL ENVIRONMENT ==="
-            # Verificar se env existe, se não, criar
-            if [ ! -d "env" ]; then
-                echo "Criando novo virtual environment..."
-                python3 -m venv env
-            fi
-            
-            echo "=== ATIVANDO ENV E INSTALANDO DEPENDÊNCIAS ==="
-            # Usar caminhos absolutos para evitar problemas
-            /home/ubuntu/Sistema_Suporte/env/bin/pip install --upgrade pip
-            /home/ubuntu/Sistema_Suporte/env/bin/pip install -r requirements.txt
-            
-            echo "=== EXECUTANDO COMANDOS DJANGO ==="
-            # Usar Python do env diretamente
-            /home/ubuntu/Sistema_Suporte/env/bin/python manage.py migrate --noinput
-            /home/ubuntu/Sistema_Suporte/env/bin/python manage.py collectstatic --noinput
-            
-            echo "=== REINICIANDO SERVIÇO ==="
-            sudo systemctl restart django_runserver
-            
-            echo "✅ DEPLOY CONCLUÍDO!"
+              cd /home/ubuntu/Sistema_Suporte
+              
+              echo "=== DEBUG DO AMBIENTE ==="
+              whoami
+              pwd
+              env | grep -i db
+              env | grep -i django
+              
+              echo "=== VERIFICANDO .env ==="
+              ls -la .env
+              cat .env
+              
+              echo "=== VERIFICANDO CONEXÃO MYSQL ==="
+              mysql --version
+              mysql -u root -p -e "SHOW DATABASES;" || echo "Erro MySQL"
