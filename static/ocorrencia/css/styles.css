@@ -1011,32 +1011,6 @@ footer select {
   color: white;
 }
 
-/* cores status */
-.status-atrasado {
-  background-color: #e74c3c; /* vermelho */
-}
-
-.status-concluido {
-  background-color: #27ae60; /* verde */
-}
-
-.status-progresso {
-  background-color: #f1c40f; /* amarelo */
-  color: black;
-}
-
-.status-requisitado {
-  background-color: #3498db; /* azul */
-}
-
-.awaiting-china-late{
-    background-color: #e74c3c;
-}
-
-.status-awaiting{
-
-}
-
 /* Estilização do container de upload de arquivos no popup */
 .file-upload-wrapper {
     margin-top: 15px;

@@ -133,10 +133,12 @@ def download_todos_arquivos(request, record_id):
     record = get_object_or_404(Record, id=record_id)
     arquivos = ArquivoOcorrencia.objects.filter(record=record)
 
+    print(arquivos)
+
     if not arquivos.exists():
         return JsonResponse({'status': 'error', 'message': 'Nenhum arquivo encontrado.'}, status=404)
 
-    if arquivos.count() <= 5:
+    if arquivos.count() <= 1:
         # Retorna múltiplos arquivos, mas um por vez via response streaming
         # (normalmente o ideal é baixar em ZIP também, mas mantendo a regra)
         arquivo = arquivos.first()
