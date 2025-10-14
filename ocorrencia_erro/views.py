@@ -366,7 +366,7 @@ def filter_data_view(request):
                 queryset = queryset.order_by(order_field)
 
             # 4. Paginação
-            paginator = Paginator(queryset, 11)
+            paginator = Paginator(queryset, 13)
             page_obj = paginator.get_page(page_number)
 
             # 5. Preparação dos dados para a resposta JSON

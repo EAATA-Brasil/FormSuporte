@@ -351,38 +351,52 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 // Update country options
                 paisesDatalist.innerHTML = '';
-                data.pais.forEach(pais => {
-                    const option = document.createElement('option');
-                    option.value = pais;
-                    paisesDatalist.appendChild(option);
-                });
+                // Adiciona verificação para garantir que data.paises é um array antes de iterar
+                // O nome da chave no JSON retornado é 'paises' (plural)
+                if (Array.isArray(data.paises)) {
+                    data.paises.forEach(pais => {
+                        const option = document.createElement('option');
+                        option.value = pais;
+                        paisesDatalist.appendChild(option);
+                    });
+                }
 
                 // Update brand options
                 marcaDatalist.innerHTML = '';
-                data.marcas.forEach(marca => {
-                    const option = document.createElement('option');
-                    option.value = marca;
-                    marcaDatalist.appendChild(option);
-                });
+                // Adiciona verificação para garantir que data.marcas é um array antes de iterar
+                if (Array.isArray(data.marcas)) {
+                    data.marcas.forEach(marca => {
+                        const option = document.createElement('option');
+                        option.value = marca;
+                        marcaDatalist.appendChild(option);
+                    });
+                }
 
                 // Update model options
                 modeloDatalist.innerHTML = '';
                 anoDatalist.innerHTML = '';
-                data.modelos.forEach(modelo => {
-                    const option = document.createElement('option');
-                    option.value = modelo;
-                    modeloDatalist.appendChild(option);
-                });
-                data.anos.forEach(ano => {
-                    const option = document.createElement('option');
-                    option.value = ano;
-                    anoDatalist.appendChild(option);
-                });
+                // Adiciona verificação para garantir que data.modelos é um array antes de iterar
+                if (Array.isArray(data.modelos)) {
+                    data.modelos.forEach(modelo => {
+                        const option = document.createElement('option');
+                        option.value = modelo;
+                        modeloDatalist.appendChild(option);
+                    });
+                }
+                // Adiciona verificação para garantir que data.anos é um array antes de iterar
+                if (Array.isArray(data.anos)) {
+                    data.anos.forEach(ano => {
+                        const option = document.createElement('option');
+                        option.value = ano;
+                        anoDatalist.appendChild(option);
+                    });
+                }
 
                 // Enable/disable fields
-                marcaInput.disabled = !data.marcas.length;
-                modeloInput.disabled = !data.modelos.length;
-                anoInput.disabled = !data.anos.length;
+                // Usa a verificação de array para evitar erro de .length em undefined
+                marcaInput.disabled = !(Array.isArray(data.marcas) && data.marcas.length);
+                modeloInput.disabled = !(Array.isArray(data.modelos) && data.modelos.length);
+                anoInput.disabled = !(Array.isArray(data.anos) && data.anos.length);
             });
     }
 
