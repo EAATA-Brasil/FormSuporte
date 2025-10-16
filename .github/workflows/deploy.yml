@@ -42,5 +42,6 @@ jobs:
             
             echo "=== REINICIANDO SERVIÇO ==="
             sudo systemctl restart django_runserver
+            sudo systemctl restart gunicorn
             
             echo "✅ DEPLOY CONCLUÍDO!"
