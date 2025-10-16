@@ -327,25 +327,20 @@
     <div class="form-pair"><label for="model">Modelo</label><input type="text" id="model" name="model" required /></div>
     <div class="form-pair"><label for="year">Ano</label><input type="text" id="year" name="year" required /></div>
     <div class="form-pair"><label for="version">Versão</label><input type="text" id="version" name="version" required /></div>
-
-    {% if has_full_permission %}
+    {% if has_full_permission%}    
       <div class="form-pair">
         <label for="deadline">Deadline</label>
         <input type="text" id="deadline" name="deadline" required />
       </div>
-      <div class="form-pair">
-        <label for="status">Status</label>
-        <select id="status" name="status">
-          <option value="">-- Estado da ocorrência --</option>
-          <option value="Requisitado">Requisitado</option>
-          <option value="Concluído">Concluído</option>
-          <option value="Em progresso">Em progresso</option>
-          <option value="Atrasado">Atrasado</option>
-        </select>
-      </div>
-    {% else %}
-      <input type="hidden" name="status" value="Requisitado" />
     {% endif %}
+
+    <div class="form-pair">
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="Requisitado" selected="selected">Status padrão</option>
+        <option value="Aguardando China">Aguardando china</option>
+      </select>
+    </div>
 
     <div class="form-pair full-width">
       <label for="problem_detected">Problema Detectado</label>
