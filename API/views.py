@@ -142,13 +142,12 @@ def generate_pdf(request):
         # 2. Processar cada equipamento
         for i, equipamento_id in enumerate(equipamento_ids):
             try:
+                # Garante que a quantidade é um inteiro, padrão 1
                 try:
                     quantidade = int(quantidades[i])
                 except (ValueError, TypeError, IndexError):
                     quantidade = 1
                 equipamento = Equipamentos.objects.get(id=equipamento_id)
-                # Garante que a quantidade é um inteiro, padrão 1
-                quantidade = int(quantidades[i]) if i < len(quantidades) and quantidades[i].isdigit() else 1
                 
                 # 2.1. Lógica de Cálculo de Valor Unitário
                 localizacao = data.get('localizacao')
