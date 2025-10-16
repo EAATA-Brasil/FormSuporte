@@ -68,7 +68,8 @@ CSRF_TRUSTED_ORIGINS = [
     'https://jodi-nonbathing-cherise.ngrok-free.dev',
     'http://82.25.71.76',
     'http://127.0.0.1',
-    'http://0.0.0.0'
+    'http://0.0.0.0',
+    'https://eaatainterno.duckdns.org'
 ]
 
 # Application definition
