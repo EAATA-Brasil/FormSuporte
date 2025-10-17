@@ -964,29 +964,28 @@
                         const textoFinal = infos.join('\n');
 
                         navigator.clipboard.writeText(textoFinal)
-                            .then(() => {
-                                showSwalStyledToast("Informações copiadas com sucesso!", "success");
-                            })
-                            .catch(err => {
-                                console.error("Erro ao copiar:", err);
-                                showSwalStyledToast("Erro ao copiar informações!", "error");
-                            });
+                        .then(() => showSwalStyledToast("Informações copiadas com sucesso!", "success"))
+                        .catch(() => showSwalStyledToast("Erro ao copiar informações!", "error"));
+
                     });
 
                     // função auxiliar para exibir o toast personalizado
                     function showSwalStyledToast(message, type = "success") {
                         const toast = document.createElement("div");
-                        toast.className = "custom-swal-toast";
+                        toast.className = `custom-swal-toast swal2-popup swal2-toast swal2-icon-${type}`;
                         toast.innerHTML = `
-                            <div class="custom-swal-toast-icon ${type}">
-                                ${type === "success" ? "✔️" : "❌"}
+                            <div class="swal2-icon swal2-${type} swal2-icon-show">
+                                ${type === "success"
+                                    ? '<div class="swal2-success-circular-line-left"></div><span class="swal2-success-line-tip"></span><span class="swal2-success-line-long"></span><div class="swal2-success-ring"></div><div class="swal2-success-fix"></div><div class="swal2-success-circular-line-right"></div>'
+                                    : '<span class="swal2-x-mark"><span class="swal2-x-mark-line-left"></span><span class="swal2-x-mark-line-right"></span></span>'
+                                }
                             </div>
-                            <span class="custom-swal-toast-text">${message}</span>
+                            <div class="custom-swal-toast-text">${message}</div>
                         `;
 
                         document.body.appendChild(toast);
 
-                        // Força animação
+                        // Animação de entrada
                         setTimeout(() => toast.classList.add("show"), 10);
 
                         // Remove depois de 2,5s
