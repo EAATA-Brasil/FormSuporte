@@ -944,19 +944,6 @@
                     document.getElementById("button_pdf").addEventListener('click', ()=>{
                         handleGerarPdf(id, record.codigo_externo)
                     })
-                    // Cria um toast totalmente independente do popup principal
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: "top-end",
-                        showConfirmButton: false,
-                        timer: 2000,
-                        timerProgressBar: true,
-                        didOpen: (toast) => {
-                            toast.addEventListener('mouseenter', Swal.stopTimer)
-                            toast.addEventListener('mouseleave', Swal.resumeTimer)
-                        }
-                    });
-
                     document.getElementById("button_copy").addEventListener("click", () => {
                         const idStr = String(record.id);
                         const codigoStr = String(record.codigo_externo || "");
@@ -978,20 +965,36 @@
 
                         navigator.clipboard.writeText(textoFinal)
                             .then(() => {
-                                Toast.fire({
-                                    icon: 'success',
-                                    title: 'Informações copiadas!'
-                                });
+                                mostrarToast("✅ Informações copiadas!");
                             })
                             .catch(err => {
-                                console.error('Erro ao copiar:', err);
-                                Toast.fire({
-                                    icon: 'error',
-                                    title: 'Erro ao copiar!'
-                                });
+                                console.error("Erro ao copiar:", err);
+                                mostrarToast("❌ Erro ao copiar informações!");
                             });
                     });
 
+                    // função auxiliar para exibir o toast personalizado
+                    function mostrarToast(mensagem) {
+                        const toast = document.createElement("div");
+                        toast.textContent = mensagem;
+                        toast.style.position = "fixed";
+                        toast.style.top = "20px";
+                        toast.style.right = "20px";
+                        toast.style.background = "var(--primary)";
+                        toast.style.color = "white";
+                        toast.style.padding = "10px 15px";
+                        toast.style.borderRadius = "8px";
+                        toast.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+                        toast.style.zIndex = "99999";
+                        toast.style.fontSize = "14px";
+                        toast.style.transition = "opacity 0.3s ease";
+                        document.body.appendChild(toast);
+
+                        setTimeout(() => {
+                            toast.style.opacity = "0";
+                            setTimeout(() => toast.remove(), 300);
+                        }, 2000);
+                    }
 
                     document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
                         e.preventDefault();
