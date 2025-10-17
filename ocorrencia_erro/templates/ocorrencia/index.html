@@ -965,68 +965,37 @@
 
                         navigator.clipboard.writeText(textoFinal)
                             .then(() => {
-                                showSwalStyledToast("✅ Informações copiadas com sucesso!", "success");
+                                showSwalStyledToast("Informações copiadas com sucesso!", "success");
                             })
                             .catch(err => {
                                 console.error("Erro ao copiar:", err);
-                                showSwalStyledToast("❌ Erro ao copiar informações!", "error");
+                                showSwalStyledToast("Erro ao copiar informações!", "error");
                             });
                     });
 
                     // função auxiliar para exibir o toast personalizado
                     function showSwalStyledToast(message, type = "success") {
-                        // Cria o container
                         const toast = document.createElement("div");
-                        toast.className = `swal2-popup swal2-toast swal2-icon-${type}`;
-                        toast.style.position = "fixed";
-                        toast.style.top = "20px";
-                        toast.style.right = "20px";
-                        toast.style.width = "auto";
-                        toast.style.padding = "10px 20px";
-                        toast.style.display = "flex";
-                        toast.style.alignItems = "center";
-                        toast.style.justifyContent = "center";
-                        toast.style.gap = "10px";
-                        toast.style.zIndex = "99999";
-                        toast.style.borderRadius = "8px";
-                        toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
-                        toast.style.background = "white";
-                        toast.style.fontFamily = "inherit";
-                        toast.style.fontSize = "14px";
-                        toast.style.fontWeight = "500";
-                        toast.style.color = "#333";
-                        toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
-                        toast.style.transform = "translateY(-10px)";
-                        toast.style.opacity = "0";
+                        toast.className = "custom-swal-toast";
+                        toast.innerHTML = `
+                            <div class="custom-swal-toast-icon ${type}">
+                                ${type === "success" ? "✔️" : "❌"}
+                            </div>
+                            <span class="custom-swal-toast-text">${message}</span>
+                        `;
 
-                        // Ícone estilo SweetAlert
-                        const icon = document.createElement("div");
-                        icon.className = "swal2-icon swal2-" + type;
-                        icon.style.width = "20px";
-                        icon.style.height = "20px";
-                        icon.style.fontSize = "16px";
-
-                        // Texto
-                        const text = document.createElement("div");
-                        text.textContent = message;
-
-                        toast.appendChild(icon);
-                        toast.appendChild(text);
                         document.body.appendChild(toast);
 
-                        // Animação de entrada
-                        setTimeout(() => {
-                            toast.style.opacity = "1";
-                            toast.style.transform = "translateY(0)";
-                        }, 10);
+                        // Força animação
+                        setTimeout(() => toast.classList.add("show"), 10);
 
-                        // Remove após 2,5s
+                        // Remove depois de 2,5s
                         setTimeout(() => {
-                            toast.style.opacity = "0";
-                            toast.style.transform = "translateY(-10px)";
+                            toast.classList.remove("show");
                             setTimeout(() => toast.remove(), 300);
                         }, 2500);
                     }
+
 
                     document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
                         e.preventDefault();

@@ -1154,3 +1154,52 @@ footer select {
     flex-direction: row;
     gap: 20px;
 }
+
+
+.custom-swal-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #fff;
+  border-left: 5px solid var(--primary);
+  color: #333;
+  padding: 10px 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 99999;
+}
+
+.custom-swal-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Ícone pequeno com cor */
+.custom-swal-toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: bold;
+  color: white;
+}
+
+.custom-swal-toast-icon.success {
+  background: #28a745;
+}
+
+.custom-swal-toast-icon.error {
+  background: #dc3545;
+}
