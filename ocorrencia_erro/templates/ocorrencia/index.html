@@ -944,11 +944,13 @@
                     document.getElementById("button_pdf").addEventListener('click', ()=>{
                         handleGerarPdf(id, record.codigo_externo)
                     })
-                    document.getElementById("button_copy").addEventListener('click', () => {
-                        // Monta o texto conforme solicitado
+                    document.getElementById("button_copy").addEventListener("click", () => {
+                        const idStr = String(record.id);
+                        const codigoStr = String(record.codigo_externo || "");
+
                         const infos = [
                             `ID: ${record.id}`,
-                            record.codigo_externo && record.codigo_externo !== record.id ? `Token: ${record.codigo_externo}` : null,
+                            codigoStr && codigoStr !== idStr ? `Token: ${codigoStr}` : null,
                             `Técnico: ${record.technical || 'Não informado'}`,
                             `Dispositivo: ${record.device || 'Não informado'}`,
                             `Área: ${record.area || 'Não informado'}`,
@@ -957,32 +959,36 @@
                             `Modelo: ${record.model || 'Não informado'}`,
                             `Ano: ${record.year || 'Não informado'}`,
                             `Data: ${record.data ? formatDateToDisplay(record.data) : 'Não informado'}`
-                        ].filter(Boolean); // remove valores nulos (ex: quando não precisa mostrar o Token)
+                        ].filter(Boolean);
 
                         const textoFinal = infos.join('\n');
 
-                        // Copia o texto para a área de transferência
                         navigator.clipboard.writeText(textoFinal)
                             .then(() => {
+                                // Usa o Toast do SweetAlert
                                 Swal.fire({
-                                    icon: 'success',
-                                    title: 'Copiado!',
-                                    text: 'As informações foram copiadas para a área de transferência.',
+                                    toast: true,
+                                    position: "top-end",
+                                    icon: "success",
+                                    title: "Informações copiadas!",
+                                    showConfirmButton: false,
                                     timer: 2000,
-                                    showConfirmButton: false
+                                    timerProgressBar: true
                                 });
                             })
                             .catch(err => {
-                                console.error('Erro ao copiar:', err);
+                                console.error("Erro ao copiar:", err);
                                 Swal.fire({
-                                    icon: 'error',
-                                    title: 'Erro',
-                                    text: 'Não foi possível copiar as informações.',
-                                    timer: 2000,
-                                    showConfirmButton: false
+                                    toast: true,
+                                    position: "top-end",
+                                    icon: "error",
+                                    title: "Erro ao copiar!",
+                                    showConfirmButton: false,
+                                    timer: 2000
                                 });
                             });
                     });
+
                     document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
                         e.preventDefault();
                         const form = e.target;
