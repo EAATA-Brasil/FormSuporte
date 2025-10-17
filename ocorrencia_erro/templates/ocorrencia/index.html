@@ -754,6 +754,9 @@
                         <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
                            Gerar PDF
                         </button>
+                        <button id="button_copy" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                           COPIAR INFORMAÇÕES
+                        </button>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
@@ -939,8 +942,47 @@
                     const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);
                     const feedbackManagerTextarea = document.getElementById(feedbackManagerId);
                     document.getElementById("button_pdf").addEventListener('click', ()=>{
-                        handleGerarPdf(id)
+                        handleGerarPdf(id, record.codigo_externo)
                     })
+                    document.getElementById("button_copy").addEventListener('click', () => {
+                        // Monta o texto conforme solicitado
+                        const infos = [
+                            `ID: ${record.id}`,
+                            record.codigo_externo && record.codigo_externo !== record.id ? `Token: ${record.codigo_externo}` : null,
+                            `Técnico: ${record.technical || 'Não informado'}`,
+                            `Dispositivo: ${record.device || 'Não informado'}`,
+                            `Área: ${record.area || 'Não informado'}`,
+                            `Serial: ${record.serial || 'Não informado'}`,
+                            `Marca: ${record.brand || 'Não informado'}`,
+                            `Modelo: ${record.model || 'Não informado'}`,
+                            `Ano: ${record.year || 'Não informado'}`,
+                            `Data: ${record.data ? formatDateToDisplay(record.data) : 'Não informado'}`
+                        ].filter(Boolean); // remove valores nulos (ex: quando não precisa mostrar o Token)
+
+                        const textoFinal = infos.join('\n');
+
+                        // Copia o texto para a área de transferência
+                        navigator.clipboard.writeText(textoFinal)
+                            .then(() => {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Copiado!',
+                                    text: 'As informações foram copiadas para a área de transferência.',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                            })
+                            .catch(err => {
+                                console.error('Erro ao copiar:', err);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Erro',
+                                    text: 'Não foi possível copiar as informações.',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                            });
+                    });
                     document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
                         e.preventDefault();
                         const form = e.target;
@@ -1499,7 +1541,7 @@
             });
         }
         
-        function handleGerarPdf(recordId) {
+        function handleGerarPdf(recordId, recordCode) {
             // Mostra um feedback de carregamento para o usuário
             Swal.fire({
                 title: 'Gerando PDF...',
@@ -1530,7 +1572,7 @@
                 }
                 // Pega o nome do arquivo do cabeçalho 'Content-Disposition'
                 const disposition = response.headers.get('Content-Disposition');
-                let filename = `ocorrencia_${recordId}.pdf`; // Nome padrão
+                let filename = `ocorrencia_${recordCode}.pdf`; // Nome padrão
                 if (disposition && disposition.indexOf('attachment') !== -1) {
                     const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
                     const matches = filenameRegex.exec(disposition);
