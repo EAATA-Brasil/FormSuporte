@@ -1300,7 +1300,7 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         p.save()
 
         buffer.seek(0)
-        filename = f'ocorrencia_{record.id}.pdf'
+        filename = f'ocorrencia_{record.codigo_externo}.pdf'
         response = FileResponse(buffer, as_attachment=True, filename=filename)
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         response['Access-Control-Expose-Headers'] = 'Content-Disposition'
