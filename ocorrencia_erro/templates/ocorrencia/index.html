@@ -1089,13 +1089,16 @@
 
                     const loggedInUsername = document.getElementById('logged-in-username').textContent
 
+                    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+
                     const chatSocket = new WebSocket(
-                        'ws://'
-                        + window.location.host
-                        + '/ws/chat/'
-                        + recordId
-                        + '/'
+                        protocol +
+                        window.location.host +
+                        '/ws/chat/' +
+                        recordId +
+                        '/'
                     );
+
                     chatSocket.onclose = function(e) {
                         console.error('O socket do chat foi fechado inesperadamente');
                     };
