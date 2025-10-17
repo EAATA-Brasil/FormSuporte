@@ -4,6 +4,10 @@ from collections import defaultdict
 import os
 import json
 import mimetypes
+import requests
+
+from langdetect import detect, DetectorFactory
+DetectorFactory.seed = 0
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, Http404
@@ -57,6 +61,42 @@ FILTERABLE_COLUMNS_FOR_OPTIONS = [
 ]
 
 URL_LOGIN = 'subir_ocorrencia'
+
+def detectar_idioma(texto):
+    if not texto or len(texto.strip()) < 3:  # textos muito curtos
+        return 'PT'  # fallback
+    try:
+        return detect(texto).upper()  # retorna 'PT', 'ES', 'EN', etc.
+    except:
+        return 'PT'
+
+def traduzir_texto(texto, target_lang='EN', api_key='SUA_CHAVE_API'):
+    """
+    Traduz texto curto ou longo para inglês usando DeepL Free,
+    detectando automaticamente o idioma de origem.
+    """
+    if not texto:
+        return "N/A"
+
+    source_lang = detectar_idioma(texto)
+
+    url = "https://api-free.deepl.com/v2/translate"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    payload = {
+        "auth_key": api_key,
+        "text": texto,
+        "source_lang": source_lang,
+        "target_lang": target_lang,
+    }
+
+    try:
+        response = requests.post(url, data=payload, headers=headers)
+        response.raise_for_status()
+        result = response.json()
+        return result['translations'][0]['text']
+    except Exception as e:
+        print(f"Erro na tradução: {e}")
+        return texto
 
 def get_responsaveis():
     paises = Country.objects.all().order_by('name')
@@ -1195,9 +1235,10 @@ def gerar_pdf_ocorrencia(request, record_id=None):
             y -= 0.25 * inch
 
             # Prepara o texto, substituindo quebras de linha \n por   
+            translated_text = traduzir_texto(text_content, target_lang='EN', api_key='71437a8a-e2de-43da-a9d7-ef10bd2550cf:fx')
 
-            if text_content and isinstance(text_content, str) and text_content.strip():
-                prepared_text = text_content.replace('\n', '<br/>')
+            if translated_text and isinstance(translated_text, str) and translated_text.strip():
+                prepared_text = translated_text.replace('\n', '<br/>')
             else:
                 prepared_text = "Nenhum conteúdo fornecido."
 
