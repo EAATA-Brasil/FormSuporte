@@ -754,6 +754,7 @@
                         <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
                            Gerar PDF
                         </button>
+
                         <button id="button_copy" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
                            COPIAR INFORMAÇÕES
                         </button>
@@ -944,6 +945,7 @@
                     document.getElementById("button_pdf").addEventListener('click', ()=>{
                         handleGerarPdf(id, record.codigo_externo)
                     })
+                    document.getElementById("button_copy").style.display = window.location.protocol === 'https:' ? '' : 'none'
                     document.getElementById("button_copy").addEventListener("click", () => {
                         const idStr = String(record.id);
                         const codigoStr = String(record.codigo_externo || "");
