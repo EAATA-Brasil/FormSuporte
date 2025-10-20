@@ -286,7 +286,11 @@
 
     <div class="form-pair">
       <label for="technical">Técnico</label>
-      <input type="text" id="technical" name="technical" required />
+      {% if username and not has_full_permission%}
+        <input type="text" id="technical" name="technical" required value="{{ username|default:'' }}">
+      {%else%}
+        <input type="text" id="technical" name="technical" required/>
+      {%endif%}
     </div>
 
     <div class="form-pair full-width" id="span_ticket">

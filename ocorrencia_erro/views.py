@@ -622,7 +622,7 @@ def subir_ocorrencia(request):
     responsaveis_por_pais = {}
     todos_responsaveis = []
     todos_equipamentos = []
-
+    nome_responsaveis = []
     # Buscar os dois grupos
     grupo_responsaveis = Group.objects.filter(name='Técnicos responsáveis').first()
 
@@ -645,6 +645,8 @@ def subir_ocorrencia(request):
         if not nome_completo:
             nome_completo = user['username']
         todos_responsaveis.append({'id': user['id'], 'name': nome_completo})
+        nome_responsaveis.append(nome_completo)
+        
 
     # Prepara lista de equipamentos
     todos_equipamentos = list(Device.objects.all().values('id', 'name'))
@@ -756,6 +758,14 @@ def subir_ocorrencia(request):
                     }, status=400)
 
             # Cria o registro
+            technical = request.POST.get("technical").capitalize()
+            print(technical)
+
+            # Extrai apenas os nomes da lista de dicionários
+            nomes_responsaveis_pais = [r['name'] for r in responsaveis_por_pais[pais.id]]
+            if not has_full_permission:
+                if technical in nome_responsaveis and technical in nomes_responsaveis_pais:
+                    record_data['responsible'] = request.POST.get("technical").capitalize()
             try:
                 record = Record.objects.create(**record_data)
             except IntegrityError as e:
@@ -796,14 +806,22 @@ def subir_ocorrencia(request):
 
     # GET request - prepara dados para o template
     paises_dict = {str(p.id): p.name for p in paises}
-    return render(request, 'ocorrencia/subir_ocorrencia.html', {
+
+    # se for GET normal (primeiro carregamento)
+    context = {
         'paises': paises,
         'paises_json': json.dumps(paises_dict),
         'has_full_permission': has_full_permission,
         'responsaveis_por_pais': json.dumps(responsaveis_por_pais),
         'todos_responsaveis': json.dumps(todos_responsaveis),
         'todos_equipamentos_raw': todos_equipamentos,
-    })
+    }
+
+    # só envia username se o usuário estiver autenticado E ainda não houver um POST que o altere
+    if request.method == 'GET' and request.user.is_authenticated:
+        context['username'] = request.user.username
+
+    return render(request, 'ocorrencia/subir_ocorrencia.html', context)
 # Views auxiliares para AJAX (opcionais)
 def get_responsaveis_por_pais(request):
     """
