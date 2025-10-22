@@ -480,12 +480,12 @@
       }
 
       // Lógica de visibilidade do campo Ticket
-      inputTicket.style.display = 'none';
+      inputTicket.style.display = 'block';
       ticketField.required = false;
       countrySelect.addEventListener('change', function(e) {
         ticketField.value = '';
         const nomePais = paises[e.target.value];
-        const showTicket = nomePais && ["ESPANHA", "PORTUGAL"].includes(nomePais.toUpperCase());
+        const showTicket = nomePais;
         inputTicket.style.display = showTicket ? 'block' : 'none';
       });
 
