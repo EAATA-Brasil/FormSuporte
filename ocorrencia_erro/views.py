@@ -427,6 +427,7 @@ def filter_data_view(request):
                     'device': record.device.name if record.device else '',
                     'area': record.area or '',
                     'serial': record.serial or '',
+                    'vin': record.vin or '',
                     'brand': record.brand or '',
                     'model': record.model or '',
                     'contact': record.contact or '',
@@ -719,6 +720,7 @@ def subir_ocorrencia(request):
                 'device': device,
                 'area': request.POST.get("area_radio"),
                 'serial': request.POST.get("serial"),
+                'vin': request.POST.get("vin"),
                 'brand': request.POST.get("brand"),
                 'model': request.POST.get("model"),
                 'contact': request.POST.get("contact"),
@@ -1053,6 +1055,7 @@ def get_record(request, pk):
             "device": str(record.device) if record.device else None,
             "area": record.area,
             "serial": record.serial,
+            "vin": record.vin,
             "brand": record.brand,
             "model": record.model,
             "contact": record.contact,
@@ -1302,6 +1305,7 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         y2 = draw_field(x2, y2, "Brand", record.brand)
         y2 = draw_field(x2, y2, "Model", record.model)
         y2 = draw_field(x2, y2, "Serial", record.serial)
+        y2 = draw_field(x2, y2, "VIN", record.vin)
         y2 = draw_field(x2, y2, "Year", record.year)
         y2 = draw_field(x2, y2, "Version", record.version)
 

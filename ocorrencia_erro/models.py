@@ -133,6 +133,13 @@ class Record(models.Model):
         default="N/A",
         verbose_name='Contato'
     )
+    vin = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default="N/A",
+        verbose_name='VIN'
+    )
     year = models.CharField(
         max_length=100,
         blank=True,
