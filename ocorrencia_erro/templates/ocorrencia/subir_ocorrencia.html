@@ -538,8 +538,8 @@
 	        // Remove espaços e converte para maiúsculas
 	        serial = serial.trim().toUpperCase();
 	        
-	        // Padrão regex para Thinkcar: 12 dígitos OU "9TDP" seguido de 8 caracteres alfanuméricos
-	        const padrao = /^(?:\d{12}|9TDP[A-Z0-9]{8})$/;
+	        // Padrão regex para Thinkcar: 9877 + 8 dígitos OU "9TDP" seguido de 8 caracteres alfanuméricos
+	        const padrao = /^(?:9877\d{8}|9TDP[A-Z0-9]{8})$/;
 	        return padrao.test(serial);
 	    }
 
@@ -558,7 +558,7 @@
 
 	        if (isThinkcar) {
 	            serialHint.style.display = 'block';
-	            serialHint.textContent = "Serial obrigatório para Thinkcar: 12 dígitos ou 9TDP + 8 alfanuméricos.";
+	            serialHint.textContent = "Serial obrigatório para Thinkcar: 9877 + 8 dígitos ou 9TDP + 8 alfanuméricos.";
 	            
 	            const isValid = validarSerial(serialInput.value);
 	            if (!isValid) {
