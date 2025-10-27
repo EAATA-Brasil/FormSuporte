@@ -739,7 +739,7 @@
             const problemDetectedId = `problem_detected_${record.id}`;
             const feedbackTechnicalId = `feedback_technical_${record.id}`;
             const feedbackManagerId = `feedback_manager_${record.id}`;
-            
+            console.log(record)
             // Cria o conteúdo HTML do pop-up com informações detalhadas e textareas editáveis
             const popupContent = `
                 <div style="text-align: left;">
@@ -795,6 +795,19 @@
                             <strong>Serial:</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.serial || 'Não informado'}</span>
                         </div>
+                        ${record.tipo_ecu ? `
+                            <div>
+                                <strong>Tipo ECU:</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_ecu || 'Não informado'}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${record.tipo_motor ? `
+                            <div>
+                                <strong>Tipo Motor:</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_motor || 'Não informado'}</span>
+                            </div>
+                        ` : ''}
                         <div>
                             <strong>VIN:</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.vin || 'Não informado'}</span>
@@ -918,7 +931,7 @@
                 </div>
             `;
             
-            let id = record.id
+            let id = record.id  
             Swal.fire({
                 title: 'Informações Detalhadas',
                 html: popupContent,

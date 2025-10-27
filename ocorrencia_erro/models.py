@@ -154,6 +154,18 @@ class Record(models.Model):
         blank=True,
         verbose_name='País'
     )
+    tipo_ecu = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Tipo de ECU'
+    )
+    tipo_motor = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Tipo de Motor'
+    )
     # FIXED: Removed on_delete from CharField
     country_original = models.CharField(
         max_length=100,

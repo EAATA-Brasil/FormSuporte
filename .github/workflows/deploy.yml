@@ -37,6 +37,7 @@ jobs:
             
             echo "=== EXECUTANDO COMANDOS DJANGO ==="
             # CORREÇÃO: Python do 'env'
+            /home/ubuntu/Sistema_Suporte/env/bin/python manage.py makemigrations --noinput
             /home/ubuntu/Sistema_Suporte/env/bin/python manage.py migrate --noinput
             /home/ubuntu/Sistema_Suporte/env/bin/python manage.py collectstatic --noinput
             

@@ -158,6 +158,13 @@
     input[type="radio"]:checked { background-color: #009EE0; border: 2px solid #009EE0; }
     input[type="radio"]:hover { cursor: pointer; border: 2px solid #15446D; }
 
+    .serial-hint {
+      display: none;
+      color: var(--primary);
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
+
     /* UPLOAD DE ARQUIVOS */
     .file-upload { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .custom-file-button { background-color: var(--primary); color: white; padding: 10px 20px; border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px var(--shadow-light); transition: background-color 0.25s ease, box-shadow 0.25s ease; }
@@ -312,7 +319,7 @@
       <label for="device">Equipamentos</label>
       <select id="device" name="device" required>
         <option value="">-- Selecione o equipamento --</option>
-        {% for device in todos_equipamentos_raw %}<option value="{{ device.id }}">{{ device.name }}</option>{% endfor %}
+        {% for equipamento in todos_equipamentos_raw %}<option value="{{ equipamento.id }}">{{ equipamento.name }}</option>{% endfor %}
       </select>
     </div>
 
@@ -325,12 +332,76 @@
       </span>
     </div>
 
-    <div class="form-pair"><label for="serial">Serial</label><input type="text" id="serial" name="serial" required /></div>
+    <script>
+      // Lógica de exibição condicional para Tipo de ECU e Tipo de Motor
+      document.addEventListener('DOMContentLoaded', function() {
+        const areaRadios = document.querySelectorAll('input[name="area_radio"]');
+        const ecuField = document.getElementById('ecu-field');
+        const motorField = document.getElementById('motor-field');
+
+        function updateConditionalFields() {
+          const selectedArea = document.querySelector('input[name="area_radio"]:checked');
+          
+          if (selectedArea) {
+            const areaValue = selectedArea.value;
+            
+            // Tipo de ECU: Exibir para IMMO e Diagnosis
+            if (areaValue === 'IMMO' || areaValue === 'Diagnosis') {
+              ecuField.style.display = 'flex';
+            } else {
+              ecuField.style.display = 'none';
+              document.getElementById('tipo_ecu').value = ''; // Limpa o valor
+            }
+
+            // Tipo de Motor: Exibir apenas para Diagnosis
+            if (areaValue === 'Diagnosis') {
+              motorField.style.display = 'flex';
+            } else {
+              motorField.style.display = 'none';
+              document.getElementById('tipo_motor').value = ''; // Limpa o valor
+            }
+          } else {
+            // Oculta tudo se nenhuma área estiver selecionada
+            ecuField.style.display = 'none';
+            motorField.style.display = 'none';
+            document.getElementById('tipo_ecu').value = '';
+            document.getElementById('tipo_motor').value = '';
+          }
+        }
+
+        // Adiciona o listener para todos os botões de rádio
+        areaRadios.forEach(radio => {
+          radio.addEventListener('change', updateConditionalFields);
+        });
+
+        // Executa na carga da página para o caso de um valor já estar selecionado (ex: erro de submissão)
+        updateConditionalFields();
+      });
+    </script>
+
+    <div class="form-pair">
+      <label for="serial">Serial</label>
+      <input type="text" id="serial" name="serial" />
+      <small id="serial-hint" class="serial-hint">
+        <!-- O conteúdo será preenchido pelo JavaScript -->
+      </small>
+    </div>
     <div class="form-pair"><label for="vin">VIN</label><input type="text" id="vin" name="vin" required /></div>
     <div class="form-pair"><label for="brand">Marca</label><input type="text" id="brand" name="brand" required /></div>
     <div class="form-pair"><label for="contact">Telefone de contato</label><input type="text" id="contact" name="contact" required/></div>
     <div class="form-pair"><label for="model">Modelo</label><input type="text" id="model" name="model" required /></div>
     <div class="form-pair"><label for="year">Ano</label><input type="text" id="year" name="year" required /></div>
+    
+    <!-- Novos campos opcionais -->
+    <div class="form-pair conditional-field" id="ecu-field" style="display: none;">
+      <label for="tipo_ecu">Tipo de ECU</label>
+      <input type="text" id="tipo_ecu" name="tipo_ecu"/>
+    </div>
+    <div class="form-pair conditional-field" id="motor-field" style="display: none;">
+      <label for="tipo_motor">Tipo de Motor</label>
+      <input type="text" id="tipo_motor" name="tipo_motor"/>
+    </div>
+    <!-- Fim dos novos campos opcionais -->
     <div class="form-pair"><label for="version">Versão</label><input type="text" id="version" name="version" required /></div>
     {% if has_full_permission%}    
       <div class="form-pair">
@@ -442,13 +513,78 @@
     document.addEventListener('DOMContentLoaded', function() {
       flatpickr('#deadline', { 'allowInput': false, 'dateFormat': 'd/m/Y', 'minDate': 'today' });
 
-      // Elementos do DOM para filtros
-      const countrySelect = document.getElementById('country');
-      const responsibleSelect = document.getElementById('responsible');
-      const inputTicket = document.getElementById('span_ticket');
-      const ticketField = document.getElementById("ticket");
+	    // Elementos do DOM para filtros
+	    const countrySelect = document.getElementById('country');
+	    const responsibleSelect = document.getElementById('responsible');
+	    const inputTicket = document.getElementById('span_ticket');
+	    const ticketField = document.getElementById("ticket");
 
-      // Funções de filtro para selects
+	    // Funções de filtro para selects
+
+	    // ----------------------------------------------------------------------------------
+	    // LÓGICA DE VALIDAÇÃO THINKCAR
+	    // ----------------------------------------------------------------------------------
+
+	    const deviceSelect = document.getElementById('device');
+	    const serialInput = document.getElementById('serial');
+	    const serialHint = document.getElementById('serial-hint');
+	    let todosEquipamentos = JSON.stringify({{ todos_equipamentos_raw|safe }}); // Lista de {id: X, name: 'Y'}
+	    todosEquipamentos = JSON.parse(todosEquipamentos)
+	    // Encontra o ID do equipamento Thinkcar para usar na lógica de validação
+	    const thinkcarDevice = todosEquipamentos.find(d => d.name.toUpperCase().includes('THINKCAR') || d.name.toUpperCase().includes('READER'));
+	    
+	    // Função de validação do serial (a mesma fornecida pelo usuário)
+	    function validarSerial(serial) {
+	        // Remove espaços e converte para maiúsculas
+	        serial = serial.trim().toUpperCase();
+	        
+	        // Padrão regex para Thinkcar: 12 dígitos OU "9TDP" seguido de 8 caracteres alfanuméricos
+	        const padrao = /^(?:\d{12}|9TDP[A-Z0-9]{8})$/;
+	        return padrao.test(serial);
+	    }
+
+	    function checkThinkcarValidation() {
+	        if (!thinkcarDevice) return true; // Se não houver Thinkcar cadastrado, ignora a validação
+
+	        const selectedDeviceId = deviceSelect.value;
+	        const selectedDevice = todosEquipamentos.find(d => d.id == selectedDeviceId);
+	        
+	        // Verifica se o equipamento selecionado é um Thinkcar
+	        // Verifica se o equipamento selecionado é um Thinkcar OU um Reader
+	        const isThinkcar = selectedDevice && (selectedDevice.name.toUpperCase().includes('THINKCAR') || selectedDevice.name.toUpperCase().includes('READER'));
+	        
+	        // Se o campo serial não existir, não faz nada (embora deva existir)
+	        if (!serialInput) return true;
+
+	        if (isThinkcar) {
+	            serialHint.style.display = 'block';
+	            serialHint.textContent = "Serial obrigatório para Thinkcar: 12 dígitos ou 9TDP + 8 alfanuméricos.";
+	            
+	            const isValid = validarSerial(serialInput.value);
+	            if (!isValid) {
+	                serialInput.style.borderColor = 'var(--error)';
+	                serialInput.style.boxShadow = '0 0 4px var(--error)';
+	                return false;
+	            } else {
+	                serialInput.style.borderColor = '';
+	                serialInput.style.boxShadow = '';
+	                return true;
+	            }
+	        } else {
+	            serialHint.style.display = 'none';
+	            serialInput.style.borderColor = '';
+	            serialInput.style.boxShadow = '';
+	            return true;
+	        }
+	    }
+
+	    // Adiciona event listeners para validação em tempo real
+	    deviceSelect.addEventListener('change', checkThinkcarValidation);
+	    serialInput.addEventListener('input', checkThinkcarValidation);
+
+	    // ----------------------------------------------------------------------------------
+	    // FIM DA LÓGICA DE VALIDAÇÃO THINKCAR
+	    // ----------------------------------------------------------------------------------
       function filterResponsiblesByCountry(countryId) {
         const currentResponsible = responsibleSelect.value;
         responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
@@ -507,7 +643,11 @@
         });
       }
 
-      // --- LÓGICA DE UPLOAD DE ARQUIVOS COM PRÉ-VISUALIZAÇÃO ---
+    // ----------------------------------------------------------------------------------
+    // LÓGICA DE VALIDAÇÃO THINKCAR (MOVIDA PARA DENTRO DO DOMContentLoaded)
+    // ----------------------------------------------------------------------------------
+    
+    // --- LÓGICA DE UPLOAD DE ARQUIVOS COM PRÉ-VISUALIZAÇÃO ---
       const uploadWrapper = document.querySelector('.file-upload-wrapper');
       const fileInput = document.getElementById('arquivo');
       const previewContainer = document.getElementById('file-preview-container');
@@ -574,71 +714,86 @@
         });
         uploadWrapper.addEventListener('drop', e => handleFiles(e.dataTransfer.files), false);
         fileInput.addEventListener('change', () => handleFiles(fileInput.files));
-      }
-    });
-
-    // Event listener para o submit do formulário
-    formOcorrencia.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const form = e.target;
-    const data = new FormData(form);
-
-    // Validação básica do país (frontend)
-    if (form.querySelector('#country') && form.querySelector('#country').value === "") {
-        showPopup('error', 'Falha', 'Por favor, selecione um país.');
-        return;
-    }
-
-    submitBtnText.style.display = 'none';
-    submitBtnSpinner.classList.add('visible');
-    submitBtn.disabled = true;
-
-    try {
-        const response = await fetch("{% url 'subir_ocorrencia' %}", {
-            method: "POST",
-            headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
-            body: data,
-            credentials: 'same-origin'
-        });
-
-        // Verifica se a resposta é JSON (sucesso/erro tratado)
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            const result = await response.json();
-            
-            if (result.status === "success") {
-                showPopup('success', 'Sucesso', result.message);
-                form.reset();
-                document.getElementById('clear-all-files-btn').click();
-                
-                if ('{{has_full_permission}}' == 'True') {
-                    const responsibleSelect = document.getElementById('responsible');
-                    responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
-                    todosResponsaveis.forEach(r => {
-                        const opt = document.createElement('option');
-                        opt.value = r.name;
-                        opt.textContent = r.name;
-                        responsibleSelect.appendChild(opt);
-                    });
-                }
-            } else {
-                // Exibe mensagem de erro específica do backend
-                showPopup('error', 'Falha', result.message || "Erro ao processar a requisição.");
-            }
-        } else {
-            // Se não for JSON, trata como erro genérico
-            throw new Error('Resposta inesperada do servidor');
-        }
-    } catch (error) {
-        // Captura erros de rede ou outros erros inesperados
-        showPopup('error', 'Erro inesperado', error.message || "Ocorreu um erro inesperado. Tente novamente.");
-    } finally {
-        submitBtnText.style.display = 'inline';
-        submitBtnSpinner.classList.remove('visible');
-        submitBtn.disabled = false;
-    }
-});
-  </script>
+	      }
+	    
+	    // Event listener para o submit do formulário
+	    formOcorrencia.addEventListener('submit', async (e) => {
+	    e.preventDefault();
+	    
+	    // Garante que os campos ocultos não sejam enviados com valores antigos
+	    if (document.getElementById('ecu-field').style.display === 'none') {
+	        document.getElementById('tipo_ecu').value = '';
+	    }
+	    if (document.getElementById('motor-field').style.display === 'none') {
+	        document.getElementById('tipo_motor').value = '';
+	    }
+	    
+	    const form = e.target;
+	    const data = new FormData(form);
+	
+	    // Validação básica do país (frontend)
+	    if (form.querySelector('#country') && form.querySelector('#country').value === "") {
+	        showPopup('error', 'Falha', 'Por favor, selecione um país.');
+	        return;
+	    }
+	    
+	    // Validação Thinkcar (frontend)
+	    if (!checkThinkcarValidation()) {
+	        // A função checkThinkcarValidation já estiliza o campo com erro
+	        showPopup('error', 'Falha', 'Serial inválido para o equipamento Thinkcar selecionado.');
+	        return;
+	    }
+	
+	    submitBtnText.style.display = 'none';
+	    submitBtnSpinner.classList.add('visible');
+	    submitBtn.disabled = true;
+	
+	    try {
+	        const response = await fetch("{% url 'subir_ocorrencia' %}", {
+	            method: "POST",
+	            headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
+	            body: data,
+	            credentials: 'same-origin'
+	        });
+	
+	        // Verifica se a resposta é JSON (sucesso/erro tratado)
+	        const contentType = response.headers.get('content-type');
+	        if (contentType && contentType.includes('application/json')) {
+	            const result = await response.json();
+	            
+	            if (result.status === "success") {
+	                showPopup('success', 'Sucesso', result.message);
+	                form.reset();
+	                document.getElementById('clear-all-files-btn').click();
+	                
+	                if ('{{has_full_permission}}' == 'True') {
+	                    const responsibleSelect = document.getElementById('responsible');
+	                    responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
+	                    todosResponsaveis.forEach(r => {
+	                        const opt = document.createElement('option');
+	                        opt.value = r.name;
+	                        opt.textContent = r.name;
+	                        responsibleSelect.appendChild(opt);
+	                    });
+	                }
+	            } else {
+	                // Exibe mensagem de erro específica do backend
+	                showPopup('error', 'Falha', result.message || "Erro ao processar a requisição.");
+	            }
+	        } else {
+	            // Se não for JSON, trata como erro genérico
+	            throw new Error('Resposta inesperada do servidor');
+	        }
+	    } catch (error) {
+	        // Captura erros de rede ou outros erros inesperados
+	        showPopup('error', 'Erro inesperado', error.message || "Ocorreu um erro inesperado. Tente novamente.");
+	    } finally {
+	        submitBtnText.style.display = 'inline';
+	        submitBtnSpinner.classList.remove('visible');
+	        submitBtn.disabled = false;
+	    }
+	});
+	  });
+	  </script>
 </body>
 </html>

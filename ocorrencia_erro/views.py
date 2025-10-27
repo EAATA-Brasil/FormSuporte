@@ -428,6 +428,8 @@ def filter_data_view(request):
                     'area': record.area or '',
                     'serial': record.serial or '',
                     'vin': record.vin or '',
+                    'tipo_ecu': record.tipo_ecu or '',
+                    'tipo_motor': record.tipo_motor or '',
                     'brand': record.brand or '',
                     'model': record.model or '',
                     'contact': record.contact or '',
@@ -699,6 +701,24 @@ def subir_ocorrencia(request):
             device = get_object_or_404(Device, id=request.POST.get("device"))
 
             # Validação específica do ticket
+
+            # ----------------------------------------------------------------------------------
+            # VALIDAÇÃO THINKCAR: O serial DEVE obedecer ao padrão regex fornecido.
+            # ----------------------------------------------------------------------------------
+            serial_input = request.POST.get("serial", "").strip().upper()
+            device_name = device.name.upper() # Obtém o nome do equipamento selecionado
+            
+            # Padrão regex para Thinkcar: 12 dígitos OU "9TDP" seguido de 8 caracteres alfanuméricos
+            THINKCAR_REGEX = r"^(?:\d{12}|9TDP[A-Z0-9]{8})$"
+            
+            if "THINKCAR" in device_name or "READER" in device_name:
+                import re
+                if not re.match(THINKCAR_REGEX, serial_input):
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Serial inválido para equipamento Thinkcar. O serial deve ter 12 dígitos ou começar com '9TDP' seguido de 8 caracteres alfanuméricos."
+                    }, status=400)
+            # ----------------------------------------------------------------------------------
             ticket = request.POST.get("ticket", "").strip()
             if ticket:
                 if len(ticket) > 20:
@@ -728,6 +748,8 @@ def subir_ocorrencia(request):
                 'country': country,
                 'version': request.POST.get("version"),
                 'problem_detected': request.POST.get("problem_detected"),
+                'tipo_ecu': request.POST.get("tipo_ecu"),
+                'tipo_motor': request.POST.get("tipo_motor"),
                 'status': Record.STATUS_OCORRENCIA.REQUESTED
             }
 
@@ -1055,6 +1077,8 @@ def get_record(request, pk):
             "device": str(record.device) if record.device else None,
             "area": record.area,
             "serial": record.serial,
+            'tipo_ecu': record.tipo_ecu,
+            'tipo_motor': record.tipo_motor,
             "vin": record.vin,
             "brand": record.brand,
             "model": record.model,
