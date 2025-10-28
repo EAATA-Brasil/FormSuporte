@@ -33,6 +33,8 @@ from reportlab.lib.enums import TA_LEFT
 import zipfile
 from django.utils.encoding import smart_str
 from time import timezone
+from django.utils.translation import gettext as _
+
 
 from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao
 
@@ -218,12 +220,12 @@ def index(request):
             )
 
     status_map = {
-        Record.STATUS_OCORRENCIA.DONE: "Concluído",
-        Record.STATUS_OCORRENCIA.LATE: "Atrasado",
-        Record.STATUS_OCORRENCIA.PROGRESS: "Em progresso",
-        Record.STATUS_OCORRENCIA.REQUESTED: "Requisitado",
-        Record.STATUS_OCORRENCIA.AWAITING_CHINA: "Aguardando China",
-        Record.STATUS_OCORRENCIA.AWAITING_CHINA_LATE: "China Atrasada",
+        Record.STATUS_OCORRENCIA.DONE: _("Concluído"),
+        Record.STATUS_OCORRENCIA.LATE: _("Atrasado"),
+        Record.STATUS_OCORRENCIA.PROGRESS: _("Em progresso"),
+        Record.STATUS_OCORRENCIA.REQUESTED: _("Requisitado"),
+        Record.STATUS_OCORRENCIA.AWAITING_CHINA: _("Aguardando China"),
+        Record.STATUS_OCORRENCIA.AWAITING_CHINA_LATE: _("China Atrasada"),
 
     }
 

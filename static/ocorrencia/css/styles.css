@@ -764,45 +764,7 @@ body {
     color: var(--error);
 }
 
-.table td[data-column="status"][data-initial-value="Concluído"] {
-    background-color: var(--success) !important;
-    color: white !important;
-    font-weight: bold;
-    border-radius: 4px;
-    padding: 5px 10px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: relative;
-}
 
-.table td[data-column="status"][data-initial-value="Concluído"]::after {
-    content: "✓";
-    margin-left: 5px;
-}
-
-/* Melhorar a visualização dos outros status */
-.table td[data-column="status"][data-initial-value="Em progresso"]{
-    background-color: var(--warning) !important;
-    color: var(--dark) !important;
-}
-.table td[data-column="status"][data-initial-value="Aguardando China"] {
-    background-color: var(--waiting) !important;
-    color: var(--light) !important;
-}
-.table td[data-column="status"][data-initial-value="China Atrasada"] {
-    background-color: var(--error-china) !important;
-    color: white !important;
-}
-
-.table td[data-column="status"][data-initial-value="Atrasado"] {
-    background-color: var(--error) !important;
-    color: white !important;
-}
-
-.table td[data-column="status"][data-initial-value="Requisitado"] {
-    background-color: var(--primary) !important;
-    color: white !important;
-}
 
 /* Estilos específicos para o pop-up de detalhes do problema */
 .problem-details-popup {
@@ -882,7 +844,7 @@ body {
 /* Melhorias para a paginação */
 #paginate {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     gap: 15px;
     margin-top: 20px;

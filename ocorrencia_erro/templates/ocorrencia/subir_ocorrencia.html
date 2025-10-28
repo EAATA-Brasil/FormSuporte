@@ -1,3 +1,4 @@
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -48,6 +49,8 @@
       display: flex;
       gap: 16px;
       z-index: 1000;
+      justify-content:space-between;
+      width: calc(100% - 40px);
     }
 
     .buttons_log {
@@ -89,7 +92,7 @@
     .login:hover { background-color: var(--primary-dark); box-shadow: 0 4px 14px var(--shadow-hover); }
 
     /* FORMULÁRIO */
-    form {
+    form#form-ocorrencia {
       background-color: white;
       padding: 2.5rem 3rem;
       border-radius: 10px;
@@ -258,77 +261,87 @@
 </head>
 <body>
   <div id="actions_log">
+    <span>
+      {% include 'ocorrencia/components/toogleCountry.html' with request=request %}
+    </span>
+    <span>
+
     {% if has_full_permission %}
-      <button class="new_user buttons_log" onclick="newUser()">Criar novo usuário</button>
+      <button class="new_user buttons_log" onclick="newUser()">{% trans "Criar novo usuário" %}</button>
     {% endif %}
     {% if user.is_authenticated %}
-      <button class="logout buttons_log" onclick="logOut()">Logout</button>
-      <button class="redirecionar buttons_log" onclick="redirecionar()">Voltar para tabela</button>
+      <button class="logout buttons_log" onclick="logOut()">{% trans "Logout" %}</button>
+      <button class="redirecionar buttons_log" onclick="redirecionar()">{% trans "Voltar para tabela" %}</button>
     {% else %}
-      <button class="login buttons_log" onclick="handleLogin()">Login</button>
+      <button class="login buttons_log" onclick="handleLogin()">{% trans "Login" %}</button>
     {% endif %}
+    </span>
   </div>
 
   <form method="POST" enctype="multipart/form-data" id="form-ocorrencia">
     {% csrf_token %}
 
     <div class="form-pair">
-      <label for="country">País</label>
+      <label for="country">{% trans "País" %}</label>
       {% if has_full_permission %}
         <select id="country" name="country" required>
-          <option value="">-- Selecione o país --</option>
+          <option value="">{% trans "-- Selecione o país --" %}</option>
           {% for pais in paises %}<option value="{{ pais.id }}">{{ pais.name }}</option>{% endfor %}
         </select>
       {% else %}
         {% if paises %}
           <select id="country" name="country">
-            <option value="">-- Selecione o país --</option>
+            <option value="">{% trans "-- Selecione o país --" %}</option>
             {% for pais in paises %}<option value="{{ pais.id }}">{{ pais.name }}</option>{% endfor %}
           </select>
         {% else %}
-          <input type="text" id="country" name="country" value="Sem país atribuído" readonly />
+          <input type="text" id="country" name="country" value="{% trans 'Sem país atribuído' %}" readonly />
         {% endif %}
       {% endif %}
     </div>
 
     <div class="form-pair">
-      <label for="technical">Técnico</label>
-      {% if username and not has_full_permission%}
+      <label for="technical">{% trans "Técnico" %}</label>
+      {% if username and not has_full_permission %}
         <input type="text" id="technical" name="technical" required value="{{ username|default:'' }}">
-      {%else%}
-        <input type="text" id="technical" name="technical" required/>
-      {%endif%}
+      {% else %}
+        <input type="text" id="technical" name="technical" required />
+      {% endif %}
     </div>
 
     <div class="form-pair full-width" id="span_ticket">
-      <label for="ticket">Ticket</label>
+      <label for="ticket">{% trans "Ticket" %}</label>
       <input type="text" id="ticket" name="ticket" />
     </div>
 
     {% if has_full_permission %}
       <div class="form-pair">
-        <label for="responsible">Responsável</label>
+        <label for="responsible">{% trans "Responsável" %}</label>
         <select id="responsible" name="responsible">
-          <option value="">-- Selecione o responsável --</option>
-          {% for responsavel in todos_responsaveis_raw %}<option value="{{ responsavel.name }}">{{ responsavel.name }}</option>{% endfor %}
+          <option value="">{% trans "-- Selecione o responsável --" %}</option>
+          {% for responsavel in todos_responsaveis_raw %}
+            <option value="{{ responsavel.name }}">{{ responsavel.name }}</option>
+          {% endfor %}
         </select>
       </div>
     {% endif %}
 
     <div class="form-pair">
-      <label for="device">Equipamentos</label>
+      <label for="device">{% trans "Equipamentos" %}</label>
       <select id="device" name="device" required>
-        <option value="">-- Selecione o equipamento --</option>
-        {% for equipamento in todos_equipamentos_raw %}<option value="{{ equipamento.id }}">{{ equipamento.name }}</option>{% endfor %}
+        <option value="">{% trans "-- Selecione o equipamento --" %}</option>
+        {% for equipamento in todos_equipamentos_raw %}
+          <option value="{{ equipamento.id }}">{{ equipamento.name }}</option>
+        {% endfor %}
       </select>
     </div>
 
     <div class="form-pair full-width">
-      <label for="area">Área</label>
+      <label for="area">{% trans "Área" %}</label>
       <span class="area">
-        <span><input type="radio" name="area_radio" id="IMMO" value="IMMO" required><label for="IMMO" translate="no">IMMO</label></span>
-        <span><input type="radio" name="area_radio" id="Diagnosis" value="Diagnosis"><label for="Diagnosis">Diagnosis</label></span>
-        <span><input type="radio" name="area_radio" id="Device" value="Device"><label for="Device">Device</label></span>
+        <span><input type="radio" name="area_radio" id="IMMO" value="IMMO" required><label for="IMMO">{% trans "IMMO" %}</label></span>
+        <span><input type="radio" name="area_radio" id="Diagnosis" value="Diagnosis"><label for="Diagnosis">{% trans "Diagnosis" %}</label></span>
+        <span><input type="radio" name="area_radio" id="Device" value="Device"><label for="Device">{% trans "Device" %}</label></span>
       </span>
     </div>
 
@@ -380,64 +393,86 @@
     </script>
 
     <div class="form-pair">
-      <label for="serial">Serial</label>
+      <label for="serial">{% trans "Serial" %}</label>
       <input type="text" id="serial" name="serial" />
-      <small id="serial-hint" class="serial-hint">
-        <!-- O conteúdo será preenchido pelo JavaScript -->
-      </small>
+      <small id="serial-hint" class="serial-hint"></small>
     </div>
-    <div class="form-pair"><label for="vin">VIN</label><input type="text" id="vin" name="vin" required /></div>
-    <div class="form-pair"><label for="brand">Marca</label><input type="text" id="brand" name="brand" required /></div>
-    <div class="form-pair"><label for="contact">Telefone de contato</label><input type="text" id="contact" name="contact" required/></div>
-    <div class="form-pair"><label for="model">Modelo</label><input type="text" id="model" name="model" required /></div>
-    <div class="form-pair"><label for="year">Ano</label><input type="text" id="year" name="year" required /></div>
-    
-    <!-- Novos campos opcionais -->
+
+    <div class="form-pair">
+      <label for="vin">{% trans "VIN" %}</label>
+      <input type="text" id="vin" name="vin" required />
+    </div>
+
+    <div class="form-pair">
+      <label for="brand">{% trans "Marca" %}</label>
+      <input type="text" id="brand" name="brand" required />
+    </div>
+
+    <div class="form-pair">
+      <label for="contact">{% trans "Telefone de contato" %}</label>
+      <input type="text" id="contact" name="contact" required />
+    </div>
+
+    <div class="form-pair">
+      <label for="model">{% trans "Modelo" %}</label>
+      <input type="text" id="model" name="model" required />
+    </div>
+
+    <div class="form-pair">
+      <label for="year">{% trans "Ano" %}</label>
+      <input type="text" id="year" name="year" required />
+    </div>
+
     <div class="form-pair conditional-field" id="ecu-field" style="display: none;">
-      <label for="tipo_ecu">Tipo de ECU</label>
-      <input type="text" id="tipo_ecu" name="tipo_ecu"/>
+      <label for="tipo_ecu">{% trans "Tipo de ECU" %}</label>
+      <input type="text" id="tipo_ecu" name="tipo_ecu" />
     </div>
+
     <div class="form-pair conditional-field" id="motor-field" style="display: none;">
-      <label for="tipo_motor">Tipo de Motor</label>
-      <input type="text" id="tipo_motor" name="tipo_motor"/>
+      <label for="tipo_motor">{% trans "Tipo de Motor" %}</label>
+      <input type="text" id="tipo_motor" name="tipo_motor" />
     </div>
-    <!-- Fim dos novos campos opcionais -->
-    <div class="form-pair"><label for="version">Versão</label><input type="text" id="version" name="version" required /></div>
-    {% if has_full_permission%}    
+
+    <div class="form-pair">
+      <label for="version">{% trans "Versão" %}</label>
+      <input type="text" id="version" name="version" required />
+    </div>
+
+    {% if has_full_permission %}
       <div class="form-pair">
-        <label for="deadline">Deadline</label>
+        <label for="deadline">{% trans "Deadline" %}</label>
         <input type="text" id="deadline" name="deadline" required />
       </div>
     {% endif %}
 
     <div class="form-pair">
-      <label for="status">Status</label>
+      <label for="status">{% trans "Status" %}</label>
       <select id="status" name="status">
-        <option value="Requisitado" selected="selected">Status padrão</option>
-        <option value="Aguardando China">Aguardando china</option>
+        <option value="Requisitado" selected="selected">{% trans "Status padrão" %}</option>
+        <option value="Aguardando China">{% trans "Aguardando China" %}</option>
       </select>
     </div>
 
     <div class="form-pair full-width">
-      <label for="problem_detected">Problema Detectado</label>
+      <label for="problem_detected">{% trans "Problema Detectado" %}</label>
       <textarea id="problem_detected" name="problem_detected" required></textarea>
     </div>
 
     <div class="file-upload-wrapper full-width">
-      <label>Anexar Arquivo(s)</label>
+      <label>{% trans "Anexar Arquivo(s)" %}</label>
       <div id="file-preview-container" class="file-preview-container"></div>
       <span style="display:flex; gap:20px;">
         <div class="file-upload">
-          <label for="arquivo" class="custom-file-button">Selecionar Arquivos</label>
+          <label for="arquivo" class="custom-file-button">{% trans "Selecionar Arquivos" %}</label>
           <input type="file" id="arquivo" name="arquivo" multiple />
         </div>
-        <button type="button" id="clear-all-files-btn" class="clear-all-files-btn" style="display: none;">Limpar Tudo</button>
+        <button type="button" id="clear-all-files-btn" class="clear-all-files-btn" style="display: none;">{% trans "Limpar Tudo" %}</button>
       </span>
     </div>
 
     <div class="form-pair full-width">
       <button type="submit" id="submit-btn" required>
-        <span id="button-text" style="color:#fff">Cadastrar Ocorrência</span>
+        <span id="button-text" style="color:#fff">{% trans "Cadastrar Ocorrência" %}</span>
         <span class="spinner" id="button-spinner"></span>
       </button>
     </div>
@@ -447,9 +482,10 @@
     <div id="error-popup-content">
       <h3 id="popup-title" style="margin-bottom: 10px;"></h3>
       <p id="popup-message" style="text-align: center; margin-bottom: 20px;"></p>
-      <button id="error-popup-close-btn" style="background-color: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Fechar</button>
+      <button id="error-popup-close-btn" style="background-color: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">{% trans "Fechar" %}</button>
     </div>
   </div>
+
 
   <script>
     // Dados do backend

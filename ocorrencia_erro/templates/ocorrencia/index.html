@@ -1,350 +1,391 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>{% trans "Document" %}</title>
     <link rel="stylesheet" href="{% static 'ocorrencia/css/styles.css' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-    /* Estilos para o modal de imagem */
-    #image-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.9);
-        z-index: 10000;
-        justify-content: center;
-        align-items: center;
-    }
+        .table td[data-column="status"][data-initial-value='{%trans "Concluído"%}'] {
+    background-color: var(--success) !important;
+    color: white !important;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 5px 10px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: relative;
+}
 
-    #expanded-image {
-        max-width: 90%;
-        max-height: 90%;
-        border-radius: 8px;
-    }
+.table td[data-column="status"][data-initial-value='{%trans "Concluído"%}']::after {
+    content: "✓";
+    margin-left: 5px;
+}
 
-    #close-modal {
-        background: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        cursor: pointer;
-        font-size: 18px;
-    }
+/* Melhorar a visualização dos outros status */
+.table td[data-column="status"][data-initial-value='{%trans "Em progresso"%}']{
+    background-color: var(--warning) !important;
+    color: var(--dark) !important;
+}
+.table td[data-column="status"][data-initial-value="Aguardando China"] {
+    background-color: var(--waiting) !important;
+    color: var(--light) !important;
+}
+.table td[data-column="status"][data-initial-value="China Atrasada"] {
+    background-color: var(--error-china) !important;
+    color: white !important;
+}
 
-    #download-image {
-        background: #28a745;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 8px 12px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background-color 0.2s;
-    }
+.table td[data-column="status"][data-initial-value='{%trans "Atrasado"%}'] {
+    background-color: var(--error) !important;
+    color: white !important;
+}
 
-    #download-image:hover {
-        background: #218838;
-    }
-
-    /* Estilo para imagens clicáveis no chat */
-    .chat-message img {
-        max-width: 200px;
-        max-height: 200px;
-        border-radius: 8px;
-        margin-top: 5px;
-        border: 1px solid #ddd;
-        cursor: pointer;
-        transition: transform 0.2s ease;
-    }
-
-    .chat-message img:hover {
-        transform: scale(1.05);
-    }
-
-    /* Restante do CSS permanece igual */
-    .chat-image-button {
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 20px;
-        padding: 8px 12px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-        font-size: 16px;
-        margin-right: 8px;
-    }
-
-    .chat-image-button:hover {
-        background-color: #218838;
-    }
-
-    .image-indicator {
-        background-color: #007bff;
-        color: white;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-size: 12px;
-        margin-left: 8px;
-    }
-        /* Estilos para o sistema de notificações */
-        .notification-container {
+.table td[data-column="status"][data-initial-value='{%trans "Requisitado"%}'] {
+    background-color: var(--primary) !important;
+    color: white !important;
+}
+        /* Estilos para o modal de imagem */
+        #image-modal {
+            display: none;
             position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
         }
-        .clear-date-btn {
-            margin-bottom:15px;
+
+        #expanded-image {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+
+        #close-modal {
             background: #dc3545;
             color: white;
             border: none;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 15px;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
             cursor: pointer;
-            z-index: 1000;
+            font-size: 18px;
         }
 
-        .clear-date-btn:hover {
-            background: #c82333;
-        }
-        .today-date-btn {
-            margin-bottom:15px;
-            background: #569ff7;
+        #download-image {
+            background: #28a745;
             color: white;
             border: none;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 15px;
-            cursor: pointer;
-            z-index: 1000;
-        }
-        .headerFiles{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;    
-        }
-        .today-date-btn:hover {
-            background: #4682ccff;
-        }
-        /* Estilos para o chat */
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: 400px; /* Altura fixa para o chat */
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-            padding: 10px;
-            margin-top: 20px;
-        }
-
-        .chat-messages {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 10px;
-            display: flex;
-            flex-direction: column; /* Para que as mensagens novas apareçam na parte inferior */
-        }
-
-        .chat-message {
+            border-radius: 4px;
             padding: 8px 12px;
-            margin-bottom: 8px;
-            border-radius: 18px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-
-        .chat-message.my-message {
-            background-color: #0459B5;
-            color: white;
-            align-self: flex-end; /* Alinha a sua mensagem à direita */
-        }
-
-        .chat-message.other-message {
-            background-color: #e5e5e5;
-            color: #333;
-            align-self: flex-start; /* Alinha a mensagem do outro à esquerda */
-        }
-
-        .chat-message-author {
-            font-size: 10px;
-            color: #999;
-            margin-bottom: 2px;
-        }
-
-        .chat-input-area {
-            display: flex;
-            padding-top: 10px;
-            border-top: 1px solid #eee;
-        }
-
-        .chat-input-area input {
-            flex-grow: 1;
-            border: 1px solid #ccc;
-            border-radius: 20px;
-            padding: 8px 15px;
-            margin-right: 8px;
-        }
-
-        .chat-input-area button {
-            background-color: #0459B5;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            padding: 8px 15px;
             cursor: pointer;
+            font-size: 14px;
             transition: background-color 0.2s;
         }
 
-        .chat-input-area button:hover {
-            background-color: #0347a0;
-        }
-        .chat-message-time {
-            display: block; /* Garante que a hora fique em uma nova linha */
-            font-size: 10px;
-            color: #999;
-            margin-top: 5px;
-            text-align: right;
+        #download-image:hover {
+            background: #218838;
         }
 
-        .chat-message.my-message .chat-message-time {
-            color: rgba(255, 255, 255, 0.7); /* Cor da hora para suas mensagens */
-        }
-        .notification-bell {
-            position: relative;
-            background: #0459B5;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .notification-bell:hover {
-            background: #0347a0;
-            transform: scale(1.05);
-        }
-        
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #dc3545;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 20px;
-        }
-        
-        .notification-dropdown {
-            position: absolute;
-            top: 60px;
-            right: 0;
-            background: white;
-            border: 1px solid #ddd;
+        /* Estilo para imagens clicáveis no chat */
+        .chat-message img {
+            max-width: 200px;
+            max-height: 200px;
             border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            width: 350px;
-            max-height: 400px;
-            overflow-y: auto;
-            display: none;
-        }
-        
-        .notification-header {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .notification-item {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
+            margin-top: 5px;
+            border: 1px solid #ddd;
             cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-        
-        .notification-item:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .notification-item:last-child {
-            border-bottom: none;
-        }
-        
-        .notification-title {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        
-        .notification-summary {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-        
-        .notification-time {
-            color: #999;
-            font-size: 12px;
-        }
-        
-        .no-notifications {
-            padding: 20px;
-            text-align: center;
-            color: #999;
-            font-style: italic;
-        }
-        .notification-summary button {
-            background-color: #0459B5; /* azul igual ao sino */
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-left: 8px;
-            transition: background-color 0.2s ease, transform 0.1s ease;
+            transition: transform 0.2s ease;
         }
 
-        .notification-summary button:hover {
-            background-color: #0347a0; /* azul mais escuro no hover */
+        .chat-message img:hover {
             transform: scale(1.05);
         }
 
-        .notification-summary button:active {
-            background-color: #02367d;
-            transform: scale(0.98);
+        /* Restante do CSS permanece igual */
+        .chat-image-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 16px;
+            margin-right: 8px;
         }
-        .containerFooterPopup{
-            display: flex;
-            align-items: center;    
-            justify-content: space-around;
+
+        .chat-image-button:hover {
+            background-color: #218838;
         }
+
+        .image-indicator {
+            background-color: #007bff;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+            /* Estilos para o sistema de notificações */
+            .notification-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+            }
+            .clear-date-btn {
+                margin-bottom:15px;
+                background: #dc3545;
+                color: white;
+                border: none;
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-size: 15px;
+                cursor: pointer;
+                z-index: 1000;
+            }
+
+            .clear-date-btn:hover {
+                background: #c82333;
+            }
+            .today-date-btn {
+                margin-bottom:15px;
+                background: #569ff7;
+                color: white;
+                border: none;
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-size: 15px;
+                cursor: pointer;
+                z-index: 1000;
+            }
+            .headerFiles{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;    
+            }
+            .today-date-btn:hover {
+                background: #4682ccff;
+            }
+            /* Estilos para o chat */
+            .chat-container {
+                display: flex;
+                flex-direction: column;
+                height: 400px; /* Altura fixa para o chat */
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                background-color: #f9f9f9;
+                padding: 10px;
+                margin-top: 20px;
+            }
+
+            .chat-messages {
+                flex-grow: 1;
+                overflow-y: auto;
+                padding: 10px;
+                display: flex;
+                flex-direction: column; /* Para que as mensagens novas apareçam na parte inferior */
+            }
+
+            .chat-message {
+                padding: 8px 12px;
+                margin-bottom: 8px;
+                border-radius: 18px;
+                max-width: 80%;
+                word-wrap: break-word;
+            }
+
+            .chat-message.my-message {
+                background-color: #0459B5;
+                color: white;
+                align-self: flex-end; /* Alinha a sua mensagem à direita */
+            }
+
+            .chat-message.other-message {
+                background-color: #e5e5e5;
+                color: #333;
+                align-self: flex-start; /* Alinha a mensagem do outro à esquerda */
+            }
+
+            .chat-message-author {
+                font-size: 10px;
+                color: #999;
+                margin-bottom: 2px;
+            }
+
+            .chat-input-area {
+                display: flex;
+                padding-top: 10px;
+                border-top: 1px solid #eee;
+            }
+
+            .chat-input-area input {
+                flex-grow: 1;
+                border: 1px solid #ccc;
+                border-radius: 20px;
+                padding: 8px 15px;
+                margin-right: 8px;
+            }
+
+            .chat-input-area button {
+                background-color: #0459B5;
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 8px 15px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+
+            .chat-input-area button:hover {
+                background-color: #0347a0;
+            }
+            .chat-message-time {
+                display: block; /* Garante que a hora fique em uma nova linha */
+                font-size: 10px;
+                color: #999;
+                margin-top: 5px;
+                text-align: right;
+            }
+
+            .chat-message.my-message .chat-message-time {
+                color: rgba(255, 255, 255, 0.7); /* Cor da hora para suas mensagens */
+            }
+            .notification-bell {
+                position: relative;
+                background: #0459B5;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+                cursor: pointer;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+            }
+            
+            .notification-bell:hover {
+                background: #0347a0;
+                transform: scale(1.05);
+            }
+            
+            .notification-badge {
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background: #dc3545;
+                color: white;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                font-size: 12px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 20px;
+            }
+            
+            .notification-dropdown {
+                position: absolute;
+                top: 60px;
+                right: 0;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                width: 350px;
+                max-height: 400px;
+                overflow-y: auto;
+                display: none;
+            }
+            
+            .notification-header {
+                padding: 15px;
+                border-bottom: 1px solid #eee;
+                font-weight: bold;
+                color: #333;
+            }
+            
+            .notification-item {
+                padding: 15px;
+                border-bottom: 1px solid #f0f0f0;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+            }
+            
+            .notification-item:hover {
+                background-color: #f8f9fa;
+            }
+            
+            .notification-item:last-child {
+                border-bottom: none;
+            }
+            
+            .notification-title {
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 5px;
+            }
+            
+            .notification-summary {
+                color: #666;
+                font-size: 14px;
+                margin-bottom: 5px;
+            }
+            
+            .notification-time {
+                color: #999;
+                font-size: 12px;
+            }
+            
+            .no-notifications {
+                padding: 20px;
+                text-align: center;
+                color: #999;
+                font-style: italic;
+            }
+            .notification-summary button {
+                background-color: #0459B5; /* azul igual ao sino */
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                margin-left: 8px;
+                transition: background-color 0.2s ease, transform 0.1s ease;
+            }
+
+            .notification-summary button:hover {
+                background-color: #0347a0; /* azul mais escuro no hover */
+                transform: scale(1.05);
+            }
+
+            .notification-summary button:active {
+                background-color: #02367d;
+                transform: scale(0.98);
+            }
+            .containerFooterPopup{
+                display: flex;
+                align-items: center;    
+                justify-content: space-around;
+            }
     </style>
 </head>
 <body>
+    
     <span id="username-holder" data-username="{{ request.user.username }}"></span>
     <!-- Container de notificações -->
     <div class="notification-container">
@@ -355,11 +396,11 @@
         
         <div class="notification-dropdown" id="notification-dropdown">
             <div class="notification-header">
-                Notificações
+                {% trans "Notificações" %}
             </div>
             <div id="notification-list">
                 <div class="no-notifications">
-                    Nenhuma notificação
+                    {% trans "Nenhuma notificação" %}
                 </div>
             </div>
         </div>
@@ -368,22 +409,22 @@
     <table id="data-table" class="table">
         <thead>
             <tr style="background-color: #0459B5;">
-                {% include 'ocorrencia/components/lineHead.html' with name='id' ID="codigo_externo"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='serial' ID="serial"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='data' ID="data"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='Técnico' ID="technical"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='país' ID="country"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='dispositivo' ID="device"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='area' ID="area"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='marca' ID="brand"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='modelo' ID="model"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='Detalhes' ID="problem_detected" checbox='false'%}
-                {% include 'ocorrencia/components/lineHead.html' with name='status' ID="status"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='prazo' ID="deadline"%}
-                {% if has_edit_permission%}
-                    {% include 'ocorrencia/components/lineHead.html' with name='responsável' ID="responsible"%}
-                {%endif%}
-                {% include 'ocorrencia/components/lineHead.html' with name='finalizado' ID="finished"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='ID' ID="codigo_externo"%}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Serial") ID="serial" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Data") ID="data" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Técnico") ID="technical" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("País") ID="country" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Dispositivo") ID="device" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Área") ID="area" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Marca") ID="brand" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Modelo") ID="model" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Detalhes") ID="problem_detected" checbox='false' %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Status") ID="status" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Deadline") ID="deadline" %}
+                {% if has_edit_permission %}
+                    {% include 'ocorrencia/components/lineHead.html' with name=_("Responsável") ID="responsible" %}
+                {% endif %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Finalizado") ID="finished" %}
             </tr>
             
         </thead>
@@ -393,49 +434,55 @@
     </table>
     
     <div id="paginate">
-        <span class="button-paginator" id="last">Voltar</span>
-        <span id="num_pages">
-            
-        </span>
-        <span class="button-paginator" id="next">Avançar</span>
+        <div>
+            <a href="{% url 'subir_ocorrencia' %}" style="padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            background-color: #157347;
+            color: var(--light);">
+                <i class="fas fa-plus"></i> {% trans "Nova Ocorrência" %}
+            </a>
+            {%if has_full_permission%}
+                <a href="{% url 'criar_usuario' %}" style="padding: 0.6rem 1.2rem;
+                font-size: 1rem;
+                border: none;
+                border-radius: 0.3rem;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+                text-decoration: none;
+                display: inline-block;
+                background-color:rgb(17, 90, 226);
+                color: var(--light);">
+                    <i class="fas fa-plus"></i> {% trans "Criar novo responsável" %}
+                </a>
+            {%endif%}
+        </div>
+        <div style="display:flex; gap:20px;">
+            <span class="button-paginator" id="last">{% trans "Voltar" %}</span>
+            <span id="num_pages">
+                
+            </span>
+            <span class="button-paginator" id="next">{% trans "Avançar" %}</span>
+        </div>
+        {% include 'ocorrencia/components/toogleCountry.html' with request=request %}
     </div>
-    <a href="{% url 'subir_ocorrencia' %}" style="padding: 0.6rem 1.2rem;
-        font-size: 1rem;
-        border: none;
-        border-radius: 0.3rem;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-        text-decoration: none;
-        display: inline-block;
-        background-color: #157347;
-        color: var(--light);">
-        <i class="fas fa-plus"></i> Nova Ocorrência
-    </a>
-    {%if has_full_permission%}
-        <a href="{% url 'criar_usuario' %}" style="padding: 0.6rem 1.2rem;
-        font-size: 1rem;
-        border: none;
-        border-radius: 0.3rem;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-        text-decoration: none;
-        display: inline-block;
-        background-color:rgb(17, 90, 226);
-        color: var(--light);">
-            <i class="fas fa-plus"></i> Criar novo responsável
-        </a>
-    {%endif%}
+    
     {%if has_full_permission%}
     <footer>
         <div id="ocorrencias-panel">
-            <label for="responsavel-select">Selecionar responsável:</label>
+            <label for="responsavel-select">{% trans "Selecionar responsável:" %}</label>
             <div id="selector-and-info">
                 <select id="responsavel-select">
-                    <option value="">-- Escolha --</option>
+                    <option value="">-- {% trans "Escolha" %} --</option>
                 </select>
 
                 <div id="ocorrencias-info" style="display: none;">
-                    <strong>Total de ocorrências: <span id="total-ocorrencias">0</span></strong>
+                    <strong>{% trans "Total de ocorrências:" %} <span id="total-ocorrencias">0</span></strong>
                     <ul id="status-percentuais"></ul>
                 </div>
             </div>
@@ -497,7 +544,7 @@
         });
     }
     function deleteFile(fileId, fileName, record) {
-        if (confirm(`Deseja realmente deletar o arquivo "${fileName}"?`)) {
+        if (confirm(`{% trans "Deseja realmente deletar o arquivo" %} "${fileName}"?`)) {
             const formData = new FormData();
             formData.append('action', 'deletar');
             formData.append('file', fileId);
@@ -521,19 +568,19 @@
                         const updatedRecord = await response.json();
                         showProblemDetails(updatedRecord);
                     } catch (error) {
-                        console.error("Erro ao buscar o registro atualizado:", error);
-                        alert("Erro ao atualizar os dados da ocorrência.");
+                        console.error("{% trans 'Erro ao buscar o registro atualizado:' %}", error);
+                        alert("{% trans 'Erro ao atualizar os dados da ocorrência.' %}");
                     }
                     }, 100);
 
 
                 } else {
-                    alert('Erro ao deletar o arquivo: ' + data.message);
+                    alert('{% trans "Erro ao deletar o arquivo:" %} ' + data.message);
                 }
             })
             .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao deletar o arquivo.');
+                console.error('{% trans "Erro:" %}', error);
+                alert('{% trans "Erro ao deletar o arquivo." %}');
             });
         }
     }
@@ -565,8 +612,8 @@
                 // Feedback visual opcional
                 //console.log(`Download iniciado: ${filename}`);
             } catch (error) {
-                console.error('Erro ao fazer download:', error);
-                alert('Erro ao fazer download do arquivo. Tente novamente.');
+                console.error('{% trans "Erro ao fazer download:" %}', error);
+                alert('{% trans "Erro ao fazer download do arquivo. Tente novamente." %}');
             }
         }
     function capitalizeFirstLetter(str) {
@@ -650,7 +697,7 @@
         }
         
         const parseDate = (dateStr) => {
-            if (!dateStr || dateStr === "Não definido" || dateStr === "Não finalizado") return null;
+            if (!dateStr || dateStr === "{% trans 'Não definido' %}" || dateStr === "{% trans 'Não finalizado' %}") return null;
             const [day, month, year] = dateStr.split('/').map(Number);
             return new Date(year, month - 1, day);
         };
@@ -665,7 +712,7 @@
         deadline.setHours(0, 0, 0, 0);
         
         // Se já está finalizado, não muda o status China
-        if (record.finished && record.finished !== "Não finalizado") {
+        if (record.finished && record.finished !== "{% trans 'Não finalizado' %}") {
             return currentStatus;
         }
         
@@ -706,7 +753,7 @@
                 }
             })
             .catch(error => {
-                console.error('Erro ao marcar notificações como lidas:', error);
+                console.error('{% trans "Erro ao marcar notificações como lidas:" %}', error);
             });
             const arquivosListHTML = (record.arquivos && record.arquivos.length > 0)
             ? `<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
@@ -714,22 +761,22 @@
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #dee2e6;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 18px;">📎</span>
-                            <span style="font-weight: 500; color: #495057;">${arq.nome_original || 'Arquivo'}</span>
+                            <span style="font-weight: 500; color: #495057;">${arq.nome_original || '{% trans "Arquivo" %}'}</span>
                         </div>
                         <span>
                         <button onclick="deleteFile('${arq.id}', '${arq.nome_original}', ${JSON.stringify(record).replace(/"/g, '&quot;')})"
                                 style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background-color 0.2s;">
-                            🗑 Deletar
+                            🗑 {% trans "Deletar" %}
                         </button>
                         <button onclick="downloadFile('${arq.id}', '${arq.nome_original || 'arquivo'}')" 
                                 style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background-color 0.2s;">
-                            ⬇ Download
+                            ⬇ {% trans "Download" %}
                         </button>
                         </span>
                     </div>
                 `).join('')}
                 </div>`
-            : '<p style="color: #6c757d; font-style: italic;">Nenhum arquivo anexado.</p>';
+            : '<p style="color: #6c757d; font-style: italic;">{% trans "Nenhum arquivo anexado." %}</p>';
             // Assegura que os valores sejam strings vazias se forem null/undefined
             const problemDetectedValue = record.problem_detected || '';
             const feedbackTechnicalValue = record.feedback_technical || '';
@@ -743,21 +790,21 @@
             // Cria o conteúdo HTML do pop-up com informações detalhadas e textareas editáveis
             const popupContent = `
                 <div style="text-align: left;">
-                    <h3 style="color: var(--primary); margin-bottom: 20px;">Detalhes da Ocorrência</h3>
+                    <h3 style="color: var(--primary); margin-bottom: 20px;">{% trans "Detalhes da Ocorrência" %}</h3>
                     
                     <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h4 style="margin-top: 0; color: var(--text);">Problema Detectado:</h4>
+                        <h4 style="margin-top: 0; color: var(--text);">{% trans "Problema Detectado:" %}</h4>
                         <textarea id="${problemDetectedId}" 
                                   data-record-id="${record.id}" 
                                   data-field-name="problem_detected" 
                                   data-initial-value="${problemDetectedValue}"
                                   style="width: 100%; min-height: 100px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${problemDetectedValue}</textarea>
                         <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
-                           Gerar PDF
+                           {% trans "Gerar PDF" %}
                         </button>
 
                         <button id="button_copy" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
-                           COPIAR INFORMAÇÕES
+                           {% trans "COPIAR INFORMAÇÕES" %}
                         </button>
                     </div>
                     
@@ -765,115 +812,115 @@
                         <div>
                             <strong>ID:</strong><br>
                             <span style="color: var(--text-light);" translate="no">
-                            ${record.codigo_externo || 'Não informado'}
+                            ${record.codigo_externo || '{% trans "Não informado" %}'}
                             
                             </span>
                         </div>
                         <div>
-                            <strong>Técnico:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.technical || 'Não informado'}</span>
+                            <strong>{% trans "Técnico:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.technical || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>País:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.country || 'Não informado'}</span>
+                            <strong>{% trans "País:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.country || '{% trans "Não informado" %}'}</span>
                         </div>
                         {%if has_full_permission %}
                         <div>
-                            <strong>Telefone de contato:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.contact || 'Não informado'}</span>
+                            <strong>{% trans "Telefone de contato:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.contact || '{% trans "Não informado" %}'}</span>
                         </div>
                         {%endif%}
                         <div>
-                            <strong>Dispositivo:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.device || 'Não informado'}</span>
+                            <strong>{% trans "Dispositivo:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.device || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Área:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.area || 'Não informado'}</span>
+                            <strong>{% trans "Área:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.area || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Serial:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.serial || 'Não informado'}</span>
+                            <strong>{% trans "Serial:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.serial || '{% trans "Não informado" %}'}</span>
                         </div>
                         ${record.tipo_ecu ? `
                             <div>
-                                <strong>Tipo ECU:</strong><br>
-                                <span style="color: var(--text-light);" translate="no">${record.tipo_ecu || 'Não informado'}</span>
+                                <strong>{% trans "Tipo ECU:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_ecu || '{% trans "Não informado" %}'}</span>
                             </div>
                         ` : ''}
                         
                         ${record.tipo_motor ? `
                             <div>
-                                <strong>Tipo Motor:</strong><br>
-                                <span style="color: var(--text-light);" translate="no">${record.tipo_motor || 'Não informado'}</span>
+                                <strong>{% trans "Tipo Motor:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_motor || '{% trans "Não informado" %}'}</span>
                             </div>
                         ` : ''}
                         <div>
-                            <strong>VIN:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.vin || 'Não informado'}</span>
+                            <strong>{% trans "VIN:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.vin || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Marca:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.brand || 'Não informado'}</span>
+                            <strong>{% trans "Marca:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.brand || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Modelo:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.model || 'Não informado'}</span>
+                            <strong>{% trans "Modelo:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.model || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Ano:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.year || 'Não informado'}</span>
+                            <strong>{% trans "Ano:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.year || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Versão:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.version || 'Não informado'}</span>
+                            <strong>{% trans "Versão:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.version || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Status:</strong><br>
+                            <strong>{% trans "Status:" %}</strong><br>
 
                                 <select class="editable-select-status" data-record-id="${record.id}" data-field-name="status">
-                                    <option value="REQUESTED" ${record.status_code === 'REQUESTED' ? 'selected' : ''}>Aguardando Responsável</option>
-                                    <option value="AWAITING_CHINA" ${record.status_code === 'AWAITING_CHINA' || record.status_code === 'AWAITING_CHINA_LATE' ? 'selected' : ''}>Aguardando China</option>
+                                    <option value="REQUESTED" ${record.status_code === 'REQUESTED' ? 'selected' : ''}>{% trans "Aguardando Responsável" %}</option>
+                                    <option value="AWAITING_CHINA" ${record.status_code === 'AWAITING_CHINA' || record.status_code === 'AWAITING_CHINA_LATE' ? 'selected' : ''}>{% trans "Aguardando China" %}</option>
                                 </select>
                         </div>
                         <div>
-                            <strong>Responsável:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.responsible || 'Não informado'}</span>
+                            <strong>{% trans "Responsável:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.responsible || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Data:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.data ? formatDateToDisplay(record.data) : 'Não informado'}</span>
+                            <strong>{% trans "Data:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.data ? formatDateToDisplay(record.data) : '{% trans "Não informado" %}'}</span>
                         </div>
                         {% if has_edit_permission %}
                             <div>
-                                <strong>Prazo:</strong><br>
+                                <strong>{% trans "Prazo:" %}</strong><br>
                                 <input type="text"
                                     class="date-input flatpickr"
                                     data-record-id="${record.id}"
                                     data-field-name="deadline"
                                     value="${record.deadline ? formatDateToDisplay(record.deadline) : ''}"
-                                    placeholder="dd/mm/aaaa" />
+                                    placeholder="{% trans 'dd/mm/aaaa' %}" />
                             </div>
                             
                             {% else %}
                             <div>
-                                <strong>Prazo:</strong><br>
+                                <strong>{% trans "Prazo:" %}</strong><br>
                                 <span style="color: var(--text-light);" translate="no">
-                                    ${record.deadline ? formatDateToDisplay(record.deadline) : 'Não definido'}
+                                    ${record.deadline ? formatDateToDisplay(record.deadline) : '{% trans "Não definido" %}'}
                                 </span>
                             </div>
                         {% endif %}
                         <div>
-                            <strong>Finalizado:</strong><br>
+                            <strong>{% trans "Finalizado:" %}</strong><br>
                             <input type="text"
                                 class="date-input flatpickr"
                                 data-record-id="${record.id}"
                                 data-field-name="finished"
                                 value="${record.finished ? formatDateToDisplay(record.finished) : ''}"
-                                placeholder="dd/mm/aaaa" />
+                                placeholder="{% trans 'dd/mm/aaaa' %}" />
                         </div>
                     </div>
-                    <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">Adicionar novo arquivo:</h5>
+                    <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">{% trans "Adicionar novo arquivo:" %}</h5>
                         <div id="file-upload-wrapper-${record.id}" class="file-upload-wrapper full-width">
                             <div id="file-preview-container" class="file-preview-container"></div>
 
@@ -887,40 +934,40 @@
                                 <input type="hidden" name="page_num" value="${page_num}"/>
                                 
                                 <span class="container_buttons_popup">
-                                    <label for="arquivo" class="custom-file-button">Selecionar Arquivos</label>
+                                    <label for="arquivo" class="custom-file-button">{% trans "Selecionar Arquivos" %}</label>
                                     <input type="file" id="arquivo" name="arquivo" multiple />
-                                    <input type="submit" value="Cadastrar" required />
+                                    <input type="submit" value="{% trans 'Cadastrar' %}" required />
                                     <button type="button" id="clear-all-files-btn" class="clear-all-files-btn" style="display: none;">
-                                        Limpar Tudo
+                                        {% trans "Limpar Tudo" %}
                                     </button>
                                 </span>
                             </form>
                         </div>
                     <div class="chat-container" translate="no">
-                    <h4 style="margin-left: 10px; margin-top: 10px; color: var(--primary);">Chat de feedback</h4>
+                    <h4 style="margin-left: 10px; margin-top: 10px; color: var(--primary);">{% trans "Chat de feedback" %}</h4>
                     <div id="logged-in-user-id" style="display:none;">{{ request.user.id }}</div>
                     <div id="logged-in-username" style="display:none;">{{ request.user.username }}</div>
                     <div id="chat-messages" class="chat-messages"></div>
                     <form id="${record.id}-chat">
                         <div class="chat-input-area">
-                            <input type="text" id="chat-message-input" placeholder="Digite sua mensagem...">
+                            <input type="text" id="chat-message-input" placeholder="{% trans 'Digite sua mensagem...' %}">
                             
                             <!-- Botão para upload de imagem -->
-                            <label for="chat-image-input-${record.id}" class="chat-image-button" title="Enviar imagem">
+                            <label for="chat-image-input-${record.id}" class="chat-image-button" title="{% trans 'Enviar imagem' %}">
                                 📷
                             </label>
                             <input type="file" id="chat-image-input-${record.id}" accept="image/*" style="display: none;">
                             
-                            <button id="chat-send-button">Enviar</button>
+                            <button id="chat-send-button">{% trans "Enviar" %}</button>
                         </div>
                     </form>
                 </div>
                     <div style="margin-bottom: 20px;" translate="no">
                         <div class="headerFiles">
-                            <h4>Arquivos anexados:</h4>
+                            <h4>{% trans "Arquivos anexados:" %}</h4>
                             ${record.arquivos.length > 0 ? `
                                 <button id="allDownload"style="background: #007bff; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">
-                                    Baixar Todos
+                                    {% trans "Baixar Todos" %}
                                 </button>
                             ` : ''}
                         </div>
@@ -933,13 +980,13 @@
             
             let id = record.id  
             Swal.fire({
-                title: 'Informações Detalhadas',
+                title: '{% trans "Informações Detalhadas" %}',
                 html: popupContent,
                 width: '80%',
                 maxWidth: '800px',
                 showCloseButton: true,
                 showConfirmButton: true,
-                confirmButtonText: 'Fechar',
+                confirmButtonText: '{% trans "Fechar" %}',
                 confirmButtonColor: '#0056b3',
                 customClass: {
                     popup: 'problem-details-popup',
@@ -971,22 +1018,22 @@
                         const infos = [
                             `ID: ${idStr}`,
                             codigoStr && codigoStr !== idStr ? `Token: ${codigoStr}` : null,
-                            `Técnico: ${record.technical || 'Não informado'}`,
-                            `Dispositivo: ${record.device || 'Não informado'}`,
-                            `Área: ${record.area || 'Não informado'}`,
-                            `Serial: ${record.serial || 'Não informado'}`,
-                            `Marca: ${record.brand || 'Não informado'}`,
-                            `Modelo: ${record.model || 'Não informado'}`,
-                            `Ano: ${record.year || 'Não informado'}`,
-                            `Data: ${record.data ? formatDateToDisplay(record.data) : 'Não informado'}`,
-                            `Problema Detectado: ${problemDetectedValue}`
+                            `{% trans "Técnico:" %} ${record.technical || '{% trans "Não informado" %}'}`,
+                            `{% trans "Dispositivo:" %} ${record.device || '{% trans "Não informado" %}'}`,
+                            `{% trans "Área:" %} ${record.area || '{% trans "Não informado" %}'}`,
+                            `{% trans "Serial:" %} ${record.serial || '{% trans "Não informado" %}'}`,
+                            `{% trans "Marca:" %} ${record.brand || '{% trans "Não informado" %}'}`,
+                            `{% trans "Modelo:" %} ${record.model || '{% trans "Não informado" %}'}`,
+                            `{% trans "Ano:" %} ${record.year || '{% trans "Não informado" %}'}`,
+                            `{% trans "Data:" %} ${record.data ? formatDateToDisplay(record.data) : '{% trans "Não informado" %}'}`,
+                            `{% trans "Problema Detectado:" %} ${problemDetectedValue}`
                         ].filter(Boolean);
 
                         const textoFinal = infos.join('\n');
 
                         navigator.clipboard.writeText(textoFinal)
-                        .then(() => showSwalStyledToast("Informações copiadas com sucesso!", "success"))
-                        .catch(() => showSwalStyledToast("Erro ao copiar informações!", "error"));
+                        .then(() => showSwalStyledToast("{% trans 'Informações copiadas com sucesso!' %}", "success"))
+                        .catch(() => showSwalStyledToast("{% trans 'Erro ao copiar informações!' %}", "error"));
 
                     });
 
@@ -1031,7 +1078,7 @@
                             });
 
                             if (!response.ok) {
-                                throw new Error('Erro de rede ou do servidor');
+                                throw new Error('{% trans "Erro de rede ou do servidor" %}');
                             }
 
                             const result = await response.json();
@@ -1045,18 +1092,18 @@
                                     const updatedRecord = await response.json();
                                     showProblemDetails(updatedRecord);
                                 } catch (error) {
-                                    console.error("Erro ao buscar o registro atualizado:", error);
-                                    alert("Erro ao atualizar os dados da ocorrência.");
+                                    console.error("{% trans 'Erro ao buscar o registro atualizado:' %}", error);
+                                    alert("{% trans 'Erro ao atualizar os dados da ocorrência.' %}");
                                 }
                                 }, 100);
 
 
                                 
                             } else {
-                                alert("Erro: " + result.message);
+                                alert("{% trans 'Erro:' %} " + result.message);
                             }
                         } catch (error) {
-                            alert("Erro inesperado: " + error.message);
+                            alert("{% trans 'Erro inesperado:' %} " + error.message);
                         }
                     })
                     if (problemDetectedTextarea) {
@@ -1176,7 +1223,7 @@
                     );
 
                     chatSocket.onclose = function(e) {
-                        console.error('O socket do chat foi fechado inesperadamente');
+                        console.error('{% trans "O socket do chat foi fechado inesperadamente" %}');
                     };
                     const imageInput = document.getElementById(`chat-image-input-${id}`);
                     let selectedImageBase64 = null;
@@ -1247,7 +1294,7 @@
                         
                         // Feedback visual
                         const originalText = downloadBtn.textContent;
-                        downloadBtn.textContent = '✅ Baixado!';
+                        downloadBtn.textContent = '✅ {% trans "Baixado!" %}';
                         downloadBtn.style.background = '#17a2b8';
                         
                         setTimeout(() => {
@@ -1286,13 +1333,13 @@
                     if (file) {
                         // Verifica se é uma imagem
                         if (!file.type.startsWith('image/')) {
-                            alert('Por favor, selecione apenas arquivos de imagem.');
+                            alert('{% trans "Por favor, selecione apenas arquivos de imagem." %}');
                             return;
                         }
                         
                         // Verifica o tamanho do arquivo (limite de 2MB para Base64)
                         if (file.size > 10 * 1024 * 1024) {
-                            alert('A imagem deve ter no máximo 2MB.');
+                            alert('{% trans "A imagem deve ter no máximo 2MB." %}');
                             return;
                         }
                         
@@ -1337,7 +1384,7 @@
                                         
                                         // Feedback visual
                                         const originalPlaceholder = chatInput.placeholder;
-                                        chatInput.placeholder = '✅ Imagem colada! Digite uma mensagem (opcional)...';
+                                        chatInput.placeholder = '✅ {% trans "Imagem colada! Digite uma mensagem (opcional)..." %}';
                                         setTimeout(() => {
                                             chatInput.placeholder = originalPlaceholder;
                                         }, 2000);
@@ -1346,7 +1393,7 @@
                                 }
                             } else {
                                 // Fallback para navegadores mais antigos
-                                console.log('Clipboard API não suportada, tentando método alternativo...');
+                                console.log('{% trans "Clipboard API não suportada, tentando método alternativo..." %}');
                                 tryPasteAlternativeMethod();
                             }
                         }
@@ -1378,7 +1425,7 @@
                                     handleImageSelection(blob);
                                     
                                     // Feedback visual melhorado
-                                    showPasteFeedback(chatInput, '✅ Imagem colada com sucesso!');
+                                    showPasteFeedback(chatInput, '✅ {% trans "Imagem colada com sucesso!" %}');
                                     break;
                                 }
                             }
@@ -1441,7 +1488,7 @@
                                 indicator.remove();
                             }
                             
-                            console.log('Mensagem enviada:', message ? 'com texto' : 'apenas imagem');
+                            console.log('{% trans "Mensagem enviada:" %}', message ? '{% trans "com texto" %}' : '{% trans "apenas imagem" %}');
                         }
                     };
 
@@ -2016,7 +2063,7 @@
                     // --- FIM DA NOVA LÓGICA ---
 
                 } catch (e) {
-                    console.error("Erro ao processar opções de filtro não-data:", e);
+                    console.error("{% trans 'Erro ao processar opções de filtro não-data:' %}", e);
                     options = [];
                 }
             }
@@ -2030,7 +2077,7 @@
                 if (Object.keys(options).length > 0) {
                     optionsHTML = createDateTreeHTML(columnName, options);
                 } else {
-                    optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma data disponível.</p>';
+                    optionsHTML = '<p style="padding: 5px; color: grey;">{% trans "Nenhuma data disponível." %}</p>';
                 }
             } else {
                 if (options.length > 0) {
@@ -2039,24 +2086,24 @@
                         const isChecked = savedFilter.isApplied && savedFilter.values.includes(option);
                         optionsHTML += `<div class="filter-option">
                                         <input type="checkbox" id="${optionId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${option}" ${isChecked ? 'checked' : ''}>
-                                        <label for="${optionId}">${option || '(Vazio)'}</label>
+                                        <label for="${optionId}">${option || '{% trans "(Vazio)" %}'}</label>
                                       </div>`;
                     });
                 } else {
-                    optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma opção disponível.</p>';
+                    optionsHTML = '<p style="padding: 5px; color: grey;">{% trans "Nenhuma opção disponível." %}</p>';
                 }
             }
 
             filterBoxElement.innerHTML = `
                 <div class="filter-header">
                     <input type="checkbox" id="select-all-${columnName}">
-                    <label for="select-all-${columnName}">Selecionar Todos</label>
+                    <label for="select-all-${columnName}">{% trans "Selecionar Todos" %}</label>
                 </div>
-                ${!isDate ? `<input type="text" class="filter-search-input" placeholder="Buscar...">` : ''}
+                ${!isDate ? `<input type="text" class="filter-search-input" placeholder="{% trans 'Buscar...' %}">` : ''}
                 <div class="filter-options">${optionsHTML}</div>
                 <div class="filter-actions">
-                    <button class="apply-filter-btn">Aplicar</button>
-                    <button class="clear-filter-btn">Limpar</button>
+                    <button class="apply-filter-btn">{% trans "Aplicar" %}</button>
+                    <button class="clear-filter-btn">{% trans "Limpar" %}</button>
                 </div>
             `;
 
@@ -2257,8 +2304,8 @@
 
             })
             .catch(error => {
-                console.error("Erro ao filtrar:", error);
-                Swal.fire("Erro", "Ocorreu um erro ao aplicar os filtros.", "error");
+                console.error("{% trans 'Erro ao filtrar:' %}", error);
+                Swal.fire("{% trans 'Erro' %}", "{% trans 'Ocorreu um erro ao aplicar os filtros.' %}", "error");
             });
 
             // 4. Fechar a caixa de filtro se necessário
@@ -2283,7 +2330,7 @@
             const finishedStr = record.finished;
             
             const parseDate = (dateStr) => {
-                if (!dateStr || dateStr === "Não definido" || dateStr === "Não finalizado") return null;
+                if (!dateStr || dateStr === "{% trans 'Não definido' %}" || dateStr === "{% trans 'Não finalizado' %}") return null;
                 const [day, month, year] = dateStr.split('/').map(Number);
                 return new Date(year, month - 1, day);
             };
@@ -2306,18 +2353,18 @@
             const deadline = new Date(deadlineDate);
             deadline.setHours(0, 0, 0, 0);
 
-            if (finishedStr && finishedStr !== "Não finalizado") {
-                return 'Concluído';
+            if (finishedStr && finishedStr !== "{% trans 'Não finalizado' %}") {
+                return "{%trans 'Concluído'%}";
             }
             
-            if (!deadlineStr || deadlineStr === "Não definido") {
-                return 'Requisitado';
+            if (!deadlineStr || deadlineStr === "{% trans 'Não definido' %}") {
+                return "{%trans 'Requisitado'%}";
             }
             
             if (today > deadline) {
-                return 'Atrasado';
+                return "{%trans 'Atrasado'%}";
             } else {
-                return 'Em progresso';
+                return "{%trans 'Em progresso'%}";
             }
         }
 
@@ -2355,13 +2402,13 @@
                     if (data.status === 'success') {
                         statusCell.setAttribute('data-initial-value', newStatus);
                     } else {
-                        console.error('Erro ao persistir status China:', data.message);
+                        console.error('{% trans "Erro ao persistir status China:" %}', data.message);
                         // Reverte o status na interface se falhou no backend
                         statusCell.textContent = currentStatus;
                     }
                 })
                 .catch(error => {
-                    console.error('Erro de rede ao persistir status China:', error);
+                    console.error('{% trans "Erro de rede ao persistir status China:" %}', error);
                     // Reverte o status na interface se falhou no backend
                     statusCell.textContent = currentStatus;
                 });
@@ -2497,7 +2544,7 @@
                 const cell = noResultsRow.insertCell();
 
                 cell.colSpan = colspan > 0 ? colspan : 1;
-                cell.textContent = "Nenhum registro encontrado.";
+                cell.textContent = "{% trans 'Nenhum registro encontrado.' %}";
                 cell.style.textAlign = "center";
                 return;
             }
@@ -2535,9 +2582,9 @@
                             value = formatDateToDisplay(value);
                         } else {
                             if (columnName == 'finished') {
-                                value = "Não finalizado"
+                                value = "{% trans 'Não finalizado' %}"
                             } else {
-                                value = 'Não definido'
+                                value = '{% trans "Não definido" %}'
                             }
                         }
                     } if (columnName == 'problem_detected') {
@@ -2549,7 +2596,7 @@
                         container.style.justifyContent = 'center';
                         
                         const detailsButton = document.createElement('button');
-                        detailsButton.innerHTML = 'Ver Detalhes';
+                        detailsButton.innerHTML = '{% trans "Ver Detalhes" %}';
                         detailsButton.style.cssText = `
                             background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
                             color: white;
@@ -2616,8 +2663,8 @@
                             navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
                             textInput.blur()
                             Swal.fire({
-                                title: "Texto copiado",
-                                text: 'Data copiada para área de transferência',
+                                title: "{% trans 'Texto copiado' %}",
+                                text: '{% trans "Data copiada para área de transferência" %}',
                                 showCloseButton: true,
                                 icon: 'success'
                             })
@@ -2693,12 +2740,12 @@
                                             
                                             const clearButton = document.createElement('button');
                                             clearButton.className = 'clear-date-btn';
-                                            clearButton.textContent = 'Limpar';
+                                            clearButton.textContent = '{% trans "Limpar" %}';
                                             clearButton.type = 'button';
 
                                             const todayButton = document.createElement('button');
                                             todayButton.className = 'today-date-btn';
-                                            todayButton.textContent = 'Hoje';
+                                            todayButton.textContent = '{% trans "Hoje" %}';
                                             todayButton.type = 'button';
 
                                             clearButton.addEventListener('click', function(e) {
@@ -2772,7 +2819,7 @@
                         select.addEventListener('change', (e) => atualizarDados(e));
 
                         const optionPlaceholder = document.createElement('option');
-                        optionPlaceholder.textContent = '-- Selecione o responsável --';
+                        optionPlaceholder.textContent = '-- {% trans "Selecione o responsável" %} --';
                         optionPlaceholder.disabled = true;
                         optionPlaceholder.selected = !value;
                         select.appendChild(optionPlaceholder);
@@ -2807,8 +2854,8 @@
                         textArea.addEventListener('dblclick', (e) => {
                             navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
                             Swal.fire({
-                                title: "Texto copiado",
-                                text: 'Feedback copiado para área de transferência',
+                                title: "{% trans 'Texto copiado' %}",
+                                text: '{% trans "Feedback copiado para área de transferência" %}',
                                 showCloseButton: true,
                                 icon: 'success'
                             })
@@ -2970,7 +3017,7 @@
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Erro na requisição');
+                    throw new Error('{% trans "Erro na requisição" %}');
                 }
                 return response.json();
             })
@@ -2991,7 +3038,7 @@
                 setTimeout(() => inputElement.classList.remove('success'), 5000);
             })
             .catch(error => {
-                console.error('Erro:', error.message);
+                console.error('{% trans "Erro:" %}', error.message);
                 inputElement.classList.remove('saving');
                 inputElement.classList.add('error');
                 setTimeout(() => inputElement.classList.remove('error'), 5000);
@@ -3035,7 +3082,7 @@
             }
         })
         .catch(error => {
-            console.error('Erro ao carregar notificações:', error);
+            console.error('{% trans "Erro ao carregar notificações:" %}', error);
         });
     }
     
@@ -3043,7 +3090,7 @@
         const notificationList = document.getElementById('notification-list');
         
         if (notificacoes.length === 0) {
-            notificationList.innerHTML = '<div class="no-notifications">Nenhuma notificação</div>';
+            notificationList.innerHTML = '<div class="no-notifications">{% trans "Nenhuma notificação" %}</div>';
             return;
         }
         
@@ -3057,11 +3104,11 @@
                         <button
                             type="button"
                             class="notification-mark-read"
-                            title="Marcar como lida"
-                            aria-label="Marcar notificação como lida"
+                            title="{% trans 'Marcar como lida' %}"
+                            aria-label="{% trans 'Marcar notificação como lida' %}"
                             onclick="event.stopPropagation(); lerOcorrencia(${notificacao.id});"
                             >
-                            Marcar lida
+                            {% trans "Marcar lida" %}
                         </button>
                     </div>
                     <div class="notification-time">${notificacao.criada_em}</div>
@@ -3099,8 +3146,8 @@
             showProblemDetails(record);
         })
         .catch(error => {
-            console.error('Erro ao buscar ocorrência:', error);
-            alert('Erro ao carregar detalhes da ocorrência.');
+            console.error('{% trans "Erro ao buscar ocorrência:" %}', error);
+            alert('{% trans "Erro ao carregar detalhes da ocorrência." %}');
         });
     }
     
@@ -3124,7 +3171,7 @@
             }
         })
         .catch(error => {
-            console.error('Erro ao contar notificações:', error);
+            console.error('{% trans "Erro ao contar notificações:" %}', error);
         });
     }
     
@@ -3196,15 +3243,16 @@
                         // Opcional: Atualizar o pop-up se ele ainda estiver aberto
                         // Swal.update({ html: updatedPopupContent });
                     } else {
-                        Swal.fire("Erro", data.message || "Erro desconhecido ao atualizar status.", "error");
+                        Swal.fire("{% trans 'Erro' %}", data.message || "{% trans 'Erro desconhecido ao atualizar status.' %}", "error");
                     }
                 })
                 .catch(error => {
-                    console.error("Erro ao salvar status no pop-up:", error);
-                    Swal.fire("Erro de Rede", "Não foi possível conectar ao servidor para atualizar o status.", "error");
+                    console.error("{% trans 'Erro ao salvar status no pop-up:' %}", error);
+                    Swal.fire("{% trans 'Erro de Rede' %}", "{% trans 'Não foi possível conectar ao servidor para atualizar o status.' %}", "error");
                 });
             }
         });
+        
 </script>
 
 <!-- Modal para expandir imagens -->
@@ -3213,7 +3261,7 @@
         <img id="expanded-image" src="" style="max-width: 100%; max-height: 100%; border-radius: 8px;">
         <div style="position: absolute; top: -50px; right: 0; display: flex; gap: 10px;">
             <button id="download-image" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 14px;">
-                ⬇️ Download
+                ⬇️ {% trans "Download" %}
             </button>
             <button id="close-modal" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 18px;">×</button>
         </div>
