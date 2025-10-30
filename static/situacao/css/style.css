@@ -30,6 +30,7 @@ body {
     justify-content: center;
     align-items: center;
     padding: 20px;
+    flex-direction: column;
 }
 
 .container {
@@ -290,4 +291,191 @@ tr.vencendo {
         font-weight: bold;
         white-space: nowrap;
     }
+}
+/* Botão abrir */
+.btn-popup {
+    background-color: #0055a5;
+    color: #fff;
+    padding: 12px 22px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s ease;
+    display: block;
+}
+.btn-popup:hover { background-color: #003f7d; }
+
+/* Overlay */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(3px);
+}
+
+/* Conteúdo */
+.popup-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    width: 460px;
+    max-width: 92%;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    position: relative;
+    animation: fadeIn 0.25s ease;
+}
+.popup-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0055a5;
+    margin-bottom: 18px;
+    text-align: center;
+}
+
+/* Fechar */
+.close-btn {
+    position: absolute;
+    right: 14px;
+    top: 10px;
+    font-size: 24px;
+    color: #888;
+    cursor: pointer;
+}
+.close-btn:hover { color: #000; }
+
+/* Form */
+.popup-form .form-group {
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+}
+.popup-form label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+.popup-form input[type="text"],
+.popup-form input[type="email"] {
+    padding: 10px 12px;
+    border: 1px solid #d6d6d6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: 0.2s;
+    background: #fff;
+}
+.popup-form input:focus {
+    border-color: #0055a5;
+    box-shadow: 0 0 0 3px rgba(0,85,165,0.12);
+    outline: none;
+}
+
+/* Botões */
+.popup-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    margin-top: 18px;
+}
+.btn-enviar, .btn-cancelar {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.btn-enviar {
+    background-color: #0055a5;
+    color: #fff;
+}
+.btn-enviar:hover { background-color: #004080; }
+.btn-cancelar {
+    background-color: #e5e5e5;
+    color: #333;
+}
+.btn-cancelar:hover { background-color: #cfcfcf; }
+
+/* Animação */
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+
+/* mensagens do rodapé */
+.note { margin: 10px 0; font-weight: 600; }
+.note-success { color: #0f7a28; }
+.note-error { color: #b30021; }
+
+/* destaque de erro no campo */
+.field-error {
+  border-color: #b30021 !important;
+  box-shadow: 0 0 0 3px rgba(179,0,33,0.12) !important;
+}
+
+.form-error {
+  background: #ffe5e9;
+  border: 1px solid #ffb3c0;
+  color: #8a0014;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.input-error {
+  color: #b30021;
+  font-size: 0.83rem;
+  margin-top: 6px;
+}
+
+.field-error {
+  border-color: #b30021 !important;
+  box-shadow: 0 0 0 3px rgba(179,0,33,0.12) !important;
+}
+
+/* opcional: pequena cor padrão do banner já está definida como erro
+   você pode criar uma classe .form-info para avisos neutros */
+.form-info {
+  background: #eaf6ff;
+  border: 1px solid #bfe3ff;
+  color: #003a66;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+
+/* Banner base */
+.form-banner {
+  display: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+/* Estado: erro (vermelho) */
+.form-banner.is-error {
+  background: #ffe5e9;
+  border: 1px solid #ffb3c0;
+  color: #8a0014;
+}
+
+/* Estado: informativo (azul) */
+.form-banner.is-info {
+  background: #eaf6ff;
+  border: 1px solid #bfe3ff;
+  color: #003a66;
+}
+
+/* Estado: sucesso (verde) */
+.form-banner.is-success {
+  background: #e8f6ee;
+  border: 1px solid #bfe8cf;
+  color: #0f5f2b;
 }

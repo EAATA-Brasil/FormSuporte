@@ -2,96 +2,509 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EAATA Brasil - Controle de Acesso ao Suporte</title>
-    <link rel="stylesheet" href="{% static 'situacao/css/style.css' %}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EAATA Brasil - Controle de Acesso ao Suporte</title>
+  <link rel="stylesheet" href="{% static 'situacao/css/style.css' %}">
 </head>
+
 <body>
-    <div class="container">
-        <header class="header">
-            <div class="logo">
-                <span class="logo-text">EAATA</span>
-                <span class="logo-brasil">BRASIL</span>
-            </div>
-            <h1 class="title">CONTROLE DE ACESSO AO SUPORTE</h1>
-        </header>
-        
-        <main class="content">
-            <form method="POST" action="{% url 'buscar_serial' %}">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="serie">Nº Série</label>
-                    <input type="text" id="serie" name="serial" class="form-control" 
-                           value="{{ serial_digitado }}" required>
-                    <button type="submit" class="btn-buscar">Buscar</button>
-                </div>
-            </form>
+  <div class="container">
+    <!-- Cabeçalho -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-text">EAATA</span>
+        <span class="logo-brasil">BRASIL</span>
+      </div>
+      <h1 class="title">CONTROLE DE ACESSO AO SUPORTE</h1>
+    </header>
 
-            {% if clientes_duplicados %}
-            <div class="section">
-                <h2 class="section-title">Clientes com serial duplicado:</h2>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Nome</th>
-                            <th>CNPJ</th>
-                            <th>Telefone</th>
-                            <th>Equipamento</th>
-                            <th>Vencimento</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for item in clientes_duplicados %}
-                        <tr class="{{ item.status }}">
-                            <td data-label="Nome">{{ item.cliente.nome }}</td>
-                            <td data-label="CNPJ">{{ item.cliente.cnpj }}</td>
-                            <td data-label="Telefone">{{ item.cliente.tel }}</td>
-                            <td data-label="Equipamento">{{ item.cliente.equipamento }}</td>
-                            <td data-label="Vencimento">{{ item.cliente.vencimento }}</td>
-                            <td data-label="Status">{{ item.status_message }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% elif cliente %}
-            <div class="section">
-                <h2 class="section-title">Dados Cliente:</h2>
-                <div class="form-group">{{ cliente.nome }}</div>
-                <div class="form-group">{{ cliente.cnpj }}</div>
-                <div class="form-group">{{ cliente.tel }}</div>
-                <div class="form-group">{{ cliente.equipamento }}</div>
-            </div>
+    <main class="content">
+      <!-- Busca por Nº de Série (renderização server-side) -->
+      <form method="POST" action="{% url 'buscar_serial' %}">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="serie">Nº Série</label>
+          <input
+            type="text"
+            id="serie"
+            name="serial"
+            class="form-control"
+            value="{{ serial_digitado }}"
+            required
+          />
+          <button type="submit" class="btn-buscar">Buscar</button>
+        </div>
+      </form>
 
-            <div class="section">
-                <h2 class="section-title">Status de Uso</h2>
-                <div class="status-box {{ status }}" id="status">
-                    <p class="status-text">{{ status_message }}</p>
-                </div>
-            </div>
-            {% else %}
-            <div class="section">
-                <h2 class="section-title">Dados Cliente:</h2>
-                <div class="form-group">SEM DADOS</div>
-                <div class="form-group">SEM DADOS</div>
-                <div class="form-group">SEM DADOS</div>
-                <div class="form-group">SEM DADOS</div>
-            </div>
+      <!-- Resultado: duplicados -->
+      {% if clientes_duplicados %}
+        <div class="section">
+          <h2 class="section-title">Clientes com serial duplicado:</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>CNPJ</th>
+                <th>Telefone</th>
+                <th>Equipamento</th>
+                <th>Vencimento</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in clientes_duplicados %}
+              <tr class="{{ item.status }}">
+                <td data-label="Nome">{{ item.cliente.nome }}</td>
+                <td data-label="CNPJ">{{ item.cliente.cnpj }}</td>
+                <td data-label="Telefone">{{ item.cliente.tel }}</td>
+                <td data-label="Equipamento">{{ item.cliente.equipamento }}</td>
+                <td data-label="Vencimento">{{ item.cliente.vencimento }}</td>
+                <td data-label="Status">{{ item.status_message }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
 
-            <div class="section">
-                <h2 class="section-title">Status de Uso</h2>
-                <div class="status-box sem" id="status">
-                    <p class="status-text">SEM DADOS</p>
-                </div>
-            </div>
-            {% endif %}
+      <!-- Resultado: um cliente -->
+      {% elif cliente %}
+        <div class="section">
+          <h2 class="section-title">Dados Cliente:</h2>
+          <div class="form-group">{{ cliente.nome }}</div>
+          <div class="form-group">{{ cliente.cnpj }}</div>
+          <div class="form-group">{{ cliente.tel }}</div>
+          <div class="form-group">{{ cliente.equipamento }}</div>
+        </div>
 
-            <div class="footer" id="message">
-                <p class="note">{{ mensagem }}</p>
-            </div>
-        </main>
+        <div class="section">
+          <h2 class="section-title">Status de Uso</h2>
+          <div class="status-box {{ status }}" id="status">
+            <p class="status-text">{{ status_message }}</p>
+          </div>
+        </div>
+
+      <!-- Resultado: sem dados -->
+      {% else %}
+        <div class="section">
+          <h2 class="section-title">Dados Cliente:</h2>
+          <div class="form-group">SEM DADOS</div>
+          <div class="form-group">SEM DADOS</div>
+          <div class="form-group">SEM DADOS</div>
+          <div class="form-group">SEM DADOS</div>
+        </div>
+
+        <div class="section">
+          <h2 class="section-title">Status de Uso</h2>
+          <div class="status-box sem" id="status">
+            <p class="status-text">SEM DADOS</p>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Mensagem global do layout -->
+      <div class="footer" id="message">
+        <p class="note">{{ mensagem }}</p>
+      </div>
+
+      <!-- Ações -->
+      <div style="display:flex; justify-content: space-between;">
+        <button id="abrirPopup" class="btn-popup">Novo Serial</button>
+        <button id="abrirPopupUpdate" class="btn-popup">Atualizar Serial</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ========================= POPUP: ATUALIZAR SERIAL ========================= -->
+  <div id="popupUpdate" class="popup-overlay">
+    <div class="popup-content">
+      <span id="fecharPopupUpdate" class="close-btn">&times;</span>
+      <h2 class="popup-title">Atualizar Dados</h2>
+
+      <!-- Banner com estados (info/sucesso/erro) -->
+      <div id="formBannerUpdate" class="form-banner" style="display:none;"></div>
+
+      <form id="formUpdate" class="popup-form" action="javascript:void(0);">
+        {% csrf_token %}
+
+        <!-- Serial para localizar o registro -->
+        <div class="form-group">
+          <label for="serial_update">Serial (principal)</label>
+          <input type="text" id="serial_update" name="serial" placeholder="Digite o serial para buscar" required>
+          <small class="input-error" data-for="serial"></small>
+        </div>
+
+        <!-- Campos carregados por busca de serial; autosave a cada alteração -->
+        <div class="form-group">
+          <label for="nome_update">Nome</label>
+          <input type="text" id="nome_update" name="nome" placeholder="Nome do cliente" disabled>
+          <small class="input-error" data-for="nome"></small>
+        </div>
+
+        <div class="form-group">
+          <label for="cnpj_update">CNPJ/CPF</label>
+          <input type="text" id="cnpj_update" name="cnpj" placeholder="CNPJ/CPF" disabled>
+          <small class="input-error" data-for="cnpj"></small>
+        </div>
+
+        <div class="form-group">
+          <label for="tel_update">Telefone</label>
+          <input type="text" id="tel_update" name="tel" placeholder="(00) 00000-0000" disabled>
+          <small class="input-error" data-for="tel"></small>
+        </div>
+
+        <div class="popup-buttons">
+          <button type="button" id="fecharPopupBtnUpdate" class="btn-cancelar">Fechar</button>
+        </div>
+      </form>
     </div>
+  </div>
+
+  <!-- ========================= POPUP: NOVO SERIAL ========================= -->
+  <div id="popupForm" class="popup-overlay">
+    <div class="popup-content">
+      <span id="fecharPopup" class="close-btn">&times;</span>
+      <h2 class="popup-title">Enviar Informações</h2>
+
+      <!-- Banner do popup de criação -->
+      <div id="formBanner" class="form-banner" style="display:none;"></div>
+
+      <form method="POST" action="{% url 'cadastrar_serial' %}" enctype="multipart/form-data" class="popup-form">
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label for="serial">Serial</label>
+          <input type="text" id="serial" name="serial" placeholder="Digite o serial" required>
+          <small class="input-error" data-for="serial"></small>
+        </div>
+
+        <div class="form-group">
+          <label for="nome">Nome</label>
+          <input type="text" id="nome" name="nome" placeholder="Digite o nome do cliente" required>
+          <small class="input-error" data-for="nome"></small>
+        </div>
+
+        <div class="form-group">
+          <label for="cnpj">CNPJ/CPF</label>
+          <input type="text" id="cnpj" name="cnpj" placeholder="Digite o CNPJ/CPF do cliente" required>
+          <small class="input-error" data-for="cnpj"></small>
+        </div>
+
+        <div class="form-group">
+          <label for="tel">Telefone</label>
+          <input type="text" id="tel" name="tel" placeholder="(00) 00000-0000">
+          <small class="input-error" data-for="tel"></small>
+        </div>
+
+        <div class="form-group">
+          <label for="equipamento">Equipamento</label>
+          <input type="text" id="equipamento" name="equipamento" placeholder="Digite qual o equipamento" required>
+          <small class="input-error" data-for="equipamento"></small>
+        </div>
+
+        <div class="popup-buttons">
+          <button type="submit" class="btn-enviar">Equipamento</button>
+          <button type="button" id="fecharPopupBtn" class="btn-cancelar">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================= SCRIPT: NOVO SERIAL ========================= -->
+  <script>
+  (function () {
+    const popup = document.getElementById('popupForm');
+    const form  = popup.querySelector('form');
+    const btnFechar  = document.getElementById('fecharPopup');
+    const btnFechar2 = document.getElementById('fecharPopupBtn');
+    const banner = popup.querySelector('#formBanner');
+
+    // Mensagem de rodapé (fora do popup)
+    const msgBox = document.getElementById('message');
+    const noteP  = msgBox ? msgBox.querySelector('.note') : null;
+
+    function openPopup(){ popup.style.display = 'flex'; }
+    function closePopup(){ popup.style.display = 'none'; }
+
+    function showFooterMessage(text, ok = true){
+      if(!noteP) return;
+      noteP.textContent = text;
+      noteP.classList.remove('note-error','note-success');
+      noteP.classList.add(ok ? 'note-success' : 'note-error');
+      msgBox.scrollIntoView({ behavior:'smooth', block:'center' });
+    }
+
+    // Banner do popup (error/info/success)
+    function setBanner(msg, type='error'){
+      if(!banner) return;
+      if(!msg){
+        banner.style.display='none';
+        banner.textContent='';
+        banner.classList.remove('is-error','is-info','is-success');
+        return;
+      }
+      banner.textContent = msg;
+      banner.style.display='block';
+      banner.classList.remove('is-error','is-info','is-success');
+      if(type==='success') banner.classList.add('is-success');
+      else if(type==='info') banner.classList.add('is-info');
+      else banner.classList.add('is-error');
+    }
+
+    function clearFormErrors(){
+      setBanner('');
+      form.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+      form.querySelectorAll('.input-error').forEach(el => { el.style.display='none'; el.textContent=''; });
+      form.querySelectorAll('[aria-invalid="true"]').forEach(el => {
+        el.removeAttribute('aria-invalid');
+        el.removeAttribute('aria-describedby');
+      });
+    }
+
+    function setFieldError(fieldName, message){
+      const input = form.querySelector(`[name="${fieldName}"]`);
+      if(!input) return;
+      input.classList.add('field-error');
+      input.setAttribute('aria-invalid','true');
+      const small = form.querySelector(`.input-error[data-for="${fieldName}"]`);
+      if(small){
+        const id = `${fieldName}-error`;
+        small.id = id;
+        input.setAttribute('aria-describedby', id);
+        small.textContent = message;
+        small.style.display = 'block';
+      } else {
+        input.setAttribute('title', message);
+      }
+    }
+
+    // Limpa erros enquanto digita
+    form.addEventListener('input', (e) => {
+      const input = e.target;
+      input.classList.remove('field-error');
+      input.removeAttribute('aria-invalid');
+      input.removeAttribute('aria-describedby');
+      input.removeAttribute('title');
+      const small = form.querySelector(`.input-error[data-for="${input.name}"]`);
+      if(small){ small.style.display='none'; small.textContent=''; }
+      setBanner('');
+    });
+
+    // Submit via fetch (criação)
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearFormErrors();
+
+      const url = form.getAttribute('action');
+      const formData = new FormData(form);
+
+      const csrfInput = form.querySelector('input[name=csrfmiddlewaretoken]');
+      const headers = {};
+      if(csrfInput) headers['X-CSRFToken'] = csrfInput.value;
+
+      try{
+        const resp = await fetch(url, { method:'POST', headers, body:formData });
+        const data = await resp.json();
+
+        if(!resp.ok || data.ok === false){
+          setBanner(data.message || 'Erro ao cadastrar.', 'error');
+          if(data.field_errors){
+            Object.entries(data.field_errors).forEach(([field, msg]) => setFieldError(field, msg));
+          } else if(/serial/i.test((data.message||''))){
+            setFieldError('serial', data.message);
+          }
+          return;
+        }
+
+        form.reset();
+        closePopup();
+        showFooterMessage(data.message || 'Cadastro realizado com sucesso!', true);
+      }
+      catch{
+        setBanner('Falha de comunicação com o servidor.', 'error');
+      }
+    });
+
+    // Abrir/fechar popup
+    document.getElementById('abrirPopup')?.addEventListener('click', openPopup);
+    btnFechar?.addEventListener('click', closePopup);
+    btnFechar2?.addEventListener('click', closePopup);
+    window.addEventListener('click', (e) => { if(e.target === popup) closePopup(); });
+    window.addEventListener('keydown', (e) => { if(e.key === 'Escape') closePopup(); });
+  })();
+  </script>
+
+  <!-- ========================= SCRIPT: ATUALIZAR SERIAL (observer + autosave) ========================= -->
+  <script>
+  (function () {
+    // Debounce simples
+    const debounce = (fn, ms=500) => { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }; };
+
+    // Elementos
+    const popup   = document.getElementById('popupUpdate');
+    const openBtn = document.getElementById('abrirPopupUpdate');
+    const closeX  = document.getElementById('fecharPopupUpdate');
+    const closeBtn= document.getElementById('fecharPopupBtnUpdate');
+    const banner  = document.getElementById('formBannerUpdate');
+
+    const form = document.getElementById('formUpdate');
+    const csrfInput = form.querySelector('input[name=csrfmiddlewaretoken]');
+    const headers = csrfInput ? { 'X-CSRFToken': csrfInput.value } : {};
+
+    // Endpoints
+    const urlBuscar    = "{% url 'api_buscar_cliente' %}";
+    const urlAtualizar = "{% url 'api_atualizar_cliente' %}";
+
+    // Inputs a serem atualizados automaticamente
+    const inputs = {
+      serial: document.getElementById('serial_update'),
+      nome:   document.getElementById('nome_update'),
+      cnpj:   document.getElementById('cnpj_update'),
+      tel:    document.getElementById('tel_update'),
+    };
+
+    let currentSerial = null;
+    let loaded = false;
+
+    function openPopup(){ popup.style.display = 'flex'; }
+    function closePopup(){ popup.style.display = 'none'; }
+
+    function setBanner(msg, type='error'){
+      if(!banner) return;
+      if(!msg){
+        banner.style.display='none';
+        banner.textContent='';
+        banner.classList.remove('is-error','is-info','is-success');
+        return;
+      }
+      banner.textContent = msg;
+      banner.style.display='block';
+      banner.classList.remove('is-error','is-info','is-success');
+      if(type==='success') banner.classList.add('is-success');
+      else if(type==='info') banner.classList.add('is-info');
+      else banner.classList.add('is-error');
+    }
+
+    function clearFieldErrors(){
+      form.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+      form.querySelectorAll('.input-error').forEach(el => { el.style.display='none'; el.textContent=''; });
+      Object.values(inputs).forEach(input => {
+        input.removeAttribute('aria-invalid');
+        input.removeAttribute('aria-describedby');
+        input.removeAttribute('title');
+      });
+    }
+
+    function setLoadingState(isLoading){
+      ['nome','cnpj','tel'].forEach(k => inputs[k].disabled = isLoading || !loaded);
+    }
+
+    function fillForm(data){
+      inputs.nome.value = data.nome || '';
+      inputs.cnpj.value = data.cnpj || '';
+      inputs.tel.value  = data.tel  || '';
+    }
+
+    async function fetchBySerial(serial){
+      if(!serial){
+        loaded = false; currentSerial = null;
+        fillForm({}); setLoadingState(false);
+        setBanner('Digite um serial para buscar.', 'info');
+        return;
+      }
+      setBanner('Buscando dados...', 'info');
+      setLoadingState(true);
+      clearFieldErrors();
+
+      try{
+        const resp = await fetch(`${urlBuscar}?serial=${encodeURIComponent(serial)}`, { method:'GET' });
+        const data = await resp.json();
+
+        if(!resp.ok || data.ok === false){
+          loaded = false; currentSerial = null;
+          fillForm({}); setLoadingState(false);
+          setBanner(data.message || 'Serial não encontrado.', 'error');
+          const small = form.querySelector('.input-error[data-for="serial"]');
+          inputs.serial.classList.add('field-error');
+          if(small){ small.textContent = data.message || 'Serial não encontrado.'; small.style.display='block'; }
+          return;
+        }
+
+        loaded = true;
+        currentSerial = data.data.serial;
+        fillForm(data.data);
+        setBanner('Dados carregados. Edite e salvaremos automaticamente.', 'info');
+        setLoadingState(false);
+      }
+      catch{
+        loaded = false; currentSerial = null;
+        fillForm({}); setLoadingState(false);
+        setBanner('Falha ao buscar dados. Verifique sua conexão.', 'error');
+      }
+    }
+
+    const debouncedFetch = debounce(() => fetchBySerial(inputs.serial.value.trim()), 600);
+
+    // Observa o serial para buscar ao terminar de digitar / sair do campo / Enter
+    inputs.serial.addEventListener('input', () => { clearFieldErrors(); setBanner(''); debouncedFetch(); });
+    inputs.serial.addEventListener('blur',  () => fetchBySerial(inputs.serial.value.trim()));
+    inputs.serial.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ e.preventDefault(); fetchBySerial(inputs.serial.value.trim()); }
+    });
+
+    async function saveField(field, value){
+      if(!loaded || !currentSerial || field === 'serial') return;
+
+      try{
+        const body = new FormData();
+        body.append('serial', currentSerial);
+        body.append('field',  field);
+        body.append('value',  value);
+
+        const resp = await fetch(urlAtualizar, { method:'POST', headers, body });
+        const data = await resp.json();
+
+        if(!resp.ok || data.ok === false){
+          const small = form.querySelector(`.input-error[data-for="${field}"]`);
+          inputs[field].classList.add('field-error');
+          if(small){ small.textContent = data.message || 'Falha ao salvar.'; small.style.display='block'; }
+          setBanner(data.message || 'Falha ao salvar campo.', 'error');
+        } else {
+          // sucesso discreto
+          const small = form.querySelector(`.input-error[data-for="${field}"]`);
+          if(small){ small.style.display='none'; small.textContent=''; }
+          inputs[field].classList.remove('field-error');
+          inputs[field].removeAttribute('aria-invalid');
+          inputs[field].removeAttribute('aria-describedby');
+          setBanner('Alterações salvas.', 'success');
+        }
+      }
+      catch{
+        const small = form.querySelector(`.input-error[data-for="${field}"]`);
+        inputs[field].classList.add('field-error');
+        if(small){ small.textContent = 'Erro de rede ao salvar.'; small.style.display='block'; }
+        setBanner('Erro de rede ao salvar.', 'error');
+      }
+    }
+
+    const debouncedSavers = {
+      nome: debounce((v) => saveField('nome', v), 400),
+      cnpj: debounce((v) => saveField('cnpj', v), 400),
+      tel:  debounce((v) => saveField('tel',  v), 400),
+    };
+
+    // Liga autosave nos campos
+    ['nome','cnpj','tel'].forEach(field => {
+      inputs[field].addEventListener('input', (e) => { clearFieldErrors(); debouncedSavers[field](e.target.value); });
+    });
+
+    // Abrir/fechar popup
+    openBtn?.addEventListener('click', openPopup);
+    closeX?.addEventListener('click', closePopup);
+    closeBtn?.addEventListener('click', closePopup);
+    window.addEventListener('click', (e) => { if(e.target === popup) closePopup(); });
+    window.addEventListener('keydown', (e) => { if(e.key === 'Escape') closePopup(); });
+  })();
+  </script>
 </body>
 </html>
