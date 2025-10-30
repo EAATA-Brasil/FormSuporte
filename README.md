@@ -198,6 +198,114 @@ O projeto `FormSuporte` é uma aplicação Django. A configuração principal (`
 
 Cada aplicativo (`form`, `ocorrencia_erro`, `simulador`, `situacao_veiculo`) possui seu próprio arquivo `apps.py` para configuração específica do aplicativo, incluindo `verbose_name` e importação de sinais (como em `ocorrencia_erro`) para garantir o carregamento correto da lógica de negócio.
 
+## 🌍 Tradução e Internacionalização (i18n)
+
+O projeto utiliza o sistema de tradução do **Django**, permitindo exibir textos em diferentes idiomas.
+
+---
+
+### 🔹 1. Marcar textos nos templates
+
+No início do template adicione:
+{% load i18n %}
+
+Exemplo com `trans`:
+<h1>{% trans "Bem-vindo" %}</h1>
+<p>{% trans "Clique no botão para continuar." %}</p>
+
+Exemplo com `blocktrans` (com variável):
+{% load i18n %}
+{% blocktrans with user_name=request.user.first_name %}
+Olá, {{ user_name }}! Seu painel está pronto.
+{% endblocktrans %}
+
+Exemplo com pluralização:
+{% load i18n %}
+{% blocktrans count total=itens|length %}
+Você tem {{ total }} item no carrinho.
+{% plural %}
+Você tem {{ total }} itens no carrinho.
+{% endblocktrans %}
+
+---
+
+### 🔹 2. Marcar textos no código Python
+
+from django.utils.translation import gettext as _
+# ou, para uso preguiçoso (modelos/forms):
+# from django.utils.translation import gettext_lazy as _
+
+titulo = _("Relatório de Ocorrências")
+mensagem = _("Arquivo gerado com sucesso.")
+
+---
+
+### 🔹 3. Configuração no settings.py
+
+USE_I18N = True
+
+LANGUAGE_CODE = "pt-br"
+
+LANGUAGES = [
+    ("pt-br", "Português (Brasil)"),
+    ("en", "English"),
+    # adicione outros idiomas se necessário
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / "locale",  # pasta onde ficarão os arquivos de tradução
+]
+
+No MIDDLEWARE, o LocaleMiddleware deve vir após SessionMiddleware e CommonMiddleware:
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
+    # ...
+]
+
+---
+
+### 🔹 4. Gerar e compilar traduções
+
+Execute na raiz do projeto (onde está o manage.py):
+
+django-admin makemessages --all --ignore=env
+django-admin compilemessages
+
+Esses comandos:
+- Criam/atualizam os arquivos .po em locale/<idioma>/LC_MESSAGES/
+- Compilam os arquivos .mo usados pelo Django em runtime
+
+Dicas:
+- Para um idioma específico: django-admin makemessages -l en --ignore=env
+- Em Windows, se necessário, use: python manage.py makemessages ... / python manage.py compilemessages
+
+---
+
+### 🔹 5. Troca de idioma no site (opcional)
+
+Formulário para trocar o idioma usando a view set_language do Django:
+
+<form action="{% url 'set_language' %}" method="post">
+  {% csrf_token %}
+  <select name="language">
+    <option value="pt-br">Português (Brasil)</option>
+    <option value="en">English</option>
+  </select>
+  <button type="submit">{% trans "Alterar idioma" %}</button>
+</form>
+
+---
+
+✅ Resumo rápido:
+1) Use {% trans "texto" %} ou {% blocktrans %} nos templates
+2) Use _() no Python
+3) Ajuste USE_I18N, LANGUAGES e LOCALE_PATHS
+4) Rode: django-admin makemessages --all --ignore=env && django-admin compilemessages
+
+
 ## Como Contribuir
 
 Informações sobre como configurar o ambiente de desenvolvimento, executar testes e contribuir para o projeto serão adicionadas em futuras atualizações deste README. Por enquanto, consulte os arquivos de código-fonte e os READMEs específicos de cada aplicativo para obter mais detalhes.
