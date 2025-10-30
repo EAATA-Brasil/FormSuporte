@@ -212,6 +212,20 @@
     </div>
   </div>
 
+    <script>
+        // Atualiza o input principal (#serie) e envia o form da página
+        function refreshMain(serial) {
+            if (!serial) return;
+            const mainInput = document.getElementById('serie');
+            if (!mainInput) return;
+            const mainForm = mainInput.closest('form');
+            if (!mainForm) return;
+            mainInput.value = serial.trim();
+            // envia POST para /buscar/ (server-side) e atualiza a renderização da página
+            mainForm.submit();
+        }
+    </script>
+
   <!-- ========================= SCRIPT: NOVO SERIAL ========================= -->
   <script>
   (function () {
@@ -318,9 +332,11 @@
           return;
         }
 
+        const createdSerial = (formData.get('serial') || '').trim(); // pegue ANTES do reset()
         form.reset();
         closePopup();
         showFooterMessage(data.message || 'Cadastro realizado com sucesso!', true);
+        if (createdSerial) refreshMain(createdSerial);
       }
       catch{
         setBanner('Falha de comunicação com o servidor.', 'error');
@@ -348,6 +364,7 @@
     const closeX  = document.getElementById('fecharPopupUpdate');
     const closeBtn= document.getElementById('fecharPopupBtnUpdate');
     const banner  = document.getElementById('formBannerUpdate');
+    const serialInput = document.getElementById('serie');
 
     const form = document.getElementById('formUpdate');
     const csrfInput = form.querySelector('input[name=csrfmiddlewaretoken]');
@@ -365,11 +382,27 @@
       tel:    document.getElementById('tel_update'),
     };
 
+    const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+            if (e.isIntersecting) {
+                const s = serialInput.value.trim();
+                if (s) fetchBySerial(s);
+                inputs.serial.value = s || ''
+            }
+        }
+    }, { threshold: 0.1 });
+
+    io.observe(popup);
+
     let currentSerial = null;
     let loaded = false;
 
     function openPopup(){ popup.style.display = 'flex'; }
-    function closePopup(){ popup.style.display = 'none'; }
+    function closePopup(){ 
+        const s = (inputs.serial.value || '').trim();
+        if (s) refreshMain(s);
+        popup.style.display = 'none'; 
+    }
 
     function setBanner(msg, type='error'){
       if(!banner) return;
@@ -435,7 +468,7 @@
         loaded = true;
         currentSerial = data.data.serial;
         fillForm(data.data);
-        setBanner('Dados carregados. Edite e salvaremos automaticamente.', 'info');
+        setBanner('Dados carregados.', 'info');
         setLoadingState(false);
       }
       catch{
@@ -506,7 +539,10 @@
     closeBtn?.addEventListener('click', closePopup);
     window.addEventListener('click', (e) => { if(e.target === popup) closePopup(); });
     window.addEventListener('keydown', (e) => { if(e.key === 'Escape') closePopup(); });
+    document.getElementById('fecharPopupBtnUpdate')?.addEventListener('click', () => io.disconnect());
   })();
+
+
   </script>
 </body>
 </html>
