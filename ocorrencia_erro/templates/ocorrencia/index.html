@@ -463,11 +463,13 @@
             {%endif%}
         </div>
         <div style="display:flex; gap:20px;">
-            <span class="button-paginator" id="last">{% trans "Voltar" %}</span>
+            <span class="button-paginator" id="first">{%trans "Primeira"%}</span>
+            <span class="button-paginator" id="prev">{% trans "Voltar" %}</span>
             <span id="num_pages">
                 
             </span>
             <span class="button-paginator" id="next">{% trans "Avançar" %}</span>
+            <span class="button-paginator" id="last">{% trans "Última"%}</span>
         </div>
         {% include 'ocorrencia/components/toogleCountry.html' with request=request %}
     </div>
@@ -1766,14 +1768,28 @@
         let buttons_paginator = document.querySelectorAll('.button-paginator')
         var total_pages
         
+        function gotoPage(n){
+            // limita entre 1 e total_pages
+            const target = Math.max(1, Math.min(total_pages, Number(n)))
+            if (page_num !== target){
+                page_num = target
+                applyFiltersAndSort() // sua função já existente
+            }
+        }
 
         buttons_paginator.forEach(button=>{
             button.addEventListener('click', (e)=>{
                 if(e.target.id == "next" && page_num <= total_pages){
                     page_num += 1
                 }
-                else if(e.target.id == "last" && page_num > 1){
+                else if(e.target.id == "prev" && page_num > 1){
                     page_num -= 1
+                }
+                else if(e.target.id == "last"){
+                    page_num = total_pages
+                }
+                else if(e.target.id == "first"){
+                    page_num = 1
                 }
                 applyFiltersAndSort()
             })
@@ -1824,23 +1840,23 @@
             }
 
         function paginate(hasPrev, hasNext){
-            const buttonPrev = document.getElementById("last")
+            const buttonPrev = document.getElementById("prev")
             const buttonNext = document.getElementById("next")
             if(!hasPrev && hasNext){   
-                buttonPrev.style.visibility = 'hidden'
-                buttonNext.style.visibility = 'visible'
+                buttonPrev.style.display = 'none'
+                buttonNext.style.display = 'block'
             }
             else if(!hasNext && hasPrev){
-                buttonPrev.style.visibility = 'visible'
-                buttonNext.style.visibility = 'hidden'
+                buttonPrev.style.display = 'block'
+                buttonNext.style.display = 'none'
             }
             else if(!hasNext && !hasPrev){
-                buttonPrev.style.visibility = 'hidden'
-                buttonNext.style.visibility = 'hidden'
+                buttonPrev.style.display = 'none'
+                buttonNext.style.display = 'none'
             }
             else{
-                buttonPrev.style.visibility = 'visible'
-                buttonNext.style.visibility = 'visible'
+                buttonPrev.style.display = 'block'
+                buttonNext.style.display = 'block'
             }
             buttons.update()
         }
