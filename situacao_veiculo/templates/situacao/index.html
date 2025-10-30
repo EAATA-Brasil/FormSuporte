@@ -110,7 +110,9 @@
       <!-- Ações -->
       <div style="display:flex; justify-content: space-between;">
         <button id="abrirPopup" class="btn-popup">Novo Serial</button>
-        <button id="abrirPopupUpdate" class="btn-popup">Atualizar Serial</button>
+        {% if request.user.is_superuser %}
+            <button id="abrirPopupUpdate" class="btn-popup">Atualizar Serial</button>
+        {%endif%}
       </div>
     </main>
   </div>
