@@ -78,10 +78,6 @@ def cadastrar_serial(request):
     field_errors = {}
     if not serial:
         field_errors['serial'] = 'Serial é obrigatório.'
-    if not nome:
-        field_errors['nome'] = 'Nome é obrigatório.'
-    if not cnpj:
-        field_errors['cnpj'] = 'CNPJ/CPF é obrigatório.'
 
     # Validações dos novos campos (apenas se superuser enviou algo)
     anos_para_vencimento = None
