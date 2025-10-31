@@ -95,16 +95,17 @@ class Cliente(models.Model):
         else:
             return "Consultar ativação - ATUALIZAR DADOS."
 
-    # ✅ Curto efetivo: se houver vencimento, ignora custom e usa a padrão
     @property
     def status_message(self):
-        if self.vencimento is not None:
+        s = self.status
+        if s in {'vencido', 'vencendo', 'bloqueado_data_invalida'}:
             return self.status_message_default
         return self.status_message_custom or self.status_message_default
 
-    # ✅ Detalhado efetivo: se houver vencimento, também ignora custom
+    # ✅ Detalhado efetivo: padrão só supera em estados críticos
     @property
     def message_effective(self):
-        if self.vencimento is not None:
+        s = self.status
+        if s in {'vencido', 'vencendo', 'bloqueado_data_invalida'}:
             return self.status_message_default
         return self.mensagem or self.status_message_default

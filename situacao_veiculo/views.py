@@ -33,17 +33,8 @@ def buscar_serial(request):
             return render(request, 'situacao/index.html', context)
         
         cliente = clientes.first()
-        context['cliente'] = cliente
-        context['status'] = cliente.status
-
-        # Se o cliente já tiver mensagem/status_message, usa elas
-        if cliente.mensagem and cliente.status_message:
-            context['mensagem'] = cliente.mensagem
-            context['status_message'] = cliente.status_message
-        else:
-            # comportamento padrão
-            context['mensagem'] = cliente.status_message or 'Situação não informada.'
-            context['status_message'] = cliente.status_message or 'Sem status registrado.'
+        context['mensagem'] = cliente.message_effective
+        context['status_message'] = cliente.status_message
         
         return render(request, 'situacao/index.html', context)
     
