@@ -94,7 +94,7 @@ class Cliente(models.Model):
         elif s == 'bloqueado_data_invalida':
             return "Não fazer atendimento - INFORMAR AO GESTOR"
         else:
-            return "Status de suporte indefinido. Contatar administrador."
+            return "Consultar ativação - ATUALIZAR DADOS."
 
     # ✅ Mensagem EFETIVA (preferir custom; senão, padrão)
     @property

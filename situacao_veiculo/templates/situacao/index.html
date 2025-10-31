@@ -110,9 +110,7 @@
       <!-- Ações -->
       <div style="display:flex; justify-content: space-between;">
         <button id="abrirPopup" class="btn-popup">Novo Serial</button>
-        {% if request.user.is_superuser %}
-            <button id="abrirPopupUpdate" class="btn-popup">Atualizar Serial</button>
-        {%endif%}
+        <button id="abrirPopupUpdate" class="btn-popup" type="button">Atualizar Serial</button>
       </div>
     </main>
   </div>
@@ -154,6 +152,13 @@
           <input type="text" id="tel_update" name="tel" placeholder="(00) 00000-0000" disabled>
           <small class="input-error" data-for="tel"></small>
         </div>
+
+        <div class="form-group">
+          <label for="vencimento_update">Vencimento</label>
+          <input type="date" id="vencimento_update" name="vencimento" disabled>
+          <small class="input-error" data-for="vencimento"></small>
+        </div>
+
 
         <div class="popup-buttons">
           <button type="button" id="fecharPopupBtnUpdate" class="btn-cancelar">Fechar</button>
@@ -197,12 +202,32 @@
           <input type="text" id="tel" name="tel" placeholder="(00) 00000-0000">
           <small class="input-error" data-for="tel"></small>
         </div>
-
         <div class="form-group">
           <label for="equipamento">Equipamento</label>
           <input type="text" id="equipamento" name="equipamento" placeholder="Digite qual o equipamento" required>
           <small class="input-error" data-for="equipamento"></small>
         </div>
+
+        {% if user.is_superuser %}
+          <div class="admin-fields">
+            <label style="font-weight:700;color:#1b3b66;margin-bottom:8px;">
+              Configurações de vencimento
+              <span class="admin-badge">ADMIN</span>
+            </label>
+
+            <div class="form-group">
+              <label for="anos_para_vencimento">Anos para vencimento</label>
+              <input type="number" id="anos_para_vencimento" name="anos_para_vencimento" min="0" step="1" value="2">
+              <small class="input-error" data-for="anos_para_vencimento"></small>
+            </div>
+
+            <div class="form-group">
+              <label for="vencimento_create">Data de vencimento</label>
+              <input type="date" id="vencimento_create" name="vencimento">
+              <small class="input-error" data-for="vencimento"></small>
+            </div>
+          </div>
+        {% endif %}
 
         <div class="popup-buttons">
           <button type="submit" class="btn-enviar">Equipamento</button>
@@ -352,197 +377,254 @@
   })();
   </script>
 
-  <!-- ========================= SCRIPT: ATUALIZAR SERIAL (observer + autosave) ========================= -->
-  <script>
-  (function () {
-    // Debounce simples
-    const debounce = (fn, ms=500) => { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }; };
+<!-- ========================= SCRIPT: ATUALIZAR SERIAL (abre popup + autosave, com vencimento) ========================= -->
+<script>
+(function () {
+  // Debounce simples
+  const debounce = (fn, ms=500) => { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }; };
 
-    // Elementos
-    const popup   = document.getElementById('popupUpdate');
-    const openBtn = document.getElementById('abrirPopupUpdate');
-    const closeX  = document.getElementById('fecharPopupUpdate');
-    const closeBtn= document.getElementById('fecharPopupBtnUpdate');
-    const banner  = document.getElementById('formBannerUpdate');
-    const serialInput = document.getElementById('serie');
+  // Elementos
+  const popup     = document.getElementById('popupUpdate');
+  const openBtn   = document.getElementById('abrirPopupUpdate');
+  const closeX    = document.getElementById('fecharPopupUpdate');
+  const closeBtn  = document.getElementById('fecharPopupBtnUpdate');
+  const banner    = document.getElementById('formBannerUpdate');
+  const mainSerialInput = document.getElementById('serie'); // input principal da página
 
-    const form = document.getElementById('formUpdate');
-    const csrfInput = form.querySelector('input[name=csrfmiddlewaretoken]');
-    const headers = csrfInput ? { 'X-CSRFToken': csrfInput.value } : {};
+  const form = document.getElementById('formUpdate');
+  const csrfInput = form.querySelector('input[name=csrfmiddlewaretoken]');
+  const headers = csrfInput ? { 'X-CSRFToken': csrfInput.value } : {};
 
-    // Endpoints
-    const urlBuscar    = "{% url 'api_buscar_cliente' %}";
-    const urlAtualizar = "{% url 'api_atualizar_cliente' %}";
+  // Endpoints
+  const urlBuscar    = "{% url 'api_buscar_cliente' %}";
+  const urlAtualizar = "{% url 'api_atualizar_cliente' %}";
 
-    // Inputs a serem atualizados automaticamente
-    const inputs = {
-      serial: document.getElementById('serial_update'),
-      nome:   document.getElementById('nome_update'),
-      cnpj:   document.getElementById('cnpj_update'),
-      tel:    document.getElementById('tel_update'),
-    };
+  // Inputs do popup
+  const inputs = {
+    serial:     document.getElementById('serial_update'),
+    nome:       document.getElementById('nome_update'),
+    cnpj:       document.getElementById('cnpj_update'),
+    tel:        document.getElementById('tel_update'),
+    vencimento: document.getElementById('vencimento_update'),
+  };
 
-    const io = new IntersectionObserver((entries) => {
-        for (const e of entries) {
-            if (e.isIntersecting) {
-                const s = serialInput.value.trim();
-                if (s) fetchBySerial(s);
-                inputs.serial.value = s || ''
-            }
-        }
-    }, { threshold: 0.1 });
+  // Abre/fecha popup
+  function openPopup() {
+    // força tipo=button para evitar submit acidental se o botão entrar num <form>
+    openBtn?.setAttribute('type','button');
 
-    io.observe(popup);
+    popup.style.display = 'flex';
+    // pré-carrega o serial do campo principal, se existir
+    const s = (mainSerialInput?.value || '').trim();
+    inputs.serial.value = s;
+    if (s) { fetchBySerial(s); }
+    clearFieldErrors();
+    setBanner(''); // limpa banner
+  }
 
-    let currentSerial = null;
-    let loaded = false;
+  function closePopup() {
+    const s = (inputs.serial.value || '').trim();
+    if (s) refreshMain(s); // re-renderiza server-side com o serial selecionado
+    popup.style.display = 'none';
+    clearFieldErrors();
+    setBanner('');
+  }
 
-    function openPopup(){ popup.style.display = 'flex'; }
-    function closePopup(){ 
-        const s = (inputs.serial.value || '').trim();
-        if (s) refreshMain(s);
-        popup.style.display = 'none'; 
-    }
-
-    function setBanner(msg, type='error'){
-      if(!banner) return;
-      if(!msg){
-        banner.style.display='none';
-        banner.textContent='';
-        banner.classList.remove('is-error','is-info','is-success');
-        return;
-      }
-      banner.textContent = msg;
-      banner.style.display='block';
+  // Banner
+  function setBanner(msg, type='error'){
+    if(!banner) return;
+    if(!msg){
+      banner.style.display='none';
+      banner.textContent='';
       banner.classList.remove('is-error','is-info','is-success');
-      if(type==='success') banner.classList.add('is-success');
-      else if(type==='info') banner.classList.add('is-info');
-      else banner.classList.add('is-error');
+      return;
     }
+    banner.textContent = msg;
+    banner.style.display='block';
+    banner.classList.remove('is-error','is-info','is-success');
+    if(type==='success') banner.classList.add('is-success');
+    else if(type==='info') banner.classList.add('is-info');
+    else banner.classList.add('is-error');
+  }
 
-    function clearFieldErrors(){
-      form.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
-      form.querySelectorAll('.input-error').forEach(el => { el.style.display='none'; el.textContent=''; });
-      Object.values(inputs).forEach(input => {
-        input.removeAttribute('aria-invalid');
-        input.removeAttribute('aria-describedby');
-        input.removeAttribute('title');
-      });
+  // Erros por campo
+  function clearFieldErrors(){
+    form.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+    form.querySelectorAll('.input-error').forEach(el => { el.style.display='none'; el.textContent=''; });
+    Object.values(inputs).forEach(input => {
+      input.removeAttribute('aria-invalid');
+      input.removeAttribute('aria-describedby');
+      input.removeAttribute('title');
+    });
+  }
+
+  // Habilita/Desabilita inputs enquanto carrega
+  let loaded = false;
+  function setLoadingState(isLoading){
+    ['nome','cnpj','tel','vencimento'].forEach(k => inputs[k].disabled = isLoading || !loaded);
+  }
+
+  // Preenche inputs com dados vindos da API
+  function fillForm(data){
+    inputs.nome.value = data.nome || '';
+    inputs.cnpj.value = data.cnpj || '';
+    inputs.tel.value  = data.tel  || '';
+
+    // ✅ Preenche a data atual (se houver) no formato yyyy-mm-dd
+    if (data.vencimento){
+      inputs.vencimento.value = (data.vencimento || '').slice(0, 10);
+    } else {
+      inputs.vencimento.value = '';
     }
+  }
 
-    function setLoadingState(isLoading){
-      ['nome','cnpj','tel'].forEach(k => inputs[k].disabled = isLoading || !loaded);
+  // Busca por serial
+  async function fetchBySerial(serial){
+    const s = (serial || '').trim();
+    if(!s){
+      loaded = false; fillForm({}); setLoadingState(false);
+      setBanner('Digite um serial para buscar.', 'info');
+      return;
     }
+    setBanner('Buscando dados...', 'info');
+    setLoadingState(true);
+    clearFieldErrors();
 
-    function fillForm(data){
-      inputs.nome.value = data.nome || '';
-      inputs.cnpj.value = data.cnpj || '';
-      inputs.tel.value  = data.tel  || '';
-    }
+    try{
+      const resp = await fetch(`${urlBuscar}?serial=${encodeURIComponent(s)}`, { method:'GET' });
+      const data = await resp.json();
 
-    async function fetchBySerial(serial){
-      if(!serial){
-        loaded = false; currentSerial = null;
-        fillForm({}); setLoadingState(false);
-        setBanner('Digite um serial para buscar.', 'info');
+      if(!resp.ok || data.ok === false){
+        loaded = false; fillForm({}); setLoadingState(false);
+        setBanner(data.message || 'Serial não encontrado.', 'error');
+        const small = form.querySelector('.input-error[data-for="serial"]');
+        inputs.serial.classList.add('field-error');
+        if(small){ small.textContent = data.message || 'Serial não encontrado.'; small.style.display='block'; }
         return;
       }
-      setBanner('Buscando dados...', 'info');
-      setLoadingState(true);
-      clearFieldErrors();
 
-      try{
-        const resp = await fetch(`${urlBuscar}?serial=${encodeURIComponent(serial)}`, { method:'GET' });
-        const data = await resp.json();
-
-        if(!resp.ok || data.ok === false){
-          loaded = false; currentSerial = null;
-          fillForm({}); setLoadingState(false);
-          setBanner(data.message || 'Serial não encontrado.', 'error');
-          const small = form.querySelector('.input-error[data-for="serial"]');
-          inputs.serial.classList.add('field-error');
-          if(small){ small.textContent = data.message || 'Serial não encontrado.'; small.style.display='block'; }
-          return;
-        }
-
-        loaded = true;
-        currentSerial = data.data.serial;
-        fillForm(data.data);
-        setBanner('Dados carregados.', 'info');
-        setLoadingState(false);
-      }
-      catch{
-        loaded = false; currentSerial = null;
-        fillForm({}); setLoadingState(false);
-        setBanner('Falha ao buscar dados. Verifique sua conexão.', 'error');
-      }
+      loaded = true;
+      fillForm(data.data);
+      setBanner('Dados carregados. Altere e eu salvo automaticamente.', 'info');
+      setLoadingState(false);
     }
+    catch{
+      loaded = false; fillForm({}); setLoadingState(false);
+      setBanner('Falha ao buscar dados. Verifique sua conexão.', 'error');
+    }
+  }
 
-    const debouncedFetch = debounce(() => fetchBySerial(inputs.serial.value.trim()), 600);
+  const debouncedFetch = debounce(() => fetchBySerial(inputs.serial.value.trim()), 600);
 
-    // Observa o serial para buscar ao terminar de digitar / sair do campo / Enter
-    inputs.serial.addEventListener('input', () => { clearFieldErrors(); setBanner(''); debouncedFetch(); });
-    inputs.serial.addEventListener('blur',  () => fetchBySerial(inputs.serial.value.trim()));
-    inputs.serial.addEventListener('keydown', (e) => {
-      if(e.key === 'Enter'){ e.preventDefault(); fetchBySerial(inputs.serial.value.trim()); }
-    });
+  // Observa o serial (popup)
+  inputs.serial.addEventListener('input', () => { clearFieldErrors(); setBanner(''); debouncedFetch(); });
+  inputs.serial.addEventListener('blur',  () => fetchBySerial(inputs.serial.value.trim()));
+  inputs.serial.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); fetchBySerial(inputs.serial.value.trim()); }
+  });
 
-    async function saveField(field, value){
-      if(!loaded || !currentSerial || field === 'serial') return;
+  // Salvar um campo no backend (form-data)
+  async function saveField(field, value){
+    if(!loaded || field === 'serial') return;
 
-      try{
-        const body = new FormData();
-        body.append('serial', currentSerial);
-        body.append('field',  field);
-        body.append('value',  value);
+    try{
+      const body = new FormData();
+      // usa o serial atualmente digitado no popup (caso o usuário tenha alterado nos campos principais depois)
+      const currentSerial = (inputs.serial.value || '').trim();
+      if (!currentSerial) return;
 
-        const resp = await fetch(urlAtualizar, { method:'POST', headers, body });
-        const data = await resp.json();
+      body.append('serial', currentSerial);
+      body.append('field',  field);
+      body.append('value',  value);
 
-        if(!resp.ok || data.ok === false){
-          const small = form.querySelector(`.input-error[data-for="${field}"]`);
-          inputs[field].classList.add('field-error');
-          if(small){ small.textContent = data.message || 'Falha ao salvar.'; small.style.display='block'; }
-          setBanner(data.message || 'Falha ao salvar campo.', 'error');
-        } else {
-          // sucesso discreto
-          const small = form.querySelector(`.input-error[data-for="${field}"]`);
-          if(small){ small.style.display='none'; small.textContent=''; }
-          inputs[field].classList.remove('field-error');
-          inputs[field].removeAttribute('aria-invalid');
-          inputs[field].removeAttribute('aria-describedby');
-          setBanner('Alterações salvas.', 'success');
-        }
-      }
-      catch{
+      const resp = await fetch(urlAtualizar, { method:'POST', headers, body });
+      const data = await resp.json();
+
+      if (!resp.ok || data.ok === false){
         const small = form.querySelector(`.input-error[data-for="${field}"]`);
-        inputs[field].classList.add('field-error');
-        if(small){ small.textContent = 'Erro de rede ao salvar.'; small.style.display='block'; }
-        setBanner('Erro de rede ao salvar.', 'error');
+        const fieldInput = inputs[field];
+        if (fieldInput) fieldInput.classList.add('field-error');
+        if(small){ small.textContent = data.message || 'Falha ao salvar.'; small.style.display='block'; }
+        setBanner(data.message || 'Falha ao salvar campo.', 'error');
+      } else {
+        // Normaliza vencimento retornado
+        if (field === 'vencimento'){
+          const v = data?.data?.vencimento;
+          if (v){
+            inputs.vencimento.value = (v || '').slice(0, 10);
+          } else {
+            inputs.vencimento.value = '';
+          }
+        }
+        const small = form.querySelector(`.input-error[data-for="${field}"]`);
+        const fieldInput = inputs[field];
+        if (fieldInput) {
+          fieldInput.classList.remove('field-error');
+          fieldInput.removeAttribute('aria-invalid');
+          fieldInput.removeAttribute('aria-describedby');
+        }
+        if(small){ small.style.display='none'; small.textContent=''; }
+        setBanner('Alterações salvas.', 'success');
       }
     }
+    catch{
+      const small = form.querySelector(`.input-error[data-for="${field}"]`);
+      const fieldInput = inputs[field];
+      if (fieldInput) fieldInput.classList.add('field-error');
+      if(small){ small.textContent = 'Erro de rede ao salvar.'; small.style.display='block'; }
+      setBanner('Erro de rede ao salvar.', 'error');
+    }
+  }
 
-    const debouncedSavers = {
-      nome: debounce((v) => saveField('nome', v), 400),
-      cnpj: debounce((v) => saveField('cnpj', v), 400),
-      tel:  debounce((v) => saveField('tel',  v), 400),
-    };
+  // Debouncers dos campos de texto
+  const debouncedSavers = {
+    nome: debounce((v) => saveField('nome', v), 400),
+    cnpj: debounce((v) => saveField('cnpj', v), 400),
+    tel:  debounce((v) => saveField('tel',  v), 400),
+  };
 
-    // Liga autosave nos campos
-    ['nome','cnpj','tel'].forEach(field => {
-      inputs[field].addEventListener('input', (e) => { clearFieldErrors(); debouncedSavers[field](e.target.value); });
-    });
+  // Liga autosave nos campos de texto
+  ['nome','cnpj','tel'].forEach(field => {
+    inputs[field].addEventListener('input', (e) => { clearFieldErrors(); debouncedSavers[field](e.target.value); });
+  });
 
-    // Abrir/fechar popup
-    openBtn?.addEventListener('click', openPopup);
-    closeX?.addEventListener('click', closePopup);
-    closeBtn?.addEventListener('click', closePopup);
-    window.addEventListener('click', (e) => { if(e.target === popup) closePopup(); });
-    window.addEventListener('keydown', (e) => { if(e.key === 'Escape') closePopup(); });
-    document.getElementById('fecharPopupBtnUpdate')?.addEventListener('click', () => io.disconnect());
-  })();
+  // Vencimento: salva ao mudar (opcional/limpável)
+  inputs.vencimento.addEventListener('change', async (e) => {
+    const v = e.target.value; // '' ou 'YYYY-MM-DD'
+    await saveField('vencimento', v || ''); // vazio => backend limpa
+    if (!v) inputs.vencimento.value = '';     // mantém vazio visualmente
+  });
+    // ✅ Ao clicar no input, abre o date picker
+  inputs.vencimento.addEventListener('click', (e) => {
+    // Em alguns browsers, previne seleção de texto e já abre o seletor
+    if (typeof inputs.vencimento.showPicker === 'function') {
+      e.preventDefault();
+      inputs.vencimento.showPicker();
+    } else {
+      // fallback
+      inputs.vencimento.focus();
+      inputs.vencimento.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+    }
+  });
+
+  // ✅ Ao focar (por tab ou toque), também abre o date picker
+  inputs.vencimento.addEventListener('focus', () => {
+    if (typeof inputs.vencimento.showPicker === 'function') {
+      inputs.vencimento.showPicker();
+    }
+  });
 
 
-  </script>
+  // Eventos de abrir/fechar popup
+  openBtn?.addEventListener('click', openPopup);
+  closeX?.addEventListener('click', closePopup);
+  closeBtn?.addEventListener('click', closePopup);
+  window.addEventListener('click', (e) => { if(e.target === popup) closePopup(); });
+  window.addEventListener('keydown', (e) => { if(e.key === 'Escape') {
+    if (popup && popup.style.display === 'flex') { closePopup(); }
+  }});
+})();
+</script>
+
 </body>
 </html>

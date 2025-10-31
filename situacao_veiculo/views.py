@@ -4,6 +4,7 @@ from django.views.decorators.http import require_POST, require_GET
 from django.utils import timezone
 from django.http import JsonResponse
 from django.db import IntegrityError
+from django.utils.dateparse import parse_date
 
 def buscar_serial(request):
     context = {}
@@ -54,7 +55,7 @@ def _anos_por_equipamento(equipamento: str) -> int:
     return 1 if 'reader' in equipamento.lower() else 2
 
 
-ALLOWED_FIELDS = {"nome", "cnpj", "tel"}
+ALLOWED_FIELDS = {"nome", "cnpj", "tel", "vencimento"}
 
 def _digits_only(s: str) -> str:
     return ''.join(ch for ch in s if ch.isdigit())
@@ -70,6 +71,10 @@ def cadastrar_serial(request):
     tel = (request.POST.get('tel') or '').strip()
     equipamento = (request.POST.get('equipamento') or '').strip()
 
+    # Novos (somente para superuser)
+    anos_input = (request.POST.get('anos_para_vencimento') or '').strip()
+    venc_input = (request.POST.get('vencimento') or '').strip()
+
     field_errors = {}
     if not serial:
         field_errors['serial'] = 'Serial é obrigatório.'
@@ -78,9 +83,33 @@ def cadastrar_serial(request):
     if not cnpj:
         field_errors['cnpj'] = 'CNPJ/CPF é obrigatório.'
 
+    # Validações dos novos campos (apenas se superuser enviou algo)
+    anos_para_vencimento = None
+    vencimento_data = None
+
+    if request.user.is_superuser:
+        # anos_para_vencimento: opcional, default 2 se não vier
+        if anos_input:
+            try:
+                anos_para_vencimento = int(anos_input)
+                if anos_para_vencimento < 0:
+                    field_errors['anos_para_vencimento'] = 'Deve ser um inteiro zero ou positivo.'
+            except ValueError:
+                field_errors['anos_para_vencimento'] = 'Informe um número inteiro.'
+        else:
+            anos_para_vencimento = 2  # default solicitado
+
+        # vencimento: opcional (pode vir vazio), valida formato se vier
+        if venc_input:
+            d = parse_date(venc_input)
+            if not d:
+                field_errors['vencimento'] = 'Data inválida (use YYYY-MM-DD).'
+            else:
+                vencimento_data = d
+
     if field_errors:
         return JsonResponse(
-            {"ok": False, "message": "Preencha os campos obrigatórios.", "field_errors": field_errors},
+            {"ok": False, "message": "Corrija os campos destacados.", "field_errors": field_errors},
             status=400,
         )
 
@@ -91,15 +120,19 @@ def cadastrar_serial(request):
                 status=409,
             )
 
-        anos_para_vencimento = _anos_por_equipamento(equipamento)
+        # Se não for superuser, mantém sua lógica atual (por equipamento)
+        if not request.user.is_superuser:
+            anos_para_vencimento = _anos_por_equipamento(equipamento)
 
         cliente = Cliente.objects.create(
             anos_para_vencimento=int(anos_para_vencimento),
             serial=serial,
             nome=nome,
-            cnpj=_digits_only(cnpj) or cnpj,  # normaliza, mas preserva se não houver dígitos
+            cnpj=_digits_only(cnpj) or cnpj,
             tel=tel,
             equipamento=equipamento or "N/D",
+            # vencimento: só setamos se superuser enviou; senão, o models.save() cuidará (auto) quando None
+            vencimento=vencimento_data if request.user.is_superuser else None,
         )
 
         return JsonResponse(
@@ -113,7 +146,8 @@ def cadastrar_serial(request):
                     "cnpj": cliente.cnpj,
                     "tel": cliente.tel,
                     "equipamento": cliente.equipamento,
-                    "anos_para_vencimento": anos_para_vencimento,
+                    "anos_para_vencimento": cliente.anos_para_vencimento,
+                    "vencimento": cliente.vencimento.isoformat() if cliente.vencimento else None,
                     "timestamp": data_referencia.isoformat(),
                 },
             },
@@ -136,7 +170,6 @@ def cadastrar_serial(request):
             status=500,
         )
 
-
 @require_GET
 def api_buscar_cliente(request):
     serial = (request.GET.get('serial') or '').strip()
@@ -153,7 +186,8 @@ def api_buscar_cliente(request):
         "serial": cliente.serial,
         "nome": cliente.nome,
         "cnpj": cliente.cnpj,
-        "tel": cliente.tel
+        "tel": cliente.tel,
+        "vencimento": cliente.vencimento.isoformat() if cliente.vencimento else None,
     }
     return JsonResponse({"ok": True, "data": data}, status=200)
 
@@ -174,15 +208,26 @@ def api_atualizar_cliente(request):
     except Cliente.DoesNotExist:
         return JsonResponse({"ok": False, "message": "Serial não encontrado."}, status=404)
 
-    # Normalizações
+    # Normalizações específicas
     if field == "cnpj":
-        value = _digits_only(value) or value
+        value = ''.join(ch for ch in value if ch.isdigit()) or value
+
+    if field == "vencimento":
+        if not value:
+            cliente.vencimento = None
+            cliente.save(update_fields=["vencimento"])
+            return JsonResponse({"ok": True, "message": "Vencimento removido."})
+        data_v = parse_date(value)
+        if not data_v:
+            return JsonResponse({"ok": False, "message": "Data inválida. Use formato YYYY-MM-DD."}, status=400)
+        cliente.vencimento = data_v
+        cliente.save(update_fields=["vencimento"])
+        return JsonResponse({"ok": True, "message": "Vencimento atualizado.", "data": {"vencimento": data_v.isoformat()}})
 
     setattr(cliente, field, value)
     cliente.save(update_fields=[field])
 
-    return JsonResponse({"ok": True, "message": "Atualizado com sucesso.", "data": {field: value}}, status=200)
-
+    return JsonResponse({"ok": True, "message": f"{field.capitalize()} atualizado.", "data": {field: value}})
 
 def index(request):
     return render(request, 'situacao/index.html', {'clientes': None})

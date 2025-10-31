@@ -479,3 +479,163 @@ tr.vencendo {
   border: 1px solid #bfe8cf;
   color: #0f5f2b;
 }
+
+#vencimento_update {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  font-size: 15px;
+  transition: all 0.2s ease-in-out;
+  color: #333;
+  cursor: pointer;
+}
+
+/* Ícone do calendário (remove padrão e adiciona customizado) */
+#vencimento_update::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml,%3Csvg fill='%234A90E2' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z'/%3E%3C/svg%3E")
+    no-repeat center;
+  opacity: 0.7;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+/* Efeito hover/focus */
+#vencimento_update:hover,
+#vencimento_update:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 4px rgba(74, 144, 226, 0.4);
+  outline: none;
+}
+
+/* Valor exibido */
+#vencimento_update:not(:disabled) {
+  color: #222;
+}
+
+/* Estado desabilitado */
+#vencimento_update:disabled {
+  background-color: #f8f8f8;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* Ajuste do pequeno texto de erro */
+.input-error[data-for="vencimento"] {
+  color: #c62828;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+#anos_para_vencimento,
+#vencimento_create {
+  border: 1.5px dashed #4a90e2;
+}
+.admin-fields {
+  border: 1px dashed var(--primary-light);
+  background: #f7fbff;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+/* (Opcional) Badge ADMIN ao lado do título/label da seção */
+.admin-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #0b3d7a;
+  background: #e6f0ff;
+  border: 1px solid #cfe2ff;
+  border-radius: 999px;
+}
+
+/* Inputs do bloco admin herdam estética dos demais, com um “sotaque” */
+#anos_para_vencimento,
+#vencimento_create {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d6d6d6;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: 0.2s;
+  background: #fff;
+  color: var(--text);
+}
+
+/* Sutil diferenciação visual para “admin” */
+#anos_para_vencimento,
+#vencimento_create {
+  box-shadow: inset 0 0 0 1px rgba(0,85,165,0.06);
+}
+
+/* Foco/hover coerentes com o tema */
+#anos_para_vencimento:hover,
+#vencimento_create:hover,
+#anos_para_vencimento:focus,
+#vencimento_create:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0,85,165,0.12);
+  outline: none;
+}
+
+/* Placeholder/valor */
+#anos_para_vencimento::placeholder,
+#vencimento_create::placeholder {
+  color: var(--text-light);
+}
+
+/* Estado inválido (quando marcado via JS) */
+#anos_para_vencimento.field-error,
+#vencimento_create.field-error {
+  border-color: #b30021 !important;
+  box-shadow: 0 0 0 3px rgba(179,0,33,0.12) !important;
+}
+
+/* Mensagens de erro por campo */
+.input-error[data-for="anos_para_vencimento"],
+.input-error[data-for="vencimento"] {
+  color: #b30021;
+  font-size: 0.83rem;
+  margin-top: 6px;
+  display: block;
+}
+
+/* Ícone do calendário para o campo de criação (coeso com o update) */
+#vencimento_create::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml,%3Csvg fill='%230055a5' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z'/%3E%3C/svg%3E")
+              no-repeat center;
+  opacity: 0.75;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+/* Harmonizar o campo de update e o de criação (mesma “pegada”) */
+#vencimento_update,
+#vencimento_create {
+  cursor: pointer;
+}
+
+/* Number input sem setinhas (mais limpo) */
+#anos_para_vencimento::-webkit-outer-spin-button,
+#anos_para_vencimento::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+#anos_para_vencimento {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* Responsividade do bloco admin */
+@media (max-width: 420px) {
+  .admin-fields {
+    padding: 12px;
+    border-radius: 8px;
+  }
+}
