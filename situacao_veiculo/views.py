@@ -34,12 +34,19 @@ def buscar_serial(request):
         cliente = clientes.first()
         context['cliente'] = cliente
         context['status'] = cliente.status
-        context['mensagem'] = cliente.status_message
-        context['status_message'] = cliente.status_message
+
+        # Se o cliente já tiver mensagem/status_message, usa elas
+        if cliente.mensagem and cliente.status_message:
+            context['mensagem'] = cliente.mensagem
+            context['status_message'] = cliente.status_message
+        else:
+            # comportamento padrão
+            context['mensagem'] = cliente.status_message or 'Situação não informada.'
+            context['status_message'] = cliente.status_message or 'Sem status registrado.'
+        
         return render(request, 'situacao/index.html', context)
     
     return redirect('index')  # GET -> homepage
-
 
 def _anos_por_equipamento(equipamento: str) -> int:
     if not equipamento:
