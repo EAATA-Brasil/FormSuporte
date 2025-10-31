@@ -81,7 +81,6 @@ class Cliente(models.Model):
         else:
             return 'vencendo'
 
-    # Mensagem padrão calculada pelo status
     @property
     def status_message_default(self):
         s = self.status
@@ -96,7 +95,16 @@ class Cliente(models.Model):
         else:
             return "Consultar ativação - ATUALIZAR DADOS."
 
-    # ✅ Mensagem EFETIVA (preferir custom; senão, padrão)
+    # ✅ Curto efetivo: se houver vencimento, ignora custom e usa a padrão
     @property
     def status_message(self):
+        if self.vencimento is not None:
+            return self.status_message_default
         return self.status_message_custom or self.status_message_default
+
+    # ✅ Detalhado efetivo: se houver vencimento, também ignora custom
+    @property
+    def message_effective(self):
+        if self.vencimento is not None:
+            return self.status_message_default
+        return self.mensagem or self.status_message_default
