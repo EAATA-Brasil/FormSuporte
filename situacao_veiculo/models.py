@@ -12,11 +12,11 @@ class Cliente(models.Model):
         default=2,
         help_text="Quantidade de anos até o vencimento."
     )
-    serial = models.CharField(verbose_name="Serial", max_length=100, blank=True, null=True)
-    nome = models.CharField(verbose_name="Nome", max_length=100, blank=False)
-    cnpj = models.CharField(max_length=30, verbose_name='CPF/CNPJ', blank=True, default="SEM DADO")
-    tel = models.CharField(max_length=30, verbose_name='Telefone', blank=True, default="SEM DADO")
-    equipamento = models.CharField(verbose_name='Equipamento', max_length=100, blank=True, default="")
+    serial = models.CharField(verbose_name="Serial", max_length=100, blank=True)
+    nome = models.CharField(verbose_name="Nome", max_length=100, blank=True, null=True)
+    cnpj = models.CharField(max_length=30, verbose_name='CPF/CNPJ', blank=True, default="SEM DADO", null=True)
+    tel = models.CharField(max_length=30, verbose_name='Telefone', blank=True, default="SEM DADO", null=True)
+    equipamento = models.CharField(verbose_name='Equipamento', max_length=100, blank=True, default="", null=True)
 
     status_message_custom = models.CharField(
         "Mensagem de status (curta) - personalizada",
