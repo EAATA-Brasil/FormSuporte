@@ -11,14 +11,14 @@ def buscar_serial(request):
     if request.method == 'POST':
         serial = request.POST.get('serial', '').strip()
         context['serial_digitado'] = serial
-        
+
         clientes = Cliente.objects.filter(serial=serial)
-        
+
         if not clientes.exists():
             context['status_message'] = 'SEM DADOS'
             context['mensagem'] = 'Passar para o comercial atualizar o cadastro.'
             return render(request, 'situacao/index.html', context)
-        
+
         if clientes.count() > 1:
             lista_clientes = []
             for cliente in clientes:
@@ -26,18 +26,20 @@ def buscar_serial(request):
                     'cliente': cliente,
                     'status': cliente.status,
                     'vencimento_dias': getattr(cliente, '_vencimento_dias', None),
-                    'status_message': cliente.status_message,
+                    'status_message': cliente.status_message,  # já é “efetiva”
                 })
             context['clientes_duplicados'] = lista_clientes
             context['mensagem'] = 'Encontradas múltiplas ocorrências para esse serial. Verifique os dados abaixo:'
             return render(request, 'situacao/index.html', context)
-        
+
+        # Único cliente
         cliente = clientes.first()
-        context['mensagem'] = cliente.message_effective
-        context['status_message'] = cliente.status_message
-        
+        context['cliente'] = cliente
+        context['status'] = cliente.status
+        context['mensagem'] = cliente.message_effective   # detalhada efetiva
+        context['status_message'] = cliente.status_message  # curta efetiva
         return render(request, 'situacao/index.html', context)
-    
+
     return redirect('index')  # GET -> homepage
 
 def _anos_por_equipamento(equipamento: str) -> int:

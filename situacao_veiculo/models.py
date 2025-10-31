@@ -98,14 +98,14 @@ class Cliente(models.Model):
     @property
     def status_message(self):
         s = self.status
-        if s in {'vencido', 'vencendo', 'bloqueado_data_invalida'}:
+        if s in {'vencido', 'bloqueado_data_invalida'}:
             return self.status_message_default
         return self.status_message_custom or self.status_message_default
 
-    # ✅ Detalhado efetivo: padrão só supera em estados críticos
+    # ✅ Detalhado efetivo: mesma regra
     @property
     def message_effective(self):
         s = self.status
-        if s in {'vencido', 'vencendo', 'bloqueado_data_invalida'}:
+        if s in {'vencido', 'bloqueado_data_invalida'}:
             return self.status_message_default
         return self.mensagem or self.status_message_default
