@@ -63,6 +63,7 @@ def cadastrar_serial(request):
     cnpj = (request.POST.get('cnpj') or '').strip()
     tel = (request.POST.get('tel') or '').strip()
     equipamento = (request.POST.get('equipamento') or '').strip()
+    data_input = (request.POST.get('data') or '').strip()
 
     # Novos (somente para superuser)
     anos_input = (request.POST.get('anos_para_vencimento') or '').strip()
@@ -113,7 +114,18 @@ def cadastrar_serial(request):
         if not request.user.is_superuser:
             anos_para_vencimento = _anos_por_equipamento(equipamento)
 
+
+        data_lanc = None
+        if data_input:
+            d = parse_date(data_input)
+            if not d:
+                field_errors['data'] = 'Data inválida (use YYYY-MM-DD).'
+            else:
+                data_lanc = d
+
+
         cliente = Cliente.objects.create(
+            data=data_lanc or timezone.now(),
             anos_para_vencimento=int(anos_para_vencimento),
             serial=serial,
             nome=nome,

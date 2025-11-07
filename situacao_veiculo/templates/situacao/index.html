@@ -178,6 +178,11 @@
 
       <form method="POST" action="{% url 'cadastrar_serial' %}" enctype="multipart/form-data" class="popup-form">
         {% csrf_token %}
+        <div class="form-group">
+          <label for="data_create">Data de ativação</label>
+          <input type="date" id="data_create" name="data" value="">
+          <small class="input-error" data-for="data"></small>
+        </div>
 
         <div class="form-group">
           <label for="serial">Serial</label>
@@ -259,6 +264,27 @@
     const btnFechar  = document.getElementById('fecharPopup');
     const btnFechar2 = document.getElementById('fecharPopupBtn');
     const banner = popup.querySelector('#formBanner');
+
+    const input_date = popup.querySelector("#data_create")
+
+    input_date.addEventListener('click', (e) => {
+      // Em alguns browsers, previne seleção de texto e já abre o seletor
+      if (typeof input_date.showPicker === 'function') {
+        e.preventDefault();
+        input_date.showPicker();
+      } else {
+        // fallback
+        input_date.focus();
+        input_date.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+      }
+    });
+
+    // ✅ Ao focar (por tab ou toque), também abre o date picker
+    input_date.addEventListener('focus', () => {
+      if (typeof input_date.showPicker === 'function') {
+        input_date.showPicker();
+      }
+    });
 
     // Mensagem de rodapé (fora do popup)
     const msgBox = document.getElementById('message');
