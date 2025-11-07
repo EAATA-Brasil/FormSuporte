@@ -565,7 +565,6 @@
                     Swal.close();
                     setTimeout(async () => {
                     try {
-                        console.log(record)
                         const response = await fetch(`/ocorrencia/get_record/${record.id}`);
                         const updatedRecord = await response.json();
                         showProblemDetails(updatedRecord);
@@ -764,6 +763,9 @@
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 18px;">📎</span>
                             <span style="font-weight: 500; color: #495057;">${arq.nome_original || '{% trans "Arquivo" %}'}</span>
+                                <small style="color: #6c757d; font-size: 12px;">
+                                    {% trans "Enviado em:" %} ${arq.data_upload || '{% trans "Data desconhecida" %}'}
+                                </small>
                         </div>
                         <span>
                         <button onclick="deleteFile('${arq.id}', '${arq.nome_original}', ${JSON.stringify(record).replace(/"/g, '&quot;')})"
@@ -788,7 +790,7 @@
             const problemDetectedId = `problem_detected_${record.id}`;
             const feedbackTechnicalId = `feedback_technical_${record.id}`;
             const feedbackManagerId = `feedback_manager_${record.id}`;
-            console.log(record)
+            // console.log(record)
             // Cria o conteúdo HTML do pop-up com informações detalhadas e textareas editáveis
             const popupContent = `
                 <div style="text-align: left;">
@@ -1012,7 +1014,7 @@
                     document.getElementById("button_pdf").addEventListener('click', ()=>{
                         handleGerarPdf(id, record.codigo_externo)
                     })
-                    document.getElementById("button_copy").style.display = window.location.protocol === 'https:' ? '' : 'none'
+                    document.getElementById("button_copy").style.display = (window.location.protocol === 'https:'| window.location.host.includes('localhost')  )  ? '' : 'none'
                     document.getElementById("button_copy").addEventListener("click", () => {
                         const idStr = String(record.id);
                         const codigoStr = String(record.codigo_externo || "");
@@ -1020,24 +1022,47 @@
                         const infos = [
                             `ID: ${idStr}`,
                             codigoStr && codigoStr !== idStr ? `Token: ${codigoStr}` : null,
-                            `{% trans "Técnico:" %} ${record.technical || '{% trans "Não informado" %}'}`,
-                            `{% trans "Dispositivo:" %} ${record.device || '{% trans "Não informado" %}'}`,
-                            `{% trans "Área:" %} ${record.area || '{% trans "Não informado" %}'}`,
-                            `{% trans "Serial:" %} ${record.serial || '{% trans "Não informado" %}'}`,
-                            `{% trans "Marca:" %} ${record.brand || '{% trans "Não informado" %}'}`,
-                            `{% trans "Modelo:" %} ${record.model || '{% trans "Não informado" %}'}`,
-                            `{% trans "Ano:" %} ${record.year || '{% trans "Não informado" %}'}`,
-                            `{% trans "Data:" %} ${record.data ? formatDateToDisplay(record.data) : '{% trans "Não informado" %}'}`,
-                            `{% trans "Problema Detectado:" %} ${problemDetectedValue}`
+                            `Técnico: ${record.technical || 'Não informado'}`,
+                            `Dispositivo: ${record.device || 'Não informado'}`,
+                            `Área: ${record.area || 'Não informado'}`,
+                            `Serial: ${record.serial || 'Não informado'}`,
+                            `Marca: ${record.brand || 'Não informado'}`,
+                            `Modelo: ${record.model || 'Não informado'}`,
+                            `Ano: ${record.year || 'Não informado'}`,
+                            `Data: ${record.data ? formatDateToDisplay(record.data) : 'Não informado'}`,
+                            `Problema Detectado: ${problemDetectedValue}`
                         ].filter(Boolean);
 
                         const textoFinal = infos.join('\n');
+                        // 🔹 Envia o texto ao backend Django para tradução via DeepL
+                        fetch("{% url 'traduzir_api' %}", {
+                            method: "POST", // GET não deve ter body
+                            headers: { 
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": getCookie("csrftoken") // necessário no Django
+                            },
+                            body: JSON.stringify({ texto: textoFinal })
+                            
+                        })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`Erro na requisição: ${response.status}`);
+                            return response.json();
+                        })
+                        .then(data => {
+                            const textoTraduzido = data.traduzido || textoFinal;
 
-                        navigator.clipboard.writeText(textoFinal)
-                        .then(() => showSwalStyledToast("{% trans 'Informações copiadas com sucesso!' %}", "success"))
-                        .catch(() => showSwalStyledToast("{% trans 'Erro ao copiar informações!' %}", "error"));
+                            // 🔹 Copia o texto traduzido
+                            navigator.clipboard.writeText(textoTraduzido)
+                                .then(() => showSwalStyledToast("Information copied successfully!", "success"))
+                                .catch(err => showSwalStyledToast("Error copying information: " + err.message, "error"));
+                        })
+                        .catch(err => {
+                            console.error("Erro ao traduzir:", err);
+                            showSwalStyledToast("Error translating text: " + err.message, "error");
+                        });
 
                     });
+
 
                     // função auxiliar para exibir o toast personalizado
                     function showSwalStyledToast(message, type = "success") {
@@ -1395,7 +1420,7 @@
                                 }
                             } else {
                                 // Fallback para navegadores mais antigos
-                                console.log('{% trans "Clipboard API não suportada, tentando método alternativo..." %}');
+                                // console.log('{% trans "Clipboard API não suportada, tentando método alternativo..." %}');
                                 tryPasteAlternativeMethod();
                             }
                         }
@@ -1490,7 +1515,7 @@
                                 indicator.remove();
                             }
                             
-                            console.log('{% trans "Mensagem enviada:" %}', message ? '{% trans "com texto" %}' : '{% trans "apenas imagem" %}');
+                            // console.log('{% trans "Mensagem enviada:" %}', message ? '{% trans "com texto" %}' : '{% trans "apenas imagem" %}');
                         }
                     };
 

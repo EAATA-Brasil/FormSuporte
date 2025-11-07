@@ -12,7 +12,7 @@ class Cliente(models.Model):
         default=2,
         help_text="Quantidade de anos até o vencimento."
     )
-    serial = models.CharField(verbose_name="Serial", max_length=100, blank=True)
+    serial = models.CharField(verbose_name="Serial", max_length=100, blank=True, default='')
     nome = models.CharField(verbose_name="Nome", max_length=100, blank=True, null=True)
     cnpj = models.CharField(max_length=30, verbose_name='CPF/CNPJ', blank=True, default="SEM DADO", null=True)
     tel = models.CharField(max_length=30, verbose_name='Telefone', blank=True, default="SEM DADO", null=True)

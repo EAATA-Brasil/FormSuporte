@@ -1,0 +1,53 @@
+
+
+services:
+  web:
+    container_name: eaata_web_dev
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./FormSuporte:/usr/src/app
+    expose:
+      - 8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  redis:
+    container_name: eaata_redis_dev
+    image: redis:7-alpine
+    expose:
+      - 6379
+
+  db:
+    container_name: eaata_db_dev
+    image: mysql:8.0
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD} # Usando a mesma senha para root para simplificar
+    expose:
+      - 3306
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+
+volumes:
+  mysql_data:
+  static_volume:
+  media_volume:
+  
+  

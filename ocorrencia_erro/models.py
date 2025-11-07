@@ -275,6 +275,7 @@ class ArquivoOcorrencia(models.Model):
     record = models.ForeignKey(Record, on_delete=models.CASCADE, related_name='arquivos', null=True)
     arquivo = models.FileField(upload_to='download_arquivo/')
     nome_original = models.CharField(max_length=255, blank=True)
+    data_upload = models.DateTimeField(verbose_name="Data de upload", default=timezone.now)
 
     def __str__(self):
         return f"{self.record} salve {self.arquivo}"

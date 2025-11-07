@@ -103,7 +103,7 @@ CHANNEL_LAYERS = {
         # O Django Channels usará o Redis para gerenciar a comunicação entre os consumidores
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('localhost', 6379)], # Ajuste o host e a porta do seu servidor Redis
+            'hosts': [(os.getenv('REDIS_HOST', ''), 6379)], # Ajuste o host e a porta do seu servidor Redis
         },
     },
 }

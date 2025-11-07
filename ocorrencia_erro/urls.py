@@ -15,7 +15,7 @@ urlpatterns = [
     path('notificacoes/contar/', views.contar_notificacoes_nao_lidas, name='contar_notificacoes'),
     path('notificacoes/<int:notificacao_id>/marcar_lida/', views.marcar_notificacao_lida, name='marcar_notificacao_lida'),
     path('notificacoes/record/<int:record_id>/marcar_lidas/', views.marcar_notificacoes_por_record_como_lidas, name='marcar_notificacoes_record_lidas'),
-    
+    path("traduzir/", views.traduzir_api, name="traduzir_api"),
     # --- ALTERAÇÃO AQUI ---
     # Rota para gerar PDF via GET (ex: link direto com ID na URL)
     path('gerar_pdf/<int:record_id>/', views.gerar_pdf_ocorrencia, name='gerar_pdf_ocorrencia_get'),

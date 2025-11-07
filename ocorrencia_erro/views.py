@@ -9,6 +9,7 @@ import requests
 from langdetect import detect, DetectorFactory
 DetectorFactory.seed = 0
 
+from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, Http404
 from django.db.models import Q
@@ -72,7 +73,31 @@ def detectar_idioma(texto):
     except:
         return 'PT'
 
-def traduzir_texto(texto, target_lang='EN', api_key='SUA_CHAVE_API'):
+@require_http_methods(['POST'])
+def traduzir_api(request):
+    """
+    Reutiliza a função traduzir_texto() para traduzir textos via requisição JS.
+    """
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Método não permitido"}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        texto = data.get("texto", "")
+        print(texto)
+        if not texto:
+            return JsonResponse({"error": "Texto vazio"}, status=400)
+
+        # ✅ Aqui reaproveita sua função SEM alterar nada
+        traduzido = traduzir_texto(texto)
+
+        return JsonResponse({"traduzido": traduzido})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+def traduzir_texto(texto, target_lang='EN', api_key='71437a8a-e2de-43da-a9d7-ef10bd2550cf:fx'):
     """
     Traduz texto curto ou longo para inglês usando DeepL Free,
     detectando automaticamente o idioma de origem.
@@ -451,7 +476,8 @@ def filter_data_view(request):
                             'id': arquivo.id,
                             'record_id': arquivo.record.codigo_externo or str(arquivo.record_id),
                             'url': arquivo.arquivo.url,
-                            'nome_original': arquivo.nome_original
+                            'nome_original': arquivo.nome_original,
+                            "data_upload": arquivo.data_upload.strftime("%d/%m/%Y %H:%M")
                         }
                         for arquivo in ArquivoOcorrencia.objects.filter(record=record)
                     ],
@@ -1071,7 +1097,6 @@ def download_arquivo(request, arquivo_id):
 def get_record(request, pk):
     try:
         record = Record.objects.prefetch_related('arquivos').get(id=pk)
-        
         data = {
             "id": record.id,
             "technical": record.technical,
@@ -1099,7 +1124,8 @@ def get_record(request, pk):
                 {
                     "id": arquivo.id,
                     "nome_original": arquivo.nome_original,
-                    "caminho": arquivo.arquivo.url if arquivo.arquivo else None
+                    "caminho": arquivo.arquivo.url if arquivo.arquivo else None,
+                    "data_upload": arquivo.data_upload.strftime("%d/%m/%Y %H:%M")
                 }
                 for arquivo in record.arquivos.all()
             ]
