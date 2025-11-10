@@ -94,6 +94,13 @@ class Equipamentos(models.Model):
         null=True
     )
 
+    # --- Novo: valor opcional de cartão 12x ---
+    valor_cartao_12x = models.FloatField(
+        verbose_name='Valor da parcela no cartão (12x)',
+        blank=True,
+        null=True
+    )
+
     # --- Campos de Status e Regras de Venda ---
     disponibilidade = models.BooleanField(
         default=True, 
@@ -145,7 +152,23 @@ class Equipamentos(models.Model):
         """
         Sobrescreve o método save para converter automaticamente os campos
         'detalhes' e 'detalhes_sp' de formato WhatsApp para HTML.
+        Também aplica regras automáticas para os campos 'avista' e 'boleto'
+        com base nas condições de pagamento recebidas.
         """
+        # ------ Regras avista / boleto ------
+        parcelas_boleto = self.parcelas if self.parcelas is not None else 0
+        valor_cartao_12x = self.valor_cartao_12x if self.valor_cartao_12x is not None else 0
+
+        # Se cartão 12x não é relevante (None ou < 2) E boleto também não parcela (None ou < 2) -> somente à vista
+        if valor_cartao_12x < 2 and parcelas_boleto < 2:
+            self.avista = True
+        else:
+            self.avista = False
+
+        # Se tem 2 ou mais parcelas no boleto -> aceita boleto parcelado
+        self.boleto = parcelas_boleto > 1
+
+        # ------ Conversão de detalhes para HTML ------
         if self.detalhes:
             self.detalhes_html = self._convert_whatsapp_to_html(self.detalhes)
         else:

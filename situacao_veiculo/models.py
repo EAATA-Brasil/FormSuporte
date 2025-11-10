@@ -15,7 +15,7 @@ class Cliente(models.Model):
     serial = models.CharField(verbose_name="Serial", max_length=100, blank=True, default='')
     nome = models.CharField(verbose_name="Nome", max_length=100, blank=True, null=True)
     cnpj = models.CharField(max_length=30, verbose_name='CPF/CNPJ', blank=True, default="SEM DADO", null=True)
-    tel = models.CharField(max_length=30, verbose_name='Telefone', blank=True, default="SEM DADO", null=True)
+    tel = models.CharField(max_length=100, verbose_name='Telefone', blank=True, default="SEM DADO", null=True)
     equipamento = models.CharField(verbose_name='Equipamento', max_length=100, blank=True, default="", null=True)
 
     status_message_custom = models.CharField(
