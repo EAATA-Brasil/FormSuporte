@@ -40,13 +40,13 @@ class Equipamentos(models.Model):
     para simulação de vendas.
     """
     # --- Campos de Identificação ---
-    nome = models.CharField(verbose_name='Nome do equipamento', max_length=100)
+    nome = models.CharField(verbose_name='Nome do equipamento', max_length=100, unique=True)
 
     marca = models.ForeignKey(
         MarcaEquipamento,
         on_delete=models.CASCADE,
         related_name='equipamentos',
-        verbose_name='Marca do equipamento'
+        verbose_name='Marca do equipamento',
     )
 
     grupo = models.ForeignKey(
@@ -66,10 +66,12 @@ class Equipamentos(models.Model):
         verbose_name='Valor do equipamento dentro de SP (Preço de Venda)'
     )
     custo_cnpj = models.FloatField(
-        verbose_name='Valor do equipamento para CNPJ fora de SP (Preço de Venda)'
+        verbose_name='Valor do equipamento para CNPJ fora de SP (Preço de Venda)',
+        null=True, blank=True
     )
     custo_cpf = models.FloatField(
-        verbose_name='Valor do equipamento para CPF fora de SP (Preço de Venda)'
+        verbose_name='Valor do equipamento para CPF fora de SP (Preço de Venda)',
+        null=True, blank=True
     )
 
     # --- Campos de Condições de Pagamento Padrão ---
@@ -104,7 +106,8 @@ class Equipamentos(models.Model):
     # --- Campos de Status e Regras de Venda ---
     disponibilidade = models.BooleanField(
         default=True, 
-        verbose_name='Equipamento disponível'
+        verbose_name='Equipamento disponível',
+        blank=True
     )
     avista = models.BooleanField(
         default=False, 
