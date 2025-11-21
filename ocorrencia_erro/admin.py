@@ -7,7 +7,7 @@ from .models import Record, CountryPermission, Country, Device
 @admin.register(Record)
 class RecordAdmin(admin.ModelAdmin):
     list_display = ('status', 'data', 'responsible', 'device', 'country')
-    search_fields = ('id','codigo_externo','responsible', 'device__name', 'country__name')  # Buscando por nome do país
+    search_fields = ('id','codigo_externo','responsible', 'device__name', 'country__name', 'serial')  # Buscando por nome do país
     list_filter = ('status','responsible', 'country__name')
     
 
