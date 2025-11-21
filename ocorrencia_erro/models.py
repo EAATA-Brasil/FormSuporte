@@ -203,6 +203,12 @@ class Record(models.Model):
         default="Não identificado",
         verbose_name="Feedback Manager"
     )
+    tipo_chave = models.TextField(
+        blank=True,
+        null=True,
+        default="Não identificado",
+        verbose_name="Tipo Chave"
+    )
 
     # Em seu arquivo models.py, dentro da classe Record
     def clear_finished_date(self):

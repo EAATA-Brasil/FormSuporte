@@ -351,6 +351,7 @@
         const areaRadios = document.querySelectorAll('input[name="area_radio"]');
         const ecuField = document.getElementById('ecu-field');
         const motorField = document.getElementById('motor-field');
+        const chaveField = document.getElementById('chave-field');
 
         function updateConditionalFields() {
           const selectedArea = document.querySelector('input[name="area_radio"]:checked');
@@ -361,9 +362,17 @@
             // Tipo de ECU: Exibir para IMMO e Diagnosis
             if (areaValue === 'IMMO' || areaValue === 'Diagnosis') {
               ecuField.style.display = 'flex';
+              chaveField.style.display = 'flex';
             } else {
               ecuField.style.display = 'none';
               document.getElementById('tipo_ecu').value = ''; // Limpa o valor
+            }
+
+            if (areaValue === 'IMMO'){
+              chaveField.style.display = 'flex';
+            }else{
+              chaveField.style.display = 'none';
+              document.getElementById('tipo_chave').value = ''; // Limpa o valor
             }
 
             // Tipo de Motor: Exibir apenas para Diagnosis
@@ -377,8 +386,10 @@
             // Oculta tudo se nenhuma área estiver selecionada
             ecuField.style.display = 'none';
             motorField.style.display = 'none';
+            chaveField.style.display = 'none';
             document.getElementById('tipo_ecu').value = '';
             document.getElementById('tipo_motor').value = '';
+            document.getElementById('tipo_chave').value = '';
           }
         }
 
@@ -432,11 +443,16 @@
       <label for="tipo_motor">{% trans "Tipo de Motor" %}</label>
       <input type="text" id="tipo_motor" name="tipo_motor" />
     </div>
+    <div class="form-pair conditional-field" id="chave-field" style="display: none;">
+      <label for="tipo_chave">{% trans "Tipo Chave" %}</label>
+      <input type="text" id="tipo_chave" name="tipo_chave" />
+    </div>
 
     <div class="form-pair">
       <label for="version">{% trans "Versão" %}</label>
       <input type="text" id="version" name="version" required />
     </div>
+   
 
     {% if has_full_permission %}
       <div class="form-pair">
@@ -762,6 +778,9 @@
 	    }
 	    if (document.getElementById('motor-field').style.display === 'none') {
 	        document.getElementById('tipo_motor').value = '';
+	    }
+	    if (document.getElementById('chave-field').style.display === 'none') {
+	        document.getElementById('tipo_chave').value = '';
 	    }
 	    
 	    const form = e.target;

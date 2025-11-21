@@ -360,7 +360,7 @@ def filter_data_view(request):
                 TEXT_CASE_INSENSITIVE_COLUMNS = [
                     'codigo_externo', 'technical', 'area', 'serial', 'brand', 'model',
                     'version', 'responsible', 'problem_detected', 'feedback_technical',
-                    'feedback_manager'
+                    'feedback_manager', 'tipo_chave'
                 ]
 
                 # Filtros para valores não vazios
@@ -462,6 +462,7 @@ def filter_data_view(request):
                     'contact': record.contact or '',
                     'year': record.year or '',
                     'version': record.version or '',
+                    'tipo_chave': record.tipo_chave or '',
                     'problem_detected': record.problem_detected or '',
                     'status': STATUS_MAP_REVERSED.get(record.status, record.status or ''),
 
@@ -775,6 +776,7 @@ def subir_ocorrencia(request):
                 'year': request.POST.get("year"),
                 'country': country,
                 'version': request.POST.get("version"),
+                'tipo_chave': request.POST.get("tipo_chave"),
                 'problem_detected': request.POST.get("problem_detected"),
                 'tipo_ecu': request.POST.get("tipo_ecu"),
                 'tipo_motor': request.POST.get("tipo_motor"),
@@ -1112,6 +1114,7 @@ def get_record(request, pk):
             "contact": record.contact,
             "year": record.year,
             "version": record.version,
+            "tipo_chave": record.tipo_chave,
             "country": record.country.name if record.country else None,
             "status": record.status,
             "data": record.data.strftime("%Y-%m-%d") if record.data else None,

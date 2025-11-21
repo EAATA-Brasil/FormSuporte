@@ -875,6 +875,16 @@
                             <strong>{% trans "Ano:" %}</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.year || '{% trans "Não informado" %}'}</span>
                         </div>
+                        ${record.tipo_chave ? `
+                            <div>
+                                <strong>{% trans "Tipo Chave:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_chave || '{% trans "Não informado" %}'}</span>
+                            </div>
+                        ` : ''}
+                        <div>
+                                <strong>{% trans "Tipo Chave:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_chave || '{% trans "Não informado" %}'}</span>
+                            </div>
                         <div>
                             <strong>{% trans "Versão:" %}</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.version || '{% trans "Não informado" %}'}</span>
