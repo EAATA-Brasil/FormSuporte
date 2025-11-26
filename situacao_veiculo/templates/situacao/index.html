@@ -250,7 +250,7 @@
           {% csrf_token %}
           <div class="form-group">
             <label for="arquivo_excel">Arquivo Excel</label>
-            <input type="file" id="arquivo_excel" name="arquivo_excel" accept=".xlsx,.xls" required>
+            <input type="file" id="arquivo_excel" name="arquivo_excel" accept=".xlsx,.xls">
           </div>
           <div class="popup-buttons" style="justify-content:flex-start; gap:12px;">
             <button type="submit" class="btn-enviar">Importar</button>
@@ -729,6 +729,67 @@
     if (popup && popup.style.display === 'flex') { closePopup(); }
   }});
 })();
+
+(function () {
+    const dropArea = document.querySelector('.import-section');
+    const fileInput = document.getElementById('arquivo_excel');
+
+    if (!dropArea || !fileInput) return;
+
+    // --- ESTILO VISUAL AO ARRASTAR ---
+    function highlight() {
+        dropArea.classList.add('drag-over');
+    }
+
+    function unhighlight() {
+        dropArea.classList.remove('drag-over');
+    }
+
+    // --- PREVENIR EVENTOS PADRÃO ---
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        dropArea.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    });
+
+    // --- HIGHLIGHT E UNHIGHLIGHT ---
+    dropArea.addEventListener('dragover', highlight);
+    dropArea.addEventListener('dragenter', highlight);
+    dropArea.addEventListener('dragleave', unhighlight);
+    dropArea.addEventListener('drop', unhighlight);
+
+    // --- QUANDO SOLTAR O ARQUIVO ---
+    dropArea.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (!files || !files.length) return;
+
+        const file = files[0];
+
+        // Aceita somente Excel
+        const allowed = [
+            "application/vnd.ms-excel", 
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ];
+
+        if (!allowed.includes(file.type)) {
+            alert("Envie apenas arquivos Excel (.xlsx ou .xls)");
+            return;
+        }
+
+        // Preenche o input
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+
+        // Dispara o change do input
+        fileInput.dispatchEvent(new Event("change"));
+
+        console.log("Arquivo recebido via drag & drop:", file.name);
+    });
+
+})();
+
 </script>
 
 </body>
