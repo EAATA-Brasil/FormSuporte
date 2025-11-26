@@ -50,7 +50,7 @@ def buscar_serial(request):
 def _anos_por_equipamento(equipamento: str) -> int:
     if not equipamento:
         return 2
-    return 1 if 'reader' in equipamento.lower() else 2
+    return 1 if equipamento.lower().find('reader') != -1 else 2
 
 
 ALLOWED_FIELDS = {"nome", "cnpj", "tel", "vencimento"}
