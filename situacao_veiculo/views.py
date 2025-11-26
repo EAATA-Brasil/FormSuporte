@@ -275,12 +275,12 @@ def importar_excel(request):
     header_cells = sheet[1]
 
     expected = {
-        "nome do cliente": "nome",
+        "nome cliente": "nome",
         "nome item": "equipamento",
         "serial": "serial",
         "cnpj/cpf": "cnpj",
         "contato": "tel",
-        "numero de emissão nf": "data",
+        "numero emissão nf": "data",
     }
 
     header_map = {}

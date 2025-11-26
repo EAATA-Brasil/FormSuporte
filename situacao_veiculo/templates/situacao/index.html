@@ -212,7 +212,24 @@
           <input type="text" id="equipamento" name="equipamento" placeholder="Digite qual o equipamento">
           <small class="input-error" data-for="equipamento"></small>
         </div>
+        <div class="form-divider"></div>
 
+        <div class="import-section">
+          <h3 class="section-title">Importar por Excel</h3>
+          <p class="import-note">Envie um arquivo .xlsx com as colunas: Nome do cliente, Nome item, Serial, CNPJ/CPF, Contato e Número de emissão NF (data opcional).</p>
+          <div id="importBanner" class="form-banner" style="display:none;"></div>
+          <form id="importForm" action="{% url 'importar_excel' %}" method="POST" enctype="multipart/form-data" class="popup-form">
+            {% csrf_token %}
+            <div class="form-group">
+              <label for="arquivo_excel">Arquivo Excel</label>
+              <input type="file" id="arquivo_excel" name="arquivo_excel" accept=".xlsx,.xls">
+            </div>
+            <div class="popup-buttons" style="justify-content:flex-start; gap:12px;">
+              <button type="submit" class="btn-enviar">Importar</button>
+              <small class="import-hint">Linhas sem data usarão a data atual automaticamente.</small>
+            </div>
+          </form>
+        </div>
         {% if user.is_superuser %}
           <div class="admin-fields">
             <label style="font-weight:700;color:#1b3b66;margin-bottom:8px;">
@@ -238,26 +255,7 @@
           <button type="submit" class="btn-enviar">Cadastrar</button>
           <button type="button" id="fecharPopupBtn" class="btn-cancelar">Cancelar</button>
         </div>
-      </form>
-
-      <div class="form-divider"></div>
-
-      <div class="import-section">
-        <h3 class="section-title">Importar por Excel</h3>
-        <p class="import-note">Envie um arquivo .xlsx com as colunas: Nome do cliente, Nome item, Serial, CNPJ/CPF, Contato e Número de emissão NF (data opcional).</p>
-        <div id="importBanner" class="form-banner" style="display:none;"></div>
-        <form id="importForm" action="{% url 'importar_excel' %}" method="POST" enctype="multipart/form-data" class="popup-form">
-          {% csrf_token %}
-          <div class="form-group">
-            <label for="arquivo_excel">Arquivo Excel</label>
-            <input type="file" id="arquivo_excel" name="arquivo_excel" accept=".xlsx,.xls">
-          </div>
-          <div class="popup-buttons" style="justify-content:flex-start; gap:12px;">
-            <button type="submit" class="btn-enviar">Importar</button>
-            <small class="import-hint">Linhas sem data usarão a data atual automaticamente.</small>
-          </div>
-        </form>
-      </div>
+      </form>  
     </div>
   </div>
 
