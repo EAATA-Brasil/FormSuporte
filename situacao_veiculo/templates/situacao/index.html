@@ -243,29 +243,16 @@
       <div class="form-divider"></div>
 
       <div class="import-section">
-        <div class="import-header">
-          <div>
-            <h3 class="section-title">Importar por Excel</h3>
-            <p class="import-note">Arraste seu arquivo .xlsx com as colunas Nome do cliente, Nome item, Serial, CNPJ/CPF, Contato e Número de emissão NF (data opcional).</p>
-          </div>
-          <div class="import-badge">Novo</div>
-        </div>
-
+        <h3 class="section-title">Importar por Excel</h3>
+        <p class="import-note">Envie um arquivo .xlsx com as colunas: Nome do cliente, Nome item, Serial, CNPJ/CPF, Contato e Número de emissão NF (data opcional).</p>
         <div id="importBanner" class="form-banner" style="display:none;"></div>
-        <form id="importForm" action="{% url 'importar_excel' %}" method="POST" enctype="multipart/form-data" class="popup-form import-form">
+        <form id="importForm" action="{% url 'importar_excel' %}" method="POST" enctype="multipart/form-data" class="popup-form">
           {% csrf_token %}
-          <div class="dropzone" id="importDropzone">
+          <div class="form-group">
+            <label for="arquivo_excel">Arquivo Excel</label>
             <input type="file" id="arquivo_excel" name="arquivo_excel" accept=".xlsx,.xls" required>
-            <div class="dropzone-inner">
-              <div class="drop-icon">📄</div>
-              <div>
-                <p class="drop-title">Arraste e solte aqui</p>
-                <p class="drop-subtitle">ou clique para selecionar um arquivo Excel</p>
-                <p class="drop-file" id="importFileName">Nenhum arquivo selecionado</p>
-              </div>
-            </div>
           </div>
-          <div class="popup-buttons import-actions">
+          <div class="popup-buttons" style="justify-content:flex-start; gap:12px;">
             <button type="submit" class="btn-enviar">Importar</button>
             <small class="import-hint">Linhas sem data usarão a data atual automaticamente.</small>
           </div>
@@ -298,9 +285,6 @@
     const banner = popup.querySelector('#formBanner');
     const importForm = document.getElementById('importForm');
     const importBanner = document.getElementById('importBanner');
-    const importDropzone = document.getElementById('importDropzone');
-    const importFileInput = document.getElementById('arquivo_excel');
-    const importFileName = document.getElementById('importFileName');
 
     const input_date = popup.querySelector("#data_create")
 
@@ -488,42 +472,6 @@
         setImportBanner('Falha de comunicação com o servidor.', 'error');
       }
     });
-
-    function setSelectedFile(file){
-      if(!file || !importFileName) return;
-      importFileName.textContent = file.name;
-    }
-
-    if(importDropzone && importFileInput){
-      importDropzone.addEventListener('click', () => importFileInput.click());
-
-      importDropzone.addEventListener('dragover', (event) => {
-        event.preventDefault();
-        importDropzone.classList.add('is-dragover');
-      });
-
-      ['dragleave','dragend','mouseout'].forEach(evt => {
-        importDropzone.addEventListener(evt, () => importDropzone.classList.remove('is-dragover'));
-      });
-
-      importDropzone.addEventListener('drop', (event) => {
-        event.preventDefault();
-        importDropzone.classList.remove('is-dragover');
-        if(!event.dataTransfer || !event.dataTransfer.files.length) return;
-        const [file] = event.dataTransfer.files;
-        if(!file) return;
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        importFileInput.files = dt.files;
-        setSelectedFile(file);
-      });
-
-      importFileInput.addEventListener('change', (event) => {
-        const target = event.target;
-        if(!target || !target.files || !target.files.length) return;
-        setSelectedFile(target.files[0]);
-      });
-    }
 
     // Abrir/fechar popup
     document.getElementById('abrirPopup')?.addEventListener('click', openPopup);
