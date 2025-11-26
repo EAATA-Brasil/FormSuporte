@@ -199,6 +199,105 @@ label {
     color: var(--text);
 }
 
+.form-divider {
+    margin: 18px 0;
+    border-top: 1px dashed #cbd5e1;
+}
+
+.import-section {
+    background: #f8fbff;
+    border: 1px solid #d9e7fb;
+    padding: 16px 18px;
+    border-radius: 12px;
+    box-shadow: inset 0 1px 0 #fff, 0 10px 24px rgba(0, 85, 165, 0.04);
+}
+
+.import-note {
+    font-size: 14px;
+    color: #475569;
+    margin-bottom: 12px;
+}
+
+.import-hint {
+    color: #475569;
+    font-size: 12px;
+}
+
+.import-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.import-badge {
+    background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(59,130,246,0.25);
+}
+
+.dropzone {
+    border: 2px dashed #c0d4f5;
+    background: #f5f8ff;
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dropzone input[type="file"] {
+    display: none;
+}
+
+.dropzone-inner {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.drop-icon {
+    font-size: 32px;
+}
+
+.drop-title {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.drop-subtitle {
+    font-size: 13px;
+    color: #475569;
+}
+
+.drop-file {
+    font-size: 12px;
+    color: #1d4ed8;
+    margin-top: 4px;
+}
+
+.dropzone.is-dragover {
+    background: #e9f2ff;
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 4px rgba(29,78,216,0.08);
+}
+
+.import-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.import-actions {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
     .header {
@@ -320,14 +419,16 @@ tr.vencendo {
 
 /* Conteúdo */
 .popup-content {
-    background: #fff;
-    border-radius: 12px;
-    padding: 28px 32px;
-    width: 460px;
-    max-width: 92%;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    background: linear-gradient(145deg, #ffffff, #f7fbff);
+    border-radius: 16px;
+    padding: 26px 26px 30px;
+    width: min(540px, 94vw);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.25);
     position: relative;
     animation: fadeIn 0.25s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid #e5ecf4;
 }
 .popup-title {
     font-size: 1.4rem;

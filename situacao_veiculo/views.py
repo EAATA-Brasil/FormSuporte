@@ -1,10 +1,15 @@
-from django.shortcuts import render, redirect
-from .models import Cliente
-from django.views.decorators.http import require_POST, require_GET
-from django.utils import timezone
-from django.http import JsonResponse
+from datetime import date, datetime
+
 from django.db import IntegrityError
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.views.decorators.http import require_GET, require_POST
+from openpyxl import load_workbook
+from openpyxl.utils.datetime import from_excel
+
+from .models import Cliente
 
 def buscar_serial(request):
     context = {}
@@ -52,6 +57,30 @@ ALLOWED_FIELDS = {"nome", "cnpj", "tel", "vencimento"}
 
 def _digits_only(s: str) -> str:
     return ''.join(ch for ch in s if ch.isdigit())
+
+
+def _parse_excel_date(value, workbook):
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, (int, float)):
+        try:
+            return from_excel(value, epoch=workbook.epoch).date()
+        except Exception:
+            return None
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        parsed = parse_date(cleaned)
+        if parsed:
+            return parsed
+        try:
+            return datetime.strptime(cleaned, "%d/%m/%Y").date()
+        except ValueError:
+            return None
+    return None
 
 
 @require_POST
@@ -229,6 +258,102 @@ def api_atualizar_cliente(request):
     cliente.save(update_fields=[field])
 
     return JsonResponse({"ok": True, "message": f"{field.capitalize()} atualizado.", "data": {field: value}})
+
+
+@require_POST
+def importar_excel(request):
+    planilha = request.FILES.get('arquivo_excel')
+    if not planilha:
+        return JsonResponse({"ok": False, "message": "Envie um arquivo Excel."}, status=400)
+
+    try:
+        workbook = load_workbook(planilha, data_only=True)
+    except Exception:
+        return JsonResponse({"ok": False, "message": "Não foi possível ler o arquivo enviado."}, status=400)
+
+    sheet = workbook.active
+    header_cells = sheet[1]
+
+    expected = {
+        "nome do cliente": "nome",
+        "nome item": "equipamento",
+        "serial": "serial",
+        "cnpj/cpf": "cnpj",
+        "contato": "tel",
+        "numero de emissão nf": "data",
+    }
+
+    header_map = {}
+    for idx, cell in enumerate(header_cells):
+        header = str(cell.value).strip().lower() if cell.value else ""
+        if header in expected:
+            header_map[expected[header]] = idx
+
+    if "serial" not in header_map:
+        return JsonResponse(
+            {"ok": False, "message": "A coluna 'serial' é obrigatória na planilha."},
+            status=400,
+        )
+
+    created = 0
+    duplicates = 0
+    errors = []
+
+    for row_index, row in enumerate(sheet.iter_rows(min_row=2), start=2):
+        row_data = {}
+        for field, col_idx in header_map.items():
+            value = row[col_idx].value if col_idx < len(row) else None
+            row_data[field] = value
+
+        if not any(row_data.values()):
+            continue
+
+        serial = (row_data.get("serial") or "").strip()
+        if not serial:
+            errors.append({"row": row_index, "message": "Serial ausente."})
+            continue
+
+        if Cliente.objects.filter(serial=serial).exists():
+            duplicates += 1
+            continue
+
+        nome = (row_data.get("nome") or "").strip()
+        equipamento = (row_data.get("equipamento") or "").strip() or "N/D"
+        cnpj = _digits_only((row_data.get("cnpj") or "").strip())
+        tel = (row_data.get("tel") or "").strip()
+
+        data_valor = _parse_excel_date(row_data.get("data"), workbook)
+        data_lanc = data_valor or timezone.localdate()
+
+        try:
+            Cliente.objects.create(
+                data=data_lanc,
+                anos_para_vencimento=_anos_por_equipamento(equipamento),
+                serial=serial,
+                nome=nome,
+                cnpj=cnpj or None,
+                tel=tel or None,
+                equipamento=equipamento,
+            )
+            created += 1
+        except IntegrityError:
+            duplicates += 1
+        except Exception as exc:
+            errors.append({"row": row_index, "message": str(exc)})
+
+    message = "Importação concluída."
+    if created or duplicates or errors:
+        message = (
+            f"Importação concluída. Criados: {created}. Duplicados ignorados: {duplicates}. "
+            f"Erros: {len(errors)}."
+        )
+
+    status_code = 200 if not errors else 207
+    return JsonResponse(
+        {"ok": True, "message": message, "data": {"created": created, "duplicates": duplicates, "errors": errors}},
+        status=status_code,
+    )
+
 
 def index(request):
     return render(request, 'situacao/index.html', {'clientes': None})
