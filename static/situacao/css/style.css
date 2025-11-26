@@ -343,14 +343,16 @@ tr.vencendo {
 
 /* Conteúdo */
 .popup-content {
-    background: #fff;
-    border-radius: 12px;
-    padding: 28px 32px;
-    width: 460px;
-    max-width: 92%;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    background: linear-gradient(145deg, #ffffff, #f7fbff);
+    border-radius: 16px;
+    padding: 26px 26px 30px;
+    width: min(540px, 94vw);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.25);
     position: relative;
     animation: fadeIn 0.25s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid #e5ecf4;
 }
 .popup-title {
     font-size: 1.4rem;
