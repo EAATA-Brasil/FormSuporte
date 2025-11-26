@@ -239,6 +239,38 @@
           <button type="button" id="fecharPopupBtn" class="btn-cancelar">Cancelar</button>
         </div>
       </form>
+
+      <div class="form-divider"></div>
+
+      <div class="import-section">
+        <div class="import-header">
+          <div>
+            <h3 class="section-title">Importar por Excel</h3>
+            <p class="import-note">Arraste seu arquivo .xlsx com as colunas Nome do cliente, Nome item, Serial, CNPJ/CPF, Contato e Número de emissão NF (data opcional).</p>
+          </div>
+          <div class="import-badge">Novo</div>
+        </div>
+
+        <div id="importBanner" class="form-banner" style="display:none;"></div>
+        <form id="importForm" action="{% url 'importar_excel' %}" method="POST" enctype="multipart/form-data" class="popup-form import-form">
+          {% csrf_token %}
+          <div class="dropzone" id="importDropzone">
+            <input type="file" id="arquivo_excel" name="arquivo_excel" accept=".xlsx,.xls" required>
+            <div class="dropzone-inner">
+              <div class="drop-icon">📄</div>
+              <div>
+                <p class="drop-title">Arraste e solte aqui</p>
+                <p class="drop-subtitle">ou clique para selecionar um arquivo Excel</p>
+                <p class="drop-file" id="importFileName">Nenhum arquivo selecionado</p>
+              </div>
+            </div>
+          </div>
+          <div class="popup-buttons import-actions">
+            <button type="submit" class="btn-enviar">Importar</button>
+            <small class="import-hint">Linhas sem data usarão a data atual automaticamente.</small>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -264,6 +296,11 @@
     const btnFechar  = document.getElementById('fecharPopup');
     const btnFechar2 = document.getElementById('fecharPopupBtn');
     const banner = popup.querySelector('#formBanner');
+    const importForm = document.getElementById('importForm');
+    const importBanner = document.getElementById('importBanner');
+    const importDropzone = document.getElementById('importDropzone');
+    const importFileInput = document.getElementById('arquivo_excel');
+    const importFileName = document.getElementById('importFileName');
 
     const input_date = popup.querySelector("#data_create")
 
@@ -316,6 +353,22 @@
       if(type==='success') banner.classList.add('is-success');
       else if(type==='info') banner.classList.add('is-info');
       else banner.classList.add('is-error');
+    }
+
+    function setImportBanner(msg, type='error'){
+      if(!importBanner) return;
+      if(!msg){
+        importBanner.style.display='none';
+        importBanner.textContent='';
+        importBanner.classList.remove('is-error','is-info','is-success');
+        return;
+      }
+      importBanner.textContent = msg;
+      importBanner.style.display='block';
+      importBanner.classList.remove('is-error','is-info','is-success');
+      if(type==='success') importBanner.classList.add('is-success');
+      else if(type==='info') importBanner.classList.add('is-info');
+      else importBanner.classList.add('is-error');
     }
 
     function clearFormErrors(){
@@ -393,6 +446,84 @@
         setBanner('Falha de comunicação com o servidor.', 'error');
       }
     });
+
+    importForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setImportBanner('');
+
+      const url = importForm.getAttribute('action');
+      const formData = new FormData(importForm);
+      const csrfInput = importForm.querySelector('input[name=csrfmiddlewaretoken]');
+      const headers = {};
+      if(csrfInput) headers['X-CSRFToken'] = csrfInput.value;
+
+      try{
+        const resp = await fetch(url, { method:'POST', headers, body:formData });
+        const data = await resp.json();
+
+        if(!resp.ok || data.ok === false){
+          setImportBanner(data.message || 'Erro ao importar planilha.', 'error');
+          return;
+        }
+
+        const created = data?.data?.created ?? 0;
+        const duplicates = data?.data?.duplicates ?? 0;
+        const errors = data?.data?.errors ?? [];
+        let summary = data.message || 'Importação concluída.';
+
+        if(errors.length){
+          const linhas = errors.map(err => err.row).filter(Boolean).join(', ');
+          summary += linhas ? ` Linhas com erro: ${linhas}.` : ` Linhas com erro: ${errors.length}.`;
+        }
+
+        if(duplicates){
+          summary += ` Duplicados ignorados: ${duplicates}.`;
+        }
+
+        setImportBanner(summary, errors.length ? 'info' : 'success');
+        importForm.reset();
+        showFooterMessage(summary, errors.length === 0);
+      }
+      catch{
+        setImportBanner('Falha de comunicação com o servidor.', 'error');
+      }
+    });
+
+    function setSelectedFile(file){
+      if(!file || !importFileName) return;
+      importFileName.textContent = file.name;
+    }
+
+    if(importDropzone && importFileInput){
+      importDropzone.addEventListener('click', () => importFileInput.click());
+
+      importDropzone.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        importDropzone.classList.add('is-dragover');
+      });
+
+      ['dragleave','dragend','mouseout'].forEach(evt => {
+        importDropzone.addEventListener(evt, () => importDropzone.classList.remove('is-dragover'));
+      });
+
+      importDropzone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        importDropzone.classList.remove('is-dragover');
+        if(!event.dataTransfer || !event.dataTransfer.files.length) return;
+        const [file] = event.dataTransfer.files;
+        if(!file) return;
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        importFileInput.files = dt.files;
+        setSelectedFile(file);
+      });
+
+      importFileInput.addEventListener('change', (event) => {
+        const target = event.target;
+        if(!target || !target.files || !target.files.length) return;
+        setSelectedFile(target.files[0]);
+      });
+    }
 
     // Abrir/fechar popup
     document.getElementById('abrirPopup')?.addEventListener('click', openPopup);
