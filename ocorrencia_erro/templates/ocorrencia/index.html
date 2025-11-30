@@ -1,225 +1,391 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>{% trans "Document" %}</title>
     <link rel="stylesheet" href="{% static 'ocorrencia/css/styles.css' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* Estilos para o sistema de notificações */
-        .notification-container {
+        .table td[data-column="status"][data-initial-value='{%trans "Concluído"%}'] {
+    background-color: var(--success) !important;
+    color: white !important;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 5px 10px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.table td[data-column="status"][data-initial-value='{%trans "Concluído"%}']::after {
+    content: "✓";
+    margin-left: 5px;
+}
+
+/* Melhorar a visualização dos outros status */
+.table td[data-column="status"][data-initial-value='{%trans "Em progresso"%}']{
+    background-color: var(--warning) !important;
+    color: var(--dark) !important;
+}
+.table td[data-column="status"][data-initial-value="Aguardando China"] {
+    background-color: var(--waiting) !important;
+    color: var(--light) !important;
+}
+.table td[data-column="status"][data-initial-value="China Atrasada"] {
+    background-color: var(--error-china) !important;
+    color: white !important;
+}
+
+.table td[data-column="status"][data-initial-value='{%trans "Atrasado"%}'] {
+    background-color: var(--error) !important;
+    color: white !important;
+}
+
+.table td[data-column="status"][data-initial-value='{%trans "Requisitado"%}'] {
+    background-color: var(--primary) !important;
+    color: white !important;
+}
+        /* Estilos para o modal de imagem */
+        #image-modal {
+            display: none;
             position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
         }
-        /* Estilos para o chat */
-.chat-container {
-    display: flex;
-    flex-direction: column;
-    height: 400px; /* Altura fixa para o chat */
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #f9f9f9;
-    padding: 10px;
-    margin-top: 20px;
-}
 
-.chat-messages {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 10px;
-    display: flex;
-    flex-direction: column; /* Para que as mensagens novas apareçam na parte inferior */
-}
-
-.chat-message {
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    border-radius: 18px;
-    max-width: 80%;
-    word-wrap: break-word;
-}
-
-.chat-message.my-message {
-    background-color: #0459B5;
-    color: white;
-    align-self: flex-end; /* Alinha a sua mensagem à direita */
-}
-
-.chat-message.other-message {
-    background-color: #e5e5e5;
-    color: #333;
-    align-self: flex-start; /* Alinha a mensagem do outro à esquerda */
-}
-
-.chat-message-author {
-    font-size: 10px;
-    color: #999;
-    margin-bottom: 2px;
-}
-
-.chat-input-area {
-    display: flex;
-    padding-top: 10px;
-    border-top: 1px solid #eee;
-}
-
-.chat-input-area input {
-    flex-grow: 1;
-    border: 1px solid #ccc;
-    border-radius: 20px;
-    padding: 8px 15px;
-    margin-right: 8px;
-}
-
-.chat-input-area button {
-    background-color: #0459B5;
-    color: white;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 15px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.chat-input-area button:hover {
-    background-color: #0347a0;
-}
-.chat-message-time {
-    display: block; /* Garante que a hora fique em uma nova linha */
-    font-size: 10px;
-    color: #999;
-    margin-top: 5px;
-    text-align: right;
-}
-
-.chat-message.my-message .chat-message-time {
-    color: rgba(255, 255, 255, 0.7); /* Cor da hora para suas mensagens */
-}
-        .notification-bell {
-            position: relative;
-            background: #0459B5;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
+        #expanded-image {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
         }
-        
-        .notification-bell:hover {
-            background: #0347a0;
-            transform: scale(1.05);
-        }
-        
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
+
+        #close-modal {
             background: #dc3545;
             color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 20px;
-        }
-        
-        .notification-dropdown {
-            position: absolute;
-            top: 60px;
-            right: 0;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            width: 350px;
-            max-height: 400px;
-            overflow-y: auto;
-            display: none;
-        }
-        
-        .notification-header {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .notification-item {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-        
-        .notification-item:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .notification-item:last-child {
-            border-bottom: none;
-        }
-        
-        .notification-title {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        
-        .notification-summary {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-        
-        .notification-time {
-            color: #999;
-            font-size: 12px;
-        }
-        
-        .no-notifications {
-            padding: 20px;
-            text-align: center;
-            color: #999;
-            font-style: italic;
-        }
-        .notification-summary button {
-            background-color: #0459B5; /* azul igual ao sino */
-            color: white;
             border: none;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 12px;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
             cursor: pointer;
-            margin-left: 8px;
-            transition: background-color 0.2s ease, transform 0.1s ease;
+            font-size: 18px;
         }
 
-        .notification-summary button:hover {
-            background-color: #0347a0; /* azul mais escuro no hover */
+        #download-image {
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        #download-image:hover {
+            background: #218838;
+        }
+
+        /* Estilo para imagens clicáveis no chat */
+        .chat-message img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .chat-message img:hover {
             transform: scale(1.05);
         }
 
-        .notification-summary button:active {
-            background-color: #02367d;
-            transform: scale(0.98);
+        /* Restante do CSS permanece igual */
+        .chat-image-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 16px;
+            margin-right: 8px;
         }
+
+        .chat-image-button:hover {
+            background-color: #218838;
+        }
+
+        .image-indicator {
+            background-color: #007bff;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+            /* Estilos para o sistema de notificações */
+            .notification-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+            }
+            .clear-date-btn {
+                margin-bottom:15px;
+                background: #dc3545;
+                color: white;
+                border: none;
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-size: 15px;
+                cursor: pointer;
+                z-index: 1000;
+            }
+
+            .clear-date-btn:hover {
+                background: #c82333;
+            }
+            .today-date-btn {
+                margin-bottom:15px;
+                background: #569ff7;
+                color: white;
+                border: none;
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-size: 15px;
+                cursor: pointer;
+                z-index: 1000;
+            }
+            .headerFiles{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;    
+            }
+            .today-date-btn:hover {
+                background: #4682ccff;
+            }
+            /* Estilos para o chat */
+            .chat-container {
+                display: flex;
+                flex-direction: column;
+                height: 400px; /* Altura fixa para o chat */
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                background-color: #f9f9f9;
+                padding: 10px;
+                margin-top: 20px;
+            }
+
+            .chat-messages {
+                flex-grow: 1;
+                overflow-y: auto;
+                padding: 10px;
+                display: flex;
+                flex-direction: column; /* Para que as mensagens novas apareçam na parte inferior */
+            }
+
+            .chat-message {
+                padding: 8px 12px;
+                margin-bottom: 8px;
+                border-radius: 18px;
+                max-width: 80%;
+                word-wrap: break-word;
+            }
+
+            .chat-message.my-message {
+                background-color: #0459B5;
+                color: white;
+                align-self: flex-end; /* Alinha a sua mensagem à direita */
+            }
+
+            .chat-message.other-message {
+                background-color: #e5e5e5;
+                color: #333;
+                align-self: flex-start; /* Alinha a mensagem do outro à esquerda */
+            }
+
+            .chat-message-author {
+                font-size: 10px;
+                color: #999;
+                margin-bottom: 2px;
+            }
+
+            .chat-input-area {
+                display: flex;
+                padding-top: 10px;
+                border-top: 1px solid #eee;
+            }
+
+            .chat-input-area input {
+                flex-grow: 1;
+                border: 1px solid #ccc;
+                border-radius: 20px;
+                padding: 8px 15px;
+                margin-right: 8px;
+            }
+
+            .chat-input-area button {
+                background-color: #0459B5;
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 8px 15px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+
+            .chat-input-area button:hover {
+                background-color: #0347a0;
+            }
+            .chat-message-time {
+                display: block; /* Garante que a hora fique em uma nova linha */
+                font-size: 10px;
+                color: #999;
+                margin-top: 5px;
+                text-align: right;
+            }
+
+            .chat-message.my-message .chat-message-time {
+                color: rgba(255, 255, 255, 0.7); /* Cor da hora para suas mensagens */
+            }
+            .notification-bell {
+                position: relative;
+                background: #0459B5;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+                cursor: pointer;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+            }
+            
+            .notification-bell:hover {
+                background: #0347a0;
+                transform: scale(1.05);
+            }
+            
+            .notification-badge {
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background: #dc3545;
+                color: white;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                font-size: 12px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 20px;
+            }
+            
+            .notification-dropdown {
+                position: absolute;
+                top: 60px;
+                right: 0;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                width: 350px;
+                max-height: 400px;
+                overflow-y: auto;
+                display: none;
+            }
+            
+            .notification-header {
+                padding: 15px;
+                border-bottom: 1px solid #eee;
+                font-weight: bold;
+                color: #333;
+            }
+            
+            .notification-item {
+                padding: 15px;
+                border-bottom: 1px solid #f0f0f0;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+            }
+            
+            .notification-item:hover {
+                background-color: #f8f9fa;
+            }
+            
+            .notification-item:last-child {
+                border-bottom: none;
+            }
+            
+            .notification-title {
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 5px;
+            }
+            
+            .notification-summary {
+                color: #666;
+                font-size: 14px;
+                margin-bottom: 5px;
+            }
+            
+            .notification-time {
+                color: #999;
+                font-size: 12px;
+            }
+            
+            .no-notifications {
+                padding: 20px;
+                text-align: center;
+                color: #999;
+                font-style: italic;
+            }
+            .notification-summary button {
+                background-color: #0459B5; /* azul igual ao sino */
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                margin-left: 8px;
+                transition: background-color 0.2s ease, transform 0.1s ease;
+            }
+
+            .notification-summary button:hover {
+                background-color: #0347a0; /* azul mais escuro no hover */
+                transform: scale(1.05);
+            }
+
+            .notification-summary button:active {
+                background-color: #02367d;
+                transform: scale(0.98);
+            }
+            .containerFooterPopup{
+                display: flex;
+                align-items: center;    
+                justify-content: space-around;
+            }
     </style>
 </head>
 <body>
+    
     <span id="username-holder" data-username="{{ request.user.username }}"></span>
     <!-- Container de notificações -->
     <div class="notification-container">
@@ -230,11 +396,11 @@
         
         <div class="notification-dropdown" id="notification-dropdown">
             <div class="notification-header">
-                Notificações
+                {% trans "Notificações" %}
             </div>
             <div id="notification-list">
                 <div class="no-notifications">
-                    Nenhuma notificação
+                    {% trans "Nenhuma notificação" %}
                 </div>
             </div>
         </div>
@@ -243,21 +409,22 @@
     <table id="data-table" class="table">
         <thead>
             <tr style="background-color: #0459B5;">
-                {% include 'ocorrencia/components/lineHead.html' with name='id' ID="codigo_externo"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='data' ID="data"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='Técnico' ID="technical"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='país' ID="country"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='dispositivo' ID="device"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='area' ID="area"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='marca' ID="brand"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='modelo' ID="model"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='Detalhes' ID="problem_detected" checbox='false'%}
-                {% include 'ocorrencia/components/lineHead.html' with name='status' ID="status"%}
-                {% include 'ocorrencia/components/lineHead.html' with name='prazo' ID="deadline"%}
-                {% if has_full_permission%}
-                    {% include 'ocorrencia/components/lineHead.html' with name='responsável' ID="responsible"%}
-                {%endif%}
-                {% include 'ocorrencia/components/lineHead.html' with name='finalizado' ID="finished"%}
+                {% include 'ocorrencia/components/lineHead.html' with name='ID' ID="codigo_externo"%}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Serial") ID="serial" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Data") ID="data" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Técnico") ID="technical" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("País") ID="country" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Dispositivo") ID="device" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Área") ID="area" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Marca") ID="brand" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Modelo") ID="model" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Detalhes") ID="problem_detected" checbox='false' %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Status") ID="status" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Deadline") ID="deadline" %}
+                {% if has_edit_permission %}
+                    {% include 'ocorrencia/components/lineHead.html' with name=_("Responsável") ID="responsible" %}
+                {% endif %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Finalizado") ID="finished" %}
             </tr>
             
         </thead>
@@ -267,49 +434,57 @@
     </table>
     
     <div id="paginate">
-        <span class="button-paginator" id="last">Voltar</span>
-        <span id="num_pages">
-            
-        </span>
-        <span class="button-paginator" id="next">Avançar</span>
+        <div>
+            <a href="{% url 'subir_ocorrencia' %}" style="padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            background-color: #157347;
+            color: var(--light);">
+                <i class="fas fa-plus"></i> {% trans "Nova Ocorrência" %}
+            </a>
+            {%if has_full_permission%}
+                <a href="{% url 'criar_usuario' %}" style="padding: 0.6rem 1.2rem;
+                font-size: 1rem;
+                border: none;
+                border-radius: 0.3rem;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+                text-decoration: none;
+                display: inline-block;
+                background-color:rgb(17, 90, 226);
+                color: var(--light);">
+                    <i class="fas fa-plus"></i> {% trans "Criar novo responsável" %}
+                </a>
+            {%endif%}
+        </div>
+        <div style="display:flex; gap:20px;">
+            <span class="button-paginator" id="first">{%trans "Primeira"%}</span>
+            <span class="button-paginator" id="prev">{% trans "Voltar" %}</span>
+            <span id="num_pages">
+                
+            </span>
+            <span class="button-paginator" id="next">{% trans "Avançar" %}</span>
+            <span class="button-paginator" id="last">{% trans "Última"%}</span>
+        </div>
+        {% include 'ocorrencia/components/toogleCountry.html' with request=request %}
     </div>
-    <a href="{% url 'subir_ocorrencia' %}" style="padding: 0.6rem 1.2rem;
-        font-size: 1rem;
-        border: none;
-        border-radius: 0.3rem;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-        text-decoration: none;
-        display: inline-block;
-        background-color: #157347;
-        color: var(--light);">
-        <i class="fas fa-plus"></i> Nova Ocorrência
-    </a>
-    {%if has_full_permission%}
-        <a href="{% url 'criar_usuario' %}" style="padding: 0.6rem 1.2rem;
-        font-size: 1rem;
-        border: none;
-        border-radius: 0.3rem;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-        text-decoration: none;
-        display: inline-block;
-        background-color:rgb(17, 90, 226);
-        color: var(--light);">
-            <i class="fas fa-plus"></i> Criar novo responsável
-        </a>
-    {%endif%}
+    
     {%if has_full_permission%}
     <footer>
         <div id="ocorrencias-panel">
-            <label for="responsavel-select">Selecionar responsável:</label>
+            <label for="responsavel-select">{% trans "Selecionar responsável:" %}</label>
             <div id="selector-and-info">
                 <select id="responsavel-select">
-                    <option value="">-- Escolha --</option>
+                    <option value="">-- {% trans "Escolha" %} --</option>
                 </select>
 
                 <div id="ocorrencias-info" style="display: none;">
-                    <strong>Total de ocorrências: <span id="total-ocorrencias">0</span></strong>
+                    <strong>{% trans "Total de ocorrências:" %} <span id="total-ocorrencias">0</span></strong>
                     <ul id="status-percentuais"></ul>
                 </div>
             </div>
@@ -318,17 +493,17 @@
     {%endif%}
 <script>
     function getCookie(name) { 
-             if (document.cookie && document.cookie !== "") {
-                const cookies = document.cookie.split(";");
-                for (let i = 0; i < cookies.length; i++) {
-                    let cookie = cookies[i].trim();
-                    if (cookie.startsWith(name + "=")) {
-                        return decodeURIComponent(cookie.substring(name.length + 1));
-                    }
+        if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.startsWith(name + "=")) {
+                    return decodeURIComponent(cookie.substring(name.length + 1));
                 }
             }
-            return null;
         }
+        return null;
+    }
     if("{{has_full_permission}}" == "True"){
         const ocorrenciasData = {{ ocorrencias_json | safe }};
         
@@ -364,18 +539,6 @@
             const li = document.createElement('li');
             li.textContent = `${status}: ${qtd} (${percent}%)`;
         
-            const statusLower = status.toLowerCase();
-        
-            if (statusLower.includes("atrasado")) {
-              li.classList.add("status-atrasado");
-            } else if (statusLower.includes("concluido") || statusLower.includes("concluído")) {
-              li.classList.add("status-concluido");
-            } else if (statusLower.includes("progresso")) {
-              li.classList.add("status-progresso");
-            } else if (statusLower.includes("requisitado")) {
-              li.classList.add("status-requisitado");
-            }
-        
             statusList.appendChild(li);
           });
         
@@ -383,7 +546,7 @@
         });
     }
     function deleteFile(fileId, fileName, record) {
-        if (confirm(`Deseja realmente deletar o arquivo "${fileName}"?`)) {
+        if (confirm(`{% trans "Deseja realmente deletar o arquivo" %} "${fileName}"?`)) {
             const formData = new FormData();
             formData.append('action', 'deletar');
             formData.append('file', fileId);
@@ -402,24 +565,23 @@
                     Swal.close();
                     setTimeout(async () => {
                     try {
-                        console.log(record)
                         const response = await fetch(`/ocorrencia/get_record/${record.id}`);
                         const updatedRecord = await response.json();
                         showProblemDetails(updatedRecord);
                     } catch (error) {
-                        console.error("Erro ao buscar o registro atualizado:", error);
-                        alert("Erro ao atualizar os dados da ocorrência.");
+                        console.error("{% trans 'Erro ao buscar o registro atualizado:' %}", error);
+                        alert("{% trans 'Erro ao atualizar os dados da ocorrência.' %}");
                     }
                     }, 100);
 
 
                 } else {
-                    alert('Erro ao deletar o arquivo: ' + data.message);
+                    alert('{% trans "Erro ao deletar o arquivo:" %} ' + data.message);
                 }
             })
             .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao deletar o arquivo.');
+                console.error('{% trans "Erro:" %}', error);
+                alert('{% trans "Erro ao deletar o arquivo." %}');
             });
         }
     }
@@ -451,8 +613,8 @@
                 // Feedback visual opcional
                 //console.log(`Download iniciado: ${filename}`);
             } catch (error) {
-                console.error('Erro ao fazer download:', error);
-                alert('Erro ao fazer download do arquivo. Tente novamente.');
+                console.error('{% trans "Erro ao fazer download:" %}', error);
+                alert('{% trans "Erro ao fazer download do arquivo. Tente novamente." %}');
             }
         }
     function capitalizeFirstLetter(str) {
@@ -462,7 +624,7 @@
         }
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
-    const responsaveisPorPais = {{ responsaveis_por_pais|safe }};
+    const responsaveisPorPais = JSON.parse('{{ responsaveis_por_pais|escapejs }}');
     const todosResponsaveis = {{ todos_responsaveis|safe }};
     const paisesPorResponsavel = {};
     Object.keys(responsaveisPorPais).forEach(paisId => {
@@ -473,6 +635,101 @@
         paisesPorResponsavel[responsavel.name].push(parseInt(paisId));
         });
     });
+    // ===== SISTEMA DE ATUALIZAÇÃO DINÂMICA DE STATUS (ESCOPO GLOBAL) =====
+    // Estado global para controlar atualizações
+    let statusUpdateSystem = {
+        records: [],
+        isInitialized: false,
+        observers: new Map(),
+        debounceTimers: new Map()
+    };
+
+    // ===== SISTEMA DE OBSERVERS PARA FUNCIONALIDADES CHINA (ESCOPO GLOBAL) =====
+    let chinaStatusObserver = {
+        records: new Map(),
+        timers: new Map(),
+        
+        // Observa mudanças no status China
+        observe(recordId, record) {
+            this.records.set(recordId, record);
+            this.scheduleUpdate(recordId, record);
+        },
+        
+        // Remove observação
+        unobserve(recordId) {
+            if (this.timers.has(recordId)) {
+                clearTimeout(this.timers.get(recordId));
+                this.timers.delete(recordId);
+            }
+            this.records.delete(recordId);
+        },
+        
+        // Agenda atualização com debounce
+        scheduleUpdate(recordId, record, delay = 1000) {
+            if (this.timers.has(recordId)) {
+                clearTimeout(this.timers.get(recordId));
+            }
+            
+            const timer = setTimeout(() => {
+                //this.updateChinaStatus(recordId, record);
+                this.timers.delete(recordId);
+            }, delay);
+            
+            this.timers.set(recordId, timer);
+        },
+        
+        
+        
+        // Limpa todos os observers
+        clear() {
+            this.timers.forEach(timer => clearTimeout(timer));
+            this.timers.clear();
+            this.records.clear();
+        }
+    };
+
+    // Função para calcular status específico da China (ESCOPO GLOBAL)
+    function calculateChinaStatus(record) {
+        const currentStatus = record.status;
+        
+        // Se não é status relacionado à China, retorna null
+        if (currentStatus !== 'Aguardando China' && currentStatus !== 'China Atrasada') {
+            return null;
+        }
+        
+        const parseDate = (dateStr) => {
+            if (!dateStr || dateStr === "{% trans 'Não definido' %}" || dateStr === "{% trans 'Não finalizado' %}") return null;
+            const [day, month, year] = dateStr.split('/').map(Number);
+            return new Date(year, month - 1, day);
+        };
+        
+        const deadlineDate = parseDate(record.deadline);
+        if (!deadlineDate) return currentStatus;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const deadline = new Date(deadlineDate);
+        deadline.setHours(0, 0, 0, 0);
+        
+        // Se já está finalizado, não muda o status China
+        if (record.finished && record.finished !== "{% trans 'Não finalizado' %}") {
+            return currentStatus;
+        }
+        
+        // Lógica de transição: se passou do prazo e está "Aguardando China", vira "China Atrasada"
+        if (currentStatus === 'Aguardando China' && today > deadline) {
+            return 'China Atrasada';
+        }
+        
+        // Se está "China Atrasada" mas não passou do prazo, volta para "Aguardando China"
+        if (currentStatus === 'China Atrasada' && today <= deadline) {
+            return 'Aguardando China';
+        }
+        
+        return currentStatus;
+    }
+
     document.addEventListener("DOMContentLoaded", function ( ) {
         "use strict";
 
@@ -483,28 +740,47 @@
         
         // Função para mostrar pop-up com detalhes do problema
         function showProblemDetails(record) {
+            fetch(`/ocorrencia/notificacoes/record/${record.id}/marcar_lidas/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success' && data.count > 0) {
+                    // Atualizar o contador de notificações
+                    atualizarContadorNotificacoes();
+                }
+            })
+            .catch(error => {
+                console.error('{% trans "Erro ao marcar notificações como lidas:" %}', error);
+            });
             const arquivosListHTML = (record.arquivos && record.arquivos.length > 0)
             ? `<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
                 ${record.arquivos.map(arq => `
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #dee2e6;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 18px;">📎</span>
-                            <span style="font-weight: 500; color: #495057;">${arq.nome_original || 'Arquivo'}</span>
+                            <span style="font-weight: 500; color: #495057;">${arq.nome_original || '{% trans "Arquivo" %}'}</span>
+                                <small style="color: #6c757d; font-size: 12px;">
+                                    {% trans "Enviado em:" %} ${arq.data_upload || '{% trans "Data desconhecida" %}'}
+                                </small>
                         </div>
                         <span>
                         <button onclick="deleteFile('${arq.id}', '${arq.nome_original}', ${JSON.stringify(record).replace(/"/g, '&quot;')})"
                                 style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background-color 0.2s;">
-                            🗑 Deletar
+                            🗑 {% trans "Deletar" %}
                         </button>
                         <button onclick="downloadFile('${arq.id}', '${arq.nome_original || 'arquivo'}')" 
                                 style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background-color 0.2s;">
-                            ⬇ Download
+                            ⬇ {% trans "Download" %}
                         </button>
                         </span>
                     </div>
                 `).join('')}
                 </div>`
-            : '<p style="color: #6c757d; font-style: italic;">Nenhum arquivo anexado.</p>';
+            : '<p style="color: #6c757d; font-style: italic;">{% trans "Nenhum arquivo anexado." %}</p>';
             // Assegura que os valores sejam strings vazias se forem null/undefined
             const problemDetectedValue = record.problem_detected || '';
             const feedbackTechnicalValue = record.feedback_technical || '';
@@ -514,89 +790,151 @@
             const problemDetectedId = `problem_detected_${record.id}`;
             const feedbackTechnicalId = `feedback_technical_${record.id}`;
             const feedbackManagerId = `feedback_manager_${record.id}`;
-            
+            // console.log(record)
             // Cria o conteúdo HTML do pop-up com informações detalhadas e textareas editáveis
             const popupContent = `
                 <div style="text-align: left;">
-                    <h3 style="color: var(--primary); margin-bottom: 20px;">Detalhes da Ocorrência</h3>
+                    <h3 style="color: var(--primary); margin-bottom: 20px;">{% trans "Detalhes da Ocorrência" %}</h3>
                     
                     <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h4 style="margin-top: 0; color: var(--text);">Problema Detectado:</h4>
+                        <h4 style="margin-top: 0; color: var(--text);">{% trans "Problema Detectado:" %}</h4>
                         <textarea id="${problemDetectedId}" 
                                   data-record-id="${record.id}" 
                                   data-field-name="problem_detected" 
                                   data-initial-value="${problemDetectedValue}"
                                   style="width: 100%; min-height: 100px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${problemDetectedValue}</textarea>
+                        <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                           {% trans "Gerar PDF" %}
+                        </button>
+
+                        <button id="button_copy" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                           {% trans "COPIAR INFORMAÇÕES" %}
+                        </button>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                         <div>
                             <strong>ID:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.id || 'Não informado'}</span>
+                            <span style="color: var(--text-light);" translate="no">
+                            ${record.codigo_externo || '{% trans "Não informado" %}'}
+                            
+                            </span>
                         </div>
                         <div>
-                            <strong>Técnico:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.technical || 'Não informado'}</span>
+                            <strong>{% trans "Técnico:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.technical || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>País:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.country || 'Não informado'}</span>
+                            <strong>{% trans "País:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.country || '{% trans "Não informado" %}'}</span>
+                        </div>
+                        {%if has_full_permission %}
+                        <div>
+                            <strong>{% trans "Telefone de contato:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.contact || '{% trans "Não informado" %}'}</span>
+                        </div>
+                        {%endif%}
+                        <div>
+                            <strong>{% trans "Dispositivo:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.device || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Dispositivo:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.device || 'Não informado'}</span>
+                            <strong>{% trans "Área:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.area || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Área:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.area || 'Não informado'}</span>
+                            <strong>{% trans "Serial:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.serial || '{% trans "Não informado" %}'}</span>
+                        </div>
+                        ${record.tipo_ecu ? `
+                            <div>
+                                <strong>{% trans "Tipo ECU:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_ecu || '{% trans "Não informado" %}'}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${record.tipo_motor ? `
+                            <div>
+                                <strong>{% trans "Tipo Motor:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_motor || '{% trans "Não informado" %}'}</span>
+                            </div>
+                        ` : ''}
+                        <div>
+                            <strong>{% trans "VIN:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.vin || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Serial:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.serial || 'Não informado'}</span>
+                            <strong>{% trans "Marca:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.brand || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Marca:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.brand || 'Não informado'}</span>
+                            <strong>{% trans "Modelo:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.model || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Modelo:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.model || 'Não informado'}</span>
+                            <strong>{% trans "Ano:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.year || '{% trans "Não informado" %}'}</span>
+                        </div>
+                        ${record.tipo_chave ? `
+                            <div>
+                                <strong>{% trans "Tipo Chave:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_chave || '{% trans "Não informado" %}'}</span>
+                            </div>
+                        ` : ''}
+                        <div>
+                                <strong>{% trans "Tipo Chave:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_chave || '{% trans "Não informado" %}'}</span>
+                            </div>
+                        <div>
+                            <strong>{% trans "Versão:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.version || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Ano:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.year || 'Não informado'}</span>
+                            <strong>{% trans "Status:" %}</strong><br>
+
+                                <select class="editable-select-status" data-record-id="${record.id}" data-field-name="status">
+                                    <option value="REQUESTED" ${record.status_code === 'REQUESTED' ? 'selected' : ''}>{% trans "Aguardando Responsável" %}</option>
+                                    <option value="AWAITING_CHINA" ${record.status_code === 'AWAITING_CHINA' || record.status_code === 'AWAITING_CHINA_LATE' ? 'selected' : ''}>{% trans "Aguardando China" %}</option>
+                                </select>
                         </div>
                         <div>
-                            <strong>Versão:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.version || 'Não informado'}</span>
+                            <strong>{% trans "Responsável:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.responsible || '{% trans "Não informado" %}'}</span>
                         </div>
                         <div>
-                            <strong>Status:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.status || 'Não informado'}</span>
+                            <strong>{% trans "Data:" %}</strong><br>
+                            <span style="color: var(--text-light);" translate="no">${record.data ? formatDateToDisplay(record.data) : '{% trans "Não informado" %}'}</span>
                         </div>
+                        {% if has_edit_permission %}
+                            <div>
+                                <strong>{% trans "Prazo:" %}</strong><br>
+                                <input type="text"
+                                    class="date-input flatpickr"
+                                    data-record-id="${record.id}"
+                                    data-field-name="deadline"
+                                    value="${record.deadline ? formatDateToDisplay(record.deadline) : ''}"
+                                    placeholder="{% trans 'dd/mm/aaaa' %}" />
+                            </div>
+                            
+                            {% else %}
+                            <div>
+                                <strong>{% trans "Prazo:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">
+                                    ${record.deadline ? formatDateToDisplay(record.deadline) : '{% trans "Não definido" %}'}
+                                </span>
+                            </div>
+                        {% endif %}
                         <div>
-                            <strong>Responsável:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.responsible || 'Não informado'}</span>
-                        </div>
-                        <div>
-                            <strong>Data:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.data ? formatDateToDisplay(record.data) : 'Não informado'}</span>
-                        </div>
-                        <div>
-                            <strong>Prazo:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.deadline ? formatDateToDisplay(record.deadline) : 'Não definido'}</span>
-                        </div>
-                        <div>
-                            <strong>Finalizado:</strong><br>
-                            <span style="color: var(--text-light);" translate="no">${record.finished ? formatDateToDisplay(record.finished) : 'Não finalizado'}</span>
-                        </div>
-                        <div>
-                            <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
-                                Gerar PDF
-                            </button>
+                            <strong>{% trans "Finalizado:" %}</strong><br>
+                            <input type="text"
+                                class="date-input flatpickr"
+                                data-record-id="${record.id}"
+                                data-field-name="finished"
+                                value="${record.finished ? formatDateToDisplay(record.finished) : ''}"
+                                placeholder="{% trans 'dd/mm/aaaa' %}" />
                         </div>
                     </div>
-                    <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">Adicionar novo arquivo:</h5>
+                    <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">{% trans "Adicionar novo arquivo:" %}</h5>
                         <div id="file-upload-wrapper-${record.id}" class="file-upload-wrapper full-width">
                             <div id="file-preview-container" class="file-preview-container"></div>
 
@@ -610,30 +948,43 @@
                                 <input type="hidden" name="page_num" value="${page_num}"/>
                                 
                                 <span class="container_buttons_popup">
-                                    <label for="arquivo" class="custom-file-button">Selecionar Arquivos</label>
+                                    <label for="arquivo" class="custom-file-button">{% trans "Selecionar Arquivos" %}</label>
                                     <input type="file" id="arquivo" name="arquivo" multiple />
-                                    <input type="submit" value="Cadastrar" required />
+                                    <input type="submit" value="{% trans 'Cadastrar' %}" required />
                                     <button type="button" id="clear-all-files-btn" class="clear-all-files-btn" style="display: none;">
-                                        Limpar Tudo
+                                        {% trans "Limpar Tudo" %}
                                     </button>
                                 </span>
                             </form>
                         </div>
                     <div class="chat-container" translate="no">
-                        <h4 style="margin-left: 10px; margin-top: 10px; color: var(--primary);">Chat de feedback</h4>
-                        <div id="logged-in-user-id" style="display:none;">{{ request.user.id }}</div>
-                        <div id="logged-in-username" style="display:none;">{{ request.user.username }}</div>
-                        <div id="chat-messages" class="chat-messages"></div>
-                        <form id="${record.id}-chat">
-                            <div class="chat-input-area">
-                                <input type="text" id="chat-message-input" placeholder="Digite sua mensagem...">
-                                <button id="chat-send-button">Enviar</button>
-                            </div>
-                        </form>
-                    </div>
+                    <h4 style="margin-left: 10px; margin-top: 10px; color: var(--primary);">{% trans "Chat de feedback" %}</h4>
+                    <div id="logged-in-user-id" style="display:none;">{{ request.user.id }}</div>
+                    <div id="logged-in-username" style="display:none;">{{ request.user.username }}</div>
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <form id="${record.id}-chat">
+                        <div class="chat-input-area">
+                            <input type="text" id="chat-message-input" placeholder="{% trans 'Digite sua mensagem...' %}">
+                            
+                            <!-- Botão para upload de imagem -->
+                            <label for="chat-image-input-${record.id}" class="chat-image-button" title="{% trans 'Enviar imagem' %}">
+                                📷
+                            </label>
+                            <input type="file" id="chat-image-input-${record.id}" accept="image/*" style="display: none;">
+                            
+                            <button id="chat-send-button">{% trans "Enviar" %}</button>
+                        </div>
+                    </form>
+                </div>
                     <div style="margin-bottom: 20px;" translate="no">
-                        
-                        <h4>Arquivos anexados:</h4>
+                        <div class="headerFiles">
+                            <h4>{% trans "Arquivos anexados:" %}</h4>
+                            ${record.arquivos.length > 0 ? `
+                                <button id="allDownload"style="background: #007bff; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                                    {% trans "Baixar Todos" %}
+                                </button>
+                            ` : ''}
+                        </div>
                         ${arquivosListHTML}
                         
                     </div>
@@ -641,29 +992,115 @@
                 </div>
             `;
             
-            let id = record.id
+            let id = record.id  
             Swal.fire({
-                title: 'Informações Detalhadas',
+                title: '{% trans "Informações Detalhadas" %}',
                 html: popupContent,
                 width: '80%',
                 maxWidth: '800px',
                 showCloseButton: true,
                 showConfirmButton: true,
-                confirmButtonText: 'Fechar',
+                confirmButtonText: '{% trans "Fechar" %}',
                 confirmButtonColor: '#0056b3',
                 customClass: {
                     popup: 'problem-details-popup',
                     content: 'problem-details-content'
                 },
                 didOpen: () => {
+                    try{
+                        const allDownload = document.getElementById("allDownload")
+                        allDownload.addEventListener('click', ()=>{
+                            window.open(`/ocorrencia/download_todos/${id}/`, '_blank');
+                        })
+                    }
+                    catch(e){
+                        //
+                    }
+
                     // Adiciona event listeners para os textareas após o SweetAlert ser aberto
                     const problemDetectedTextarea = document.getElementById(problemDetectedId);
                     const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);
                     const feedbackManagerTextarea = document.getElementById(feedbackManagerId);
-                    console.log(document.getElementById('form-ocorrencia'))
                     document.getElementById("button_pdf").addEventListener('click', ()=>{
-                        handleGerarPdf(id)
+                        handleGerarPdf(id, record.codigo_externo)
                     })
+                    document.getElementById("button_copy").style.display = (window.location.protocol === 'https:'| window.location.host.includes('localhost')  )  ? '' : 'none'
+                    document.getElementById("button_copy").addEventListener("click", () => {
+                        const idStr = String(record.id);
+                        const codigoStr = String(record.codigo_externo || "");
+
+                        const infos = [
+                            `ID: ${idStr}`,
+                            codigoStr && codigoStr !== idStr ? `Token: ${codigoStr}` : null,
+                            `Técnico: ${record.technical || 'Não informado'}`,
+                            `Dispositivo: ${record.device || 'Não informado'}`,
+                            `Área: ${record.area || 'Não informado'}`,
+                            `Serial: ${record.serial || 'Não informado'}`,
+                            `Marca: ${record.brand || 'Não informado'}`,
+                            `Modelo: ${record.model || 'Não informado'}`,
+                            `Ano: ${record.year || 'Não informado'}`,
+                            `Data: ${record.data ? formatDateToDisplay(record.data) : 'Não informado'}`,
+                            `Problema Detectado: ${problemDetectedValue}`
+                        ].filter(Boolean);
+
+                        const textoFinal = infos.join('\n');
+                        // 🔹 Envia o texto ao backend Django para tradução via DeepL
+                        fetch("{% url 'traduzir_api' %}", {
+                            method: "POST", // GET não deve ter body
+                            headers: { 
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": getCookie("csrftoken") // necessário no Django
+                            },
+                            body: JSON.stringify({ texto: textoFinal })
+                            
+                        })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`Erro na requisição: ${response.status}`);
+                            return response.json();
+                        })
+                        .then(data => {
+                            const textoTraduzido = data.traduzido || textoFinal;
+
+                            // 🔹 Copia o texto traduzido
+                            navigator.clipboard.writeText(textoTraduzido)
+                                .then(() => showSwalStyledToast("Information copied successfully!", "success"))
+                                .catch(err => showSwalStyledToast("Error copying information: " + err.message, "error"));
+                        })
+                        .catch(err => {
+                            console.error("Erro ao traduzir:", err);
+                            showSwalStyledToast("Error translating text: " + err.message, "error");
+                        });
+
+                    });
+
+
+                    // função auxiliar para exibir o toast personalizado
+                    function showSwalStyledToast(message, type = "success") {
+                        const toast = document.createElement("div");
+                        toast.className = `custom-swal-toast swal2-popup swal2-toast swal2-icon-${type}`;
+                        toast.innerHTML = `
+                            <div class="swal2-icon swal2-${type} swal2-icon-show">
+                                ${type === "success"
+                                    ? '<div class="swal2-success-circular-line-left"></div><span class="swal2-success-line-tip"></span><span class="swal2-success-line-long"></span><div class="swal2-success-ring"></div><div class="swal2-success-fix"></div><div class="swal2-success-circular-line-right"></div>'
+                                    : '<span class="swal2-x-mark"><span class="swal2-x-mark-line-left"></span><span class="swal2-x-mark-line-right"></span></span>'
+                                }
+                            </div>
+                            <div class="custom-swal-toast-text">${message}</div>
+                        `;
+
+                        document.body.appendChild(toast);
+
+                        // Animação de entrada
+                        setTimeout(() => toast.classList.add("show"), 10);
+
+                        // Remove depois de 2,5s
+                        setTimeout(() => {
+                            toast.classList.remove("show");
+                            setTimeout(() => toast.remove(), 300);
+                        }, 2500);
+                    }
+
+
                     document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
                         e.preventDefault();
                         const form = e.target;
@@ -678,7 +1115,7 @@
                             });
 
                             if (!response.ok) {
-                                throw new Error('Erro de rede ou do servidor');
+                                throw new Error('{% trans "Erro de rede ou do servidor" %}');
                             }
 
                             const result = await response.json();
@@ -692,18 +1129,18 @@
                                     const updatedRecord = await response.json();
                                     showProblemDetails(updatedRecord);
                                 } catch (error) {
-                                    console.error("Erro ao buscar o registro atualizado:", error);
-                                    alert("Erro ao atualizar os dados da ocorrência.");
+                                    console.error("{% trans 'Erro ao buscar o registro atualizado:' %}", error);
+                                    alert("{% trans 'Erro ao atualizar os dados da ocorrência.' %}");
                                 }
                                 }, 100);
 
 
                                 
                             } else {
-                                alert("Erro: " + result.message);
+                                alert("{% trans 'Erro:' %} " + result.message);
                             }
                         } catch (error) {
-                            alert("Erro inesperado: " + error.message);
+                            alert("{% trans 'Erro inesperado:' %} " + error.message);
                         }
                     })
                     if (problemDetectedTextarea) {
@@ -812,28 +1249,300 @@
 
                     const loggedInUsername = document.getElementById('logged-in-username').textContent
 
+                    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+
                     const chatSocket = new WebSocket(
-                        'ws://'
-                        + window.location.host
-                        + '/ws/chat/'
-                        + recordId
-                        + '/'
+                        protocol +
+                        window.location.host +
+                        '/ws/chat/' +
+                        recordId +
+                        '/'
                     );
 
+                    chatSocket.onclose = function(e) {
+                        console.error('{% trans "O socket do chat foi fechado inesperadamente" %}');
+                    };
+                    const imageInput = document.getElementById(`chat-image-input-${id}`);
+                    let selectedImageBase64 = null;
+
+                    // Adicionar suporte para drag and drop no input do chat
+                    chatInput.addEventListener('dragover', function(e) {
+                        e.preventDefault();
+                        this.style.backgroundColor = '#f0f8ff';
+                    });
+
+                    chatInput.addEventListener('dragleave', function(e) {
+                        e.preventDefault();
+                        this.style.backgroundColor = '';
+                    });
+
+                    chatInput.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        this.style.backgroundColor = '';
+                        
+                        const files = e.dataTransfer.files;
+                        if (files.length > 0) {
+                            handleImageSelection(files[0]);
+                        }
+                    });
+
+                    // Sistema de modal para expandir imagens
+                    function setupImageModal() {
+                    const modal = document.getElementById('image-modal');
+                    const expandedImg = document.getElementById('expanded-image');
+                    const closeBtn = document.getElementById('close-modal');
+                    const downloadBtn = document.getElementById('download-image');
+                    
+                    let currentImageBase64 = '';
+                    let currentImageName = 'imagem_chat.png';
+                    
+                    // Fechar modal ao clicar no X
+                    closeBtn.addEventListener('click', function() {
+                        modal.style.display = 'none';
+                    });
+                    
+                    // Fechar modal ao clicar fora da imagem
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === modal) {
+                            modal.style.display = 'none';
+                        }
+                    });
+                    
+                    // Fechar modal com ESC
+                    document.addEventListener('keydown', function(e) {
+                        if (e.key === 'Escape' && modal.style.display === 'flex') {
+                            modal.style.display = 'none';
+                        }
+                    });
+                    
+                    // Função para download da imagem
+                    function downloadImage() {
+                        if (!currentImageBase64) return;
+                        
+                        // Cria um link temporário para download
+                        const link = document.createElement('a');
+                        link.href = currentImageBase64;
+                        link.download = currentImageName;
+                        
+                        // Adiciona ao DOM, clica e remove
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // Feedback visual
+                        const originalText = downloadBtn.textContent;
+                        downloadBtn.textContent = '✅ {% trans "Baixado!" %}';
+                        downloadBtn.style.background = '#17a2b8';
+                        
+                        setTimeout(() => {
+                            downloadBtn.textContent = originalText;
+                            downloadBtn.style.background = '#28a745';
+                        }, 2000);
+                    }
+                    
+                    // Event listener para o botão de download
+                    downloadBtn.addEventListener('click', downloadImage);
+                    
+                    // Função para expandir imagem (agora também armazena dados para download)
+                    function expandImage(base64Data, imageName = 'imagem_chat.png') {
+                        currentImageBase64 = base64Data;
+                        currentImageName = imageName;
+                        expandedImg.src = base64Data;
+                        modal.style.display = 'flex';
+                        
+                        // Foca no modal para funcionar o ESC
+                        modal.focus();
+                    }
+                    
+                    return { modal, expandedImg, expandImage, downloadImage };
+                }
+
+                // Inicializar modal
+                const { modal, expandedImg, expandImage } = setupImageModal();
+
+                // Event listener para seleção de imagem via botão
+                imageInput.addEventListener('change', function(e) {
+                    handleImageSelection(e.target.files[0]);
+                });
+
+                // Função para lidar com seleção de imagem (reutilizável)
+                function handleImageSelection(file) {
+                    if (file) {
+                        // Verifica se é uma imagem
+                        if (!file.type.startsWith('image/')) {
+                            alert('{% trans "Por favor, selecione apenas arquivos de imagem." %}');
+                            return;
+                        }
+                        
+                        // Verifica o tamanho do arquivo (limite de 2MB para Base64)
+                        if (file.size > 10 * 1024 * 1024) {
+                            alert('{% trans "A imagem deve ter no máximo 2MB." %}');
+                            return;
+                        }
+                        
+                        // Converte a imagem para Base64
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            selectedImageBase64 = e.target.result;
+                            
+                            // Mostra indicador visual que uma imagem foi selecionada
+                            const imageButton = document.querySelector(`label[for="chat-image-input-${id}"]`);
+                            if (!imageButton.querySelector('.image-indicator')) {
+                                const indicator = document.createElement('span');
+                                indicator.className = 'image-indicator';
+                                indicator.textContent = '1';
+                                imageButton.appendChild(indicator);
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+
+                    // Função para lidar com Ctrl+V
+                    function handlePaste(event) {
+                    // Verifica se Ctrl+V foi pressionado e se o foco está no input do chat
+                    if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+                        const activeElement = document.activeElement;
+                        const chatInput = document.getElementById('chat-message-input');
+                        
+                        if (activeElement === chatInput) {
+                            event.preventDefault(); // IMPORTANTE: Previne o comportamento padrão
+                            
+                            // Usa o event.clipboardData em vez de navigator.clipboard (mais confiável)
+                            const clipboardItems = event.clipboardData || window.clipboardData;
+                            
+                            if (clipboardItems && clipboardItems.items) {
+                                for (let i = 0; i < clipboardItems.items.length; i++) {
+                                    const item = clipboardItems.items[i];
+                                    
+                                    if (item.type.startsWith('image/')) {
+                                        const blob = item.getAsFile();
+                                        handleImageSelection(blob);
+                                        
+                                        // Feedback visual
+                                        const originalPlaceholder = chatInput.placeholder;
+                                        chatInput.placeholder = '✅ {% trans "Imagem colada! Digite uma mensagem (opcional)..." %}';
+                                        setTimeout(() => {
+                                            chatInput.placeholder = originalPlaceholder;
+                                        }, 2000);
+                                        break;
+                                    }
+                                }
+                            } else {
+                                // Fallback para navegadores mais antigos
+                                // console.log('{% trans "Clipboard API não suportada, tentando método alternativo..." %}');
+                                tryPasteAlternativeMethod();
+                            }
+                        }
+                    }
+                }
+
+                                    // Adicionar event listener para Ctrl+V
+                                    // Remove event listener antigo se existir
+                document.removeEventListener('keydown', handlePaste);
+
+                // Adiciona o event listener corrigido
+                document.addEventListener('keydown', handlePaste);
+
+                // Adiciona também suporte para o evento 'paste' nativo
+                document.addEventListener('paste', function(e) {
+                    const activeElement = document.activeElement;
+                    const chatInput = document.getElementById('chat-message-input');
+                    
+                    if (activeElement === chatInput) {
+                        const clipboardData = e.clipboardData || window.clipboardData;
+                        
+                        if (clipboardData && clipboardData.items) {
+                            for (let i = 0; i < clipboardData.items.length; i++) {
+                                const item = clipboardData.items[i];
+                                
+                                if (item.type.startsWith('image/')) {
+                                    e.preventDefault(); // Importante: previne o colar padrão de texto
+                                    const blob = item.getAsFile();
+                                    handleImageSelection(blob);
+                                    
+                                    // Feedback visual melhorado
+                                    showPasteFeedback(chatInput, '✅ {% trans "Imagem colada com sucesso!" %}');
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+
+                    // Função para mostrar feedback visual
+                    function showPasteFeedback(inputElement, message) {
+                        const feedback = document.createElement('div');
+                        feedback.className = 'image-paste-feedback';
+                        feedback.textContent = message;
+                        
+                        const rect = inputElement.getBoundingClientRect();
+                        feedback.style.left = rect.left + 'px';
+                        feedback.style.top = (rect.top - 30) + 'px';
+                        
+                        document.body.appendChild(feedback);
+                        
+                        setTimeout(() => {
+                            if (document.body.contains(feedback)) {
+                                document.body.removeChild(feedback);
+                            }
+                        }, 2000);
+                    }
+
+                    // Modificar o evento de submit do formulário do chat
+                   form.onsubmit = function(e) {
+                        e.preventDefault();
+                        const message = chatInput.value.trim();
+                        
+                        // Só envia se tiver mensagem OU imagem
+                        if (message || selectedImageBase64) {
+                            // Prepara os dados para enviar
+                            const messageData = {
+                                'message': message
+                            };
+                            
+                            // Adiciona a imagem em Base64 se existir
+                            if (selectedImageBase64) {
+                                messageData.image_base64 = selectedImageBase64;
+                                // Tenta obter informações do arquivo, mas usa valores padrão se não disponível
+                                const file = imageInput.files && imageInput.files[0];
+                                messageData.image_type = file ? file.type : 'image/png';
+                                messageData.image_name = file ? file.name : 'imagem_colada.png';
+                            }
+                            
+                            // Envia via WebSocket
+                            chatSocket.send(JSON.stringify(messageData));
+                            
+                            // Limpa os inputs
+                            chatInput.value = '';
+                            selectedImageBase64 = null;
+                            imageInput.value = '';
+                            
+                            // Remove o indicador visual da imagem
+                            const imageButton = document.querySelector(`label[for="chat-image-input-${id}"]`);
+                            const indicator = imageButton?.querySelector('.image-indicator');
+                            if (indicator) {
+                                indicator.remove();
+                            }
+                            
+                            // console.log('{% trans "Mensagem enviada:" %}', message ? '{% trans "com texto" %}' : '{% trans "apenas imagem" %}');
+                        }
+                    };
+
+                    // Modificar o handler de mensagens para exibir imagens em Base64 com funcionalidade de expandir
                     chatSocket.onmessage = function(e) {
                         const data = JSON.parse(e.data);
                         
-                        // Log para verificar se os dados foram recebidos e analisados corretamente
-
                         const message = data.message;
                         const author = data.author;
                         const timestamp = data.timestamp;
+                        const imageBase64 = data.image_base64;
+                        const imageType = data.image_type;
+                        const imageName = data.image_name;
 
                         if (chatMessages) {
                             const messageElement = document.createElement('div');
                             messageElement.classList.add('chat-message');
-                            
-                            // Verifique se os elementos estão a ser criados
                             
                             if (author === loggedInUsername) {
                                 messageElement.classList.add('my-message');
@@ -841,40 +1550,116 @@
                                 messageElement.classList.add('other-message');
                             }
                             
-                            messageElement.innerHTML = `
-                                <strong>${author}:</strong> ${message} 
-                                <small>(${new Date(timestamp).toLocaleString()})</small>
-                            `;
-                            // Verifique se o elemento a ser adicionado tem conteúdo
+                            let messageContent = `<div><strong>${author}:</strong> ${message || ''}`;
                             
+                            // Adicionar imagem se existir (usando Base64 diretamente)
+                            if (imageBase64) {
+                                messageContent += `<br><img src="${imageBase64}" alt="${imageName || 'Imagem'}" class="chat-image" onclick="expandImage('${imageBase64}')">`;
+                            }
+                            
+                            messageContent += `</div><small class="chat-message-time">${new Date(timestamp).toLocaleString()}</small>`;
+                            
+                            messageElement.innerHTML = messageContent;
                             chatMessages.appendChild(messageElement);
-                            // Desça a barra de rolagem para a mensagem mais recente
                             chatMessages.scrollTop = chatMessages.scrollHeight;
-                        } else {
-                            console.error("Erro: O elemento com ID 'chat-messages' não foi encontrado!");
+                            
+                            // Adicionar event listener para as imagens recém-criadas
+                            const newImages = messageElement.querySelectorAll('.chat-image');
+                            newImages.forEach(img => {
+                                img.addEventListener('click', function() {
+                                    expandImage(this.src);
+                                });
+                            });
                         }
                     };
 
-                    chatSocket.onclose = function(e) {
-                        console.error('O socket do chat foi fechado inesperadamente');
-                    };
-
-                    form.onsubmit = function(e) {
-                        e.preventDefault();
-                        const message = chatInput.value;
-                        chatSocket.send(JSON.stringify({
-                            'message': message
-                        }));
-                        chatInput.value = '';
-                    };
-
+                    // Também adicione esta função globalmente para funcionar em todas as imagens
+                    window.expandImage = expandImage;
 
                     // --- FIM DA LÓGICA DE UPLOAD ---
+                    document.querySelectorAll('.flatpickr').forEach(input => {
+                        const fpConfig = {
+                            allowInput: true,
+                            dateFormat: 'd/m/Y',
+                            plugins: [function(instance) {
+                                return {
+                                    onReady: function() {
+                                        // Botão LIMPAR
+                                        const containerFooterPopup = document.createElement('div')
+                                        containerFooterPopup.className = 'containerFooterPopup'
+                                        
+                                        const clearButton = document.createElement('button');
+                                        clearButton.className = 'clear-date-btn';
+                                        clearButton.textContent = 'Limpar';
+                                        clearButton.type = 'button';
+
+                                        const todayButton = document.createElement('button');
+                                        todayButton.className = 'today-date-btn';
+                                        todayButton.textContent = 'Hoje';
+                                        todayButton.type = 'button';
+
+                                        clearButton.addEventListener('click', function(e) {
+                                            e.stopPropagation();
+                                            instance.clear();
+                                            instance.input.value = '';
+                                            instance.close();
+
+                                            const recordId = instance.input.closest('[data-id]')?.getAttribute('data-id');
+                                            const fieldName = instance.input.closest('[data-column]')?.getAttribute('data-column');
+                                            
+                                            fetch('{% url "update_ocorrencia" %}', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'X-CSRFToken': getCookie('csrftoken')
+                                                },
+                                                body: JSON.stringify({
+                                                    id: recordId,
+                                                    field: fieldName,
+                                                    value: '',
+                                                    page_num: page_num
+                                                })
+                                            })
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.status === 'success') {
+                                                    const changeEvent = new Event('change', { bubbles: true });
+                                                    instance.input.dispatchEvent(changeEvent);
+                                                    applyFiltersAndSort(false);
+                                                }
+                                            });
+                                        });
+
+                                        todayButton.addEventListener('click', function(e) {
+                                            e.stopPropagation();
+                                            const today = new Date();
+                                            instance.setDate(today, true); // true => dispara onChange
+                                            instance.close();
+                                        });
+
+                                        // Adiciona os dois botões
+                                        containerFooterPopup.appendChild(todayButton)
+                                        containerFooterPopup.appendChild(clearButton)
+                                        instance.calendarContainer.appendChild(containerFooterPopup);
+                                       
+                                    }
+                                };
+                            }]
+                        };
+
+                        flatpickr(input, fpConfig);
+
+                        // já usa a lógica existente de salvar
+                        input.addEventListener('change', (e) => {
+                            atualizarDadosPopup(e.target);
+                        });
+                    });
+
                 }
             });
         }
         
-        function handleGerarPdf(recordId) {
+        function handleGerarPdf(recordId, recordCode) {
             // Mostra um feedback de carregamento para o usuário
             Swal.fire({
                 title: 'Gerando PDF...',
@@ -905,7 +1690,7 @@
                 }
                 // Pega o nome do arquivo do cabeçalho 'Content-Disposition'
                 const disposition = response.headers.get('Content-Disposition');
-                let filename = `ocorrencia_${recordId}.pdf`; // Nome padrão
+                let filename = `ocorrencia_${recordCode}.pdf`; // Nome padrão
                 if (disposition && disposition.indexOf('attachment') !== -1) {
                     const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
                     const matches = filenameRegex.exec(disposition);
@@ -1018,14 +1803,28 @@
         let buttons_paginator = document.querySelectorAll('.button-paginator')
         var total_pages
         
+        function gotoPage(n){
+            // limita entre 1 e total_pages
+            const target = Math.max(1, Math.min(total_pages, Number(n)))
+            if (page_num !== target){
+                page_num = target
+                applyFiltersAndSort() // sua função já existente
+            }
+        }
 
         buttons_paginator.forEach(button=>{
             button.addEventListener('click', (e)=>{
                 if(e.target.id == "next" && page_num <= total_pages){
                     page_num += 1
                 }
-                else if(e.target.id == "last" && page_num > 1){
+                else if(e.target.id == "prev" && page_num > 1){
                     page_num -= 1
+                }
+                else if(e.target.id == "last"){
+                    page_num = total_pages
+                }
+                else if(e.target.id == "first"){
+                    page_num = 1
                 }
                 applyFiltersAndSort()
             })
@@ -1076,23 +1875,23 @@
             }
 
         function paginate(hasPrev, hasNext){
-            const buttonPrev = document.getElementById("last")
+            const buttonPrev = document.getElementById("prev")
             const buttonNext = document.getElementById("next")
             if(!hasPrev && hasNext){   
-                buttonPrev.style.visibility = 'hidden'
-                buttonNext.style.visibility = 'visible'
+                buttonPrev.style.display = 'none'
+                buttonNext.style.display = 'block'
             }
             else if(!hasNext && hasPrev){
-                buttonPrev.style.visibility = 'visible'
-                buttonNext.style.visibility = 'hidden'
+                buttonPrev.style.display = 'block'
+                buttonNext.style.display = 'none'
             }
             else if(!hasNext && !hasPrev){
-                buttonPrev.style.visibility = 'hidden'
-                buttonNext.style.visibility = 'hidden'
+                buttonPrev.style.display = 'none'
+                buttonNext.style.display = 'none'
             }
             else{
-                buttonPrev.style.visibility = 'visible'
-                buttonNext.style.visibility = 'visible'
+                buttonPrev.style.display = 'block'
+                buttonNext.style.display = 'block'
             }
             buttons.update()
         }
@@ -1315,7 +2114,7 @@
                     // --- FIM DA NOVA LÓGICA ---
 
                 } catch (e) {
-                    console.error("Erro ao processar opções de filtro não-data:", e);
+                    console.error("{% trans 'Erro ao processar opções de filtro não-data:' %}", e);
                     options = [];
                 }
             }
@@ -1329,7 +2128,7 @@
                 if (Object.keys(options).length > 0) {
                     optionsHTML = createDateTreeHTML(columnName, options);
                 } else {
-                    optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma data disponível.</p>';
+                    optionsHTML = '<p style="padding: 5px; color: grey;">{% trans "Nenhuma data disponível." %}</p>';
                 }
             } else {
                 if (options.length > 0) {
@@ -1338,24 +2137,24 @@
                         const isChecked = savedFilter.isApplied && savedFilter.values.includes(option);
                         optionsHTML += `<div class="filter-option">
                                         <input type="checkbox" id="${optionId}" data-filter-option="${columnName}" data-tree-level="leaf" value="${option}" ${isChecked ? 'checked' : ''}>
-                                        <label for="${optionId}">${option || '(Vazio)'}</label>
+                                        <label for="${optionId}">${option || '{% trans "(Vazio)" %}'}</label>
                                       </div>`;
                     });
                 } else {
-                    optionsHTML = '<p style="padding: 5px; color: grey;">Nenhuma opção disponível.</p>';
+                    optionsHTML = '<p style="padding: 5px; color: grey;">{% trans "Nenhuma opção disponível." %}</p>';
                 }
             }
 
             filterBoxElement.innerHTML = `
                 <div class="filter-header">
                     <input type="checkbox" id="select-all-${columnName}">
-                    <label for="select-all-${columnName}">Selecionar Todos</label>
+                    <label for="select-all-${columnName}">{% trans "Selecionar Todos" %}</label>
                 </div>
-                ${!isDate ? `<input type="text" class="filter-search-input" placeholder="Buscar...">` : ''}
+                ${!isDate ? `<input type="text" class="filter-search-input" placeholder="{% trans 'Buscar...' %}">` : ''}
                 <div class="filter-options">${optionsHTML}</div>
                 <div class="filter-actions">
-                    <button class="apply-filter-btn">Aplicar</button>
-                    <button class="clear-filter-btn">Limpar</button>
+                    <button class="apply-filter-btn">{% trans "Aplicar" %}</button>
+                    <button class="clear-filter-btn">{% trans "Limpar" %}</button>
                 </div>
             `;
 
@@ -1497,7 +2296,7 @@
                 sort: currentSort,
                 page: page_num
             };
-            if('{{has_full_permission}}' == 'False'){
+            if('{{has_edit_permission}}' == 'False'){
                 filterData.filters['responsible'] = []
                 filterData.filters['responsible'].push('{{user}}'.toUpperCase())
             }
@@ -1556,8 +2355,8 @@
 
             })
             .catch(error => {
-                console.error("Erro ao filtrar:", error);
-                Swal.fire("Erro", "Ocorreu um erro ao aplicar os filtros.", "error");
+                console.error("{% trans 'Erro ao filtrar:' %}", error);
+                Swal.fire("{% trans 'Erro' %}", "{% trans 'Ocorreu um erro ao aplicar os filtros.' %}", "error");
             });
 
             // 4. Fechar a caixa de filtro se necessário
@@ -1574,59 +2373,52 @@
         */
         // ===== SISTEMA DE ATUALIZAÇÃO DINÂMICA DE STATUS =====
         // Simula o comportamento de useEffect do React em JavaScript puro
+        // (Definições movidas para escopo global)
 
-        // Estado global para controlar atualizações
-        let statusUpdateSystem = {
-            records: [],
-            isInitialized: false,
-            observers: new Map(),
-            debounceTimers: new Map()
-        };
-
-        // Função pura para calcular o status baseado nas datas
+        // Função pura para calcular o status baseado nas datas (MODIFICADA)
         function calculateStatus(record) {
-            // REGRA DA CHINA: Se o país for China, o status é sempre "Aguardando".
-            // Esta é a verificação mais importante e deve vir primeiro.
-            if (record.country === 'China') {
-                return 'Aguardando';
-            }
-
-            const deadlineStr = record.deadline; // Formato: DD/MM/YYYY
-            const finishedStr = record.finished; // Formato: DD/MM/YYYY
+            const deadlineStr = record.deadline;
+            const finishedStr = record.finished;
             
-            // Se tem data de finalização, sempre é "Concluído"
-            if (finishedStr && finishedStr !== "Não finalizado") {
-                return 'Concluído';
-            }
-            
-            // Se não tem prazo definido, é "Requisitado"
-            if (!deadlineStr || deadlineStr === "Não definido") {
-                return 'Requisitado';
-            }
-            
-            // Converte data do formato DD/MM/YYYY para Date
             const parseDate = (dateStr) => {
-                if (!dateStr || dateStr === "Não definido" || dateStr === "Não finalizado") return null;
+                if (!dateStr || dateStr === "{% trans 'Não definido' %}" || dateStr === "{% trans 'Não finalizado' %}") return null;
                 const [day, month, year] = dateStr.split('/').map(Number);
-                return new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
+                return new Date(year, month - 1, day);
             };
             
+            // PRIORIDADE 1: Verificar se é um caso especial da China
+            const chinaStatus = calculateChinaStatus(record);
+            if (chinaStatus) {
+                // Registrar no observer para monitoramento contínuo
+                chinaStatusObserver.observe(record.id, record);
+                return chinaStatus;
+            }
+            
+            // PRIORIDADE 2: Lógica original para outros status
             const deadlineDate = parseDate(deadlineStr);
-            if (!deadlineDate) return 'Requisitado';
+            // if (!deadlineDate) return 'Requisitado';
             
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas a data
+            today.setHours(0, 0, 0, 0);
             
             const deadline = new Date(deadlineDate);
             deadline.setHours(0, 0, 0, 0);
+
+            if (finishedStr && finishedStr !== "{% trans 'Não finalizado' %}") {
+                return "{%trans 'Concluído'%}";
+            }
             
-            // Compara as datas
+            if (!deadlineStr || deadlineStr === "{% trans 'Não definido' %}") {
+                return "{%trans 'Requisitado'%}";
+            }
+            
             if (today > deadline) {
-                return 'Atrasado';
+                return "{%trans 'Atrasado'%}";
             } else {
-                return 'Em progresso';
+                return "{%trans 'Em progresso'%}";
             }
         }
+
 
         // Função para atualizar o status de um registro específico
         function updateRecordStatus(recordId, newStatus) {
@@ -1639,20 +2431,38 @@
             if (currentStatus !== newStatus) {
                 statusCell.textContent = newStatus;
                 
-                // Cria um elemento mock para usar com a função saveField existente
-                const mockElement = {
-                    value: newStatus,
-                    closest: () => statusCell,
-                    classList: { add: () => {}, remove: () => {} },
-                    setAttribute: () => {}
-                };
+                // CORREÇÃO: Persistir status China no backend usando a API correta
+                const statusCode = newStatus === 'China Atrasada' ? 'AWAITING_CHINA_LATE' : 
+                                 newStatus === 'Aguardando China' ? 'AWAITING_CHINA' : newStatus;
                 
-                // Chama a função saveField para persistir no backend
-                if (typeof saveField === 'function') {
-                    saveField(mockElement);
-                }
-                statusCell.setAttribute('data-initial-value', newStatus)
-                //console.log(`Status atualizado para registro ${recordId}: ${currentStatus} → ${newStatus}`);
+                fetch('{% url "update_ocorrencia" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        id: recordId,
+                        field: 'status',
+                        value: statusCode,
+                        page_num: page_num
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        statusCell.setAttribute('data-initial-value', newStatus);
+                    } else {
+                        console.error('{% trans "Erro ao persistir status China:" %}', data.message);
+                        // Reverte o status na interface se falhou no backend
+                        statusCell.textContent = currentStatus;
+                    }
+                })
+                .catch(error => {
+                    console.error('{% trans "Erro de rede ao persistir status China:" %}', error);
+                    // Reverte o status na interface se falhou no backend
+                    statusCell.textContent = currentStatus;
+                });
             }
         }
 
@@ -1775,6 +2585,9 @@
             // Armazena os records no sistema de status
             statusUpdateSystem.records = records || [];
             
+            // HOOK: Limpar observers China antes de recriar a tabela
+            chinaStatusObserver.clear();
+            
             tableBody.innerHTML = "";
             if (!records || records.length === 0) {
                 const colspan = table.querySelectorAll("thead th[data-column]").length;
@@ -1782,15 +2595,16 @@
                 const cell = noResultsRow.insertCell();
 
                 cell.colSpan = colspan > 0 ? colspan : 1;
-                cell.textContent = "Nenhum registro encontrado.";
+                cell.textContent = "{% trans 'Nenhum registro encontrado.' %}";
                 cell.style.textAlign = "center";
                 return;
             }
             
             const visibleColumns = Array.from(table.querySelectorAll("thead th[data-column]")).map(th => th.getAttribute('data-column'));
             const has_full_permission = '{{has_full_permission}}' === 'True';
+            const has_edit_permission = '{{ has_edit_permission }}' === 'True';
 
-            records.forEach((record) => {
+           records.forEach((record) => {
                 const row = tableBody.insertRow();
                 visibleColumns.forEach(columnName => {
                     const cell = row.insertCell();
@@ -1800,47 +2614,28 @@
                     let value = record[columnName];
                     const headerInfo = headerData.find(h => h.columnName === columnName);
                     
-                    if (columnName === 'country') {
-                        cell.id = `${columnName}${record.id}`;
-                        cell.classList.add('editable-field-container');
-                        const select = document.createElement('select');
-                        select.id = `${columnName}${record.id}`;
+                    // --- INÍCIO DA CORREÇÃO 2: SIMPLIFICAR A LÓGICA DA COLUNA DE STATUS ---
+                    if (columnName === 'status') {
+                        // LÓGICA FINAL E SIMPLIFICADA:
+                        // 1. Apenas exibe o texto do status que o backend enviou.
+                        cell.textContent = record.status_display; 
 
-                        select.addEventListener('change', (e) => {
-                            fetch('{% url "update_ocorrencia" %}', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-                                body: JSON.stringify({ id: record.id, field: 'country', value: e.target.value, page_num: page_num })
-                            }).then(res => res.json()).then(data => {
-                                if (data.status === 'success') applyFiltersAndSort();
-                                else Swal.fire('Erro', data.message || 'Erro desconhecido', 'error');
-                            }).catch(err => Swal.fire('Erro de Rede', err.toString(), 'error'));
-                        });
-
-                        if (value === 'China') {
-                            select.innerHTML = `
-                                <option value="${record.country_id}" selected>China</option>
-                                <option value="revert">Voltar para ${record.country_original || 'Original'}</option>
-                            `;
-                        } else {
-                            select.innerHTML = `
-                                <option value="${record.country_id || ''}" selected>${value || '-- Selecione --'}</option>
-                                <option value="china_id_placeholder">Mudar para China</option>
-                            `;
+                        // 2. Adiciona a classe de estilo para qualquer status de atraso.
+                        // Usamos o 'status_code' que vem do backend para uma verificação fiável.
+                        if (record.status_code === 'AWAITING_CHINA_LATE' || record.status_code === 'LATE') {
+                            cell.classList.add("awaiting-china-late"); // Reutiliza a classe de estilo vermelha
                         }
-                        cell.appendChild(select);
-
-                    } else if (columnName === 'status') {
-                        cell.textContent = record.status; // O status agora vem correto do backend
-
-                    } else if (headerInfo?.isDateColumn) {
+                    } 
+                    // --- FIM DA CORREÇÃO 2 ---
+                    
+                    else if (headerInfo?.isDateColumn) {
                         if (value) {
                             value = formatDateToDisplay(value);
                         } else {
                             if (columnName == 'finished') {
-                                value = "Não finalizado"
+                                value = "{% trans 'Não finalizado' %}"
                             } else {
-                                value = 'Não definido'
+                                value = '{% trans "Não definido" %}'
                             }
                         }
                     } if (columnName == 'problem_detected') {
@@ -1852,7 +2647,7 @@
                         container.style.justifyContent = 'center';
                         
                         const detailsButton = document.createElement('button');
-                        detailsButton.innerHTML = 'Ver Detalhes';
+                        detailsButton.innerHTML = '{% trans "Ver Detalhes" %}';
                         detailsButton.style.cssText = `
                             background: linear-gradient(135deg, #0056b3 0%, #3a7bc8 100%);
                             color: white;
@@ -1885,29 +2680,27 @@
                         cell.appendChild(container);
 
                     } else if (columnName == 'status') {
-                        // === NOVA LÓGICA DE STATUS DINÂMICA ===
+                        // === LÓGICA DE STATUS CORRIGIDA ===
                         cell.id = `${columnName}${record.id}`;
                         cell.classList.add('field-container');
                         
-                        // Calcula o status correto baseado nas datas
-                        const calculatedStatus = calculateStatus(record);
-                        cell.textContent = calculatedStatus;
-                        cell.setAttribute('data-initial-value', calculatedStatus);
-                        // Se o status calculado for diferente do que veio do backend, atualiza
-                        if (calculatedStatus !== record[columnName]) {
-                            const mockElement = {
-                                value: calculatedStatus,
-                                closest: () => cell,
-                                classList: { add: () => {}, remove: () => {} },
-                                setAttribute: () => {}
-                            };
-                            
-                            if (typeof saveField === 'function') {
-                                saveField(mockElement);
-                            }
+                        // CORREÇÃO: Usar o status que vem do backend (record.status_display)
+                        // e apenas registrar no observer se for status China
+                        const displayStatus = record.status_display || record.status;
+                        cell.textContent = displayStatus;
+                        cell.setAttribute('data-initial-value', displayStatus);
+                        
+                        // Se é status China, registra no observer para monitoramento
+                        if (record.status === 'Aguardando China' || record.status === 'China Atrasada') {
+                            chinaStatusObserver.observe(record.id, record);
+                        }
+                        
+                        // Adiciona classe de estilo para status atrasados
+                        if (record.status_code === 'AWAITING_CHINA_LATE' || record.status_code === 'LATE') {
+                            cell.classList.add("awaiting-china-late");
                         }
 
-                    } else if ((columnName == 'deadline' && '{{has_full_permission}}' === 'True') || columnName == 'finished') {
+                    } else if ((columnName == 'deadline' && '{{has_edit_permission}}' === 'True') || columnName == 'finished') {
                         cell.id = `${columnName}${record.id}`
                         cell.classList.add('editable-field-container')
                         cell.classList.add('date-input-container')
@@ -1921,8 +2714,8 @@
                             navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
                             textInput.blur()
                             Swal.fire({
-                                title: "Texto copiado",
-                                text: 'Data copiada para área de transferência',
+                                title: "{% trans 'Texto copiado' %}",
+                                text: '{% trans "Data copiada para área de transferência" %}',
                                 showCloseButton: true,
                                 icon: 'success'
                             })
@@ -1972,13 +2765,7 @@
                                     var data = new Date(record['data'])
                                     var input_data = new Date(`${value.split('/')[2]}-${value.split('/')[1]}-${value.split('/')[0]}`)
                                     
-                                    if (input_data < data) {
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-                                    } else if (finished && input_data > finished) {
-                                        e.target.classList.add("erro")
-                                        e.target.classList.remove("success")
-                                    } else if (value.split('/')[2].length == 4 && isValidDate(value)) {
+                                    if (value.split('/')[2].length == 4 && isValidDate(value)) {
                                         e.target.classList.remove("erro")
                                         e.target.classList.add("success")
                                         atualizarDados(e)
@@ -1991,10 +2778,86 @@
                         })
                         
                         if (textInput.classList[0] == 'date-text-input') {
-                            flatpickr('.date-text-input', { 'allowInput': true, 'dateFormat': 'd/m/Y', 'minDate': 'today' })
-                        }
+                            if (value) {
+                                const fpConfig = {
+                                    'allowInput': true,
+                                    'dateFormat': 'd/m/Y',
+                                    'plugins': [function(instance) {
+                                        return {
+                                            onReady: function() {
+                                            // Botão LIMPAR
+                                            const containerFooterPopup = document.createElement('div')
+                                            containerFooterPopup.className = 'containerFooterPopup'
+                                            
+                                            const clearButton = document.createElement('button');
+                                            clearButton.className = 'clear-date-btn';
+                                            clearButton.textContent = '{% trans "Limpar" %}';
+                                            clearButton.type = 'button';
 
-                    } else if ((columnName == 'responsible' && '{{has_full_permission}}' === 'True')) {
+                                            const todayButton = document.createElement('button');
+                                            todayButton.className = 'today-date-btn';
+                                            todayButton.textContent = '{% trans "Hoje" %}';
+                                            todayButton.type = 'button';
+
+                                            clearButton.addEventListener('click', function(e) {
+                                                e.stopPropagation();
+                                                instance.clear();
+                                                instance.input.value = '';
+                                                instance.close();
+
+                                                const recordId = instance.input.closest('[data-id]')?.getAttribute('data-id');
+                                                const fieldName = instance.input.closest('[data-column]')?.getAttribute('data-column');
+                                                
+                                                fetch('{% url "update_ocorrencia" %}', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'X-CSRFToken': getCookie('csrftoken')
+                                                    },
+                                                    body: JSON.stringify({
+                                                        id: recordId,
+                                                        field: fieldName,
+                                                        value: '',
+                                                        page_num: page_num
+                                                    })
+                                                })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    if (data.status === 'success') {
+                                                        const changeEvent = new Event('change', { bubbles: true });
+                                                        instance.input.dispatchEvent(changeEvent);
+                                                        applyFiltersAndSort(false);
+                                                    }
+                                                });
+                                            });
+
+                                            todayButton.addEventListener('click', function(e) {
+                                                e.stopPropagation();
+                                                const today = new Date();
+                                                instance.setDate(today, true); // true => dispara onChange
+                                                instance.close();
+                                            });
+
+                                            // Adiciona os dois botões
+                                            containerFooterPopup.appendChild(todayButton)
+                                            containerFooterPopup.appendChild(clearButton)
+                                            instance.calendarContainer.appendChild(containerFooterPopup);
+                                        
+                                        }
+                                        };
+                                    }]
+                                };
+                                flatpickr(textInput, fpConfig);
+                            } else {
+                                // Configuração padrão para outros campos
+                                flatpickr(textInput, { 
+                                    'allowInput': true, 
+                                    'dateFormat': 'd/m/Y', 
+                                });
+                            }
+                        }   
+
+                    } else if ((columnName == 'responsible' && '{{has_edit_permission}}' === 'True')) {
                         cell.id = `${columnName}${record.id}`;
                         cell.classList.add('editable-field-container');
                         cell.classList.add('date-input-container');
@@ -2007,20 +2870,19 @@
                         select.addEventListener('change', (e) => atualizarDados(e));
 
                         const optionPlaceholder = document.createElement('option');
-                        optionPlaceholder.textContent = '-- Selecione o responsável --';
+                        optionPlaceholder.textContent = '-- {% trans "Selecione o responsável" %} --';
                         optionPlaceholder.disabled = true;
                         optionPlaceholder.selected = !value;
                         select.appendChild(optionPlaceholder);
 
                         cell.appendChild(select);
-
                         const responsaveis = responsaveisPorPais[record.country]
 
                         if (responsaveis) {
                             responsaveis.forEach(responsavel => {
                                 const opt = document.createElement('option');
-                                opt.textContent = capitalizeFirstLetter(responsavel.name)
-                                opt.value = responsavel.name
+                                opt.textContent = capitalizeFirstLetter(responsavel.name);
+                                opt.value = responsavel.name; // ou responsavel.id se preferir
                                 if (value && responsavel.name.toUpperCase() === value.toUpperCase()) {
                                     opt.selected = true;
                                 }
@@ -2043,8 +2905,8 @@
                         textArea.addEventListener('dblclick', (e) => {
                             navigator.clipboard.writeText(e.target.getAttribute('data-initial-value'))
                             Swal.fire({
-                                title: "Texto copiado",
-                                text: 'Feedback copiado para área de transferência',
+                                title: "{% trans 'Texto copiado' %}",
+                                text: '{% trans "Feedback copiado para área de transferência" %}',
                                 showCloseButton: true,
                                 icon: 'success'
                             })
@@ -2052,25 +2914,10 @@
                         cell.appendChild(textArea)
 
                     } else {
-                        if(columnName !== 'country') cell.textContent = (value !== null && value !== undefined) ? value : "";
+                        cell.textContent = (value !== null && value !== undefined) ? value.toUpperCase() : "";
                     }
                 });
             });
-            fetch('/api/get_china_id/')
-            .then(response => {
-                if (!response.ok) throw new Error('Resposta da API não foi OK');
-                return response.json();
-            })
-            .then(data => {
-                if (data.china_id) {
-                    document.querySelectorAll('option[value="china_id_placeholder"]').forEach(option => {
-                        option.value = data.china_id;
-                    });
-                } else {
-                    console.error("ID da China não recebido da API:", data.error || 'Erro desconhecido');
-                }
-            })
-        .catch(error => console.error("Falha ao buscar ID da China:", error));
             // Configura os observadores após renderizar a tabela
             setTimeout(() => {
                 setupDateInputObservers();
@@ -2078,6 +2925,13 @@
                     recalculateAllStatus();
                     statusUpdateSystem.isInitialized = true;
                 }
+                
+                // HOOK: Inicializar observers China para registros com status China
+                records.forEach(record => {
+                    if (record.status === 'Aguardando China' || record.status === 'China Atrasada') {
+                        chinaStatusObserver.observe(record.id, record);
+                    }
+                });
             }, 100);
         }
 
@@ -2199,7 +3053,6 @@
             const fieldName = container.getAttribute('data-column');
             const newValue = inputElement.value
             
-            
             fetch('{% url "update_ocorrencia" %}', {
                 method: 'POST',
                 headers: {
@@ -2215,7 +3068,7 @@
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Erro na requisição');
+                    throw new Error('{% trans "Erro na requisição" %}');
                 }
                 return response.json();
             })
@@ -2236,7 +3089,7 @@
                 setTimeout(() => inputElement.classList.remove('success'), 5000);
             })
             .catch(error => {
-                console.error('Erro:', error.message);
+                console.error('{% trans "Erro:" %}', error.message);
                 inputElement.classList.remove('saving');
                 inputElement.classList.add('error');
                 setTimeout(() => inputElement.classList.remove('error'), 5000);
@@ -2280,7 +3133,7 @@
             }
         })
         .catch(error => {
-            console.error('Erro ao carregar notificações:', error);
+            console.error('{% trans "Erro ao carregar notificações:" %}', error);
         });
     }
     
@@ -2288,7 +3141,7 @@
         const notificationList = document.getElementById('notification-list');
         
         if (notificacoes.length === 0) {
-            notificationList.innerHTML = '<div class="no-notifications">Nenhuma notificação</div>';
+            notificationList.innerHTML = '<div class="no-notifications">{% trans "Nenhuma notificação" %}</div>';
             return;
         }
         
@@ -2302,11 +3155,11 @@
                         <button
                             type="button"
                             class="notification-mark-read"
-                            title="Marcar como lida"
-                            aria-label="Marcar notificação como lida"
+                            title="{% trans 'Marcar como lida' %}"
+                            aria-label="{% trans 'Marcar notificação como lida' %}"
                             onclick="event.stopPropagation(); lerOcorrencia(${notificacao.id});"
                             >
-                            Marcar lida
+                            {% trans "Marcar lida" %}
                         </button>
                     </div>
                     <div class="notification-time">${notificacao.criada_em}</div>
@@ -2344,8 +3197,8 @@
             showProblemDetails(record);
         })
         .catch(error => {
-            console.error('Erro ao buscar ocorrência:', error);
-            alert('Erro ao carregar detalhes da ocorrência.');
+            console.error('{% trans "Erro ao buscar ocorrência:" %}', error);
+            alert('{% trans "Erro ao carregar detalhes da ocorrência." %}');
         });
     }
     
@@ -2369,7 +3222,7 @@
             }
         })
         .catch(error => {
-            console.error('Erro ao contar notificações:', error);
+            console.error('{% trans "Erro ao contar notificações:" %}', error);
         });
     }
     
@@ -2401,8 +3254,70 @@
             }
         };
     });
+        document.addEventListener("change", function(event) {
+            if (event.target.classList.contains("editable-select-status")) {
+                const selectElement = event.target;
+                const recordID = selectElement.getAttribute("data-record-id");
+                const fieldName = selectElement.getAttribute("data-field-name");
+                const newValue = selectElement.value;
 
+                fetch("{% url 'update_ocorrencia' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({
+                        id: recordID,
+                        field: fieldName,
+                        value: newValue,
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        // HOOK: Atualizar observers China quando status é alterado
+                        const record = statusUpdateSystem.records.find(r => r.id == recordID);
+                        if (record) {
+                            record.status = newValue; // Atualiza o status no record local
+                            
+                            // Se o novo status é relacionado à China, adiciona ao observer
+                            if (newValue === 'Aguardando China' || newValue === 'China Atrasada') {
+                                chinaStatusObserver.observe(recordID, record);
+                            } else {
+                                // Se não é mais status China, remove do observer
+                                chinaStatusObserver.unobserve(recordID);
+                            }
+                        }
+                        
+                        applyFiltersAndSort(); // Atualiza a tabela principal
+                        // Opcional: Atualizar o pop-up se ele ainda estiver aberto
+                        // Swal.update({ html: updatedPopupContent });
+                    } else {
+                        Swal.fire("{% trans 'Erro' %}", data.message || "{% trans 'Erro desconhecido ao atualizar status.' %}", "error");
+                    }
+                })
+                .catch(error => {
+                    console.error("{% trans 'Erro ao salvar status no pop-up:' %}", error);
+                    Swal.fire("{% trans 'Erro de Rede' %}", "{% trans 'Não foi possível conectar ao servidor para atualizar o status.' %}", "error");
+                });
+            }
+        });
+        
 </script>
+
+<!-- Modal para expandir imagens -->
+<div id="image-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; justify-content: center; align-items: center;">
+    <div style="position: relative; max-width: 90%; max-height: 90%;">
+        <img id="expanded-image" src="" style="max-width: 100%; max-height: 100%; border-radius: 8px;">
+        <div style="position: absolute; top: -50px; right: 0; display: flex; gap: 10px;">
+            <button id="download-image" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 14px;">
+                ⬇️ {% trans "Download" %}
+            </button>
+            <button id="close-modal" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 18px;">×</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>

@@ -11,4 +11,3 @@ class OcorrenciaErroConfig(AppConfig):
         Este método é executado quando o aplicativo está pronto.
         É o local recomendado para importar os sinais.
         """
-        import ocorrencia_erro.signals

@@ -30,6 +30,7 @@ body {
     justify-content: center;
     align-items: center;
     padding: 20px;
+    flex-direction: column;
 }
 
 .container {
@@ -198,6 +199,34 @@ label {
     color: var(--text);
 }
 
+.form-divider {
+    margin: 18px 0;
+    border-top: 1px solid #e2e8f0;
+}
+
+.import-section {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    padding: 16px;
+    border-radius: 6px;
+}
+.import-section.drag-over {
+    border: 2px dashed #1b3b66;
+    background: rgba(27, 59, 102, 0.07);
+    transition: 0.2s ease-in-out;
+}
+
+.import-note {
+    font-size: 14px;
+    color: #475569;
+    margin-bottom: 12px;
+}
+
+.import-hint {
+    color: #475569;
+    font-size: 12px;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
     .header {
@@ -290,4 +319,387 @@ tr.vencendo {
         font-weight: bold;
         white-space: nowrap;
     }
+}
+/* Botão abrir */
+.btn-popup {
+    background-color: #0055a5;
+    color: #fff;
+    padding: 12px 22px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s ease;
+    display: block;
+}
+.btn-popup:hover { background-color: #003f7d; }
+
+/* Overlay */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(3px);
+}
+
+/* Conteúdo */
+.popup-content {
+    background: linear-gradient(145deg, #ffffff, #f7fbff);
+    border-radius: 16px;
+    padding: 26px 26px 30px;
+    width: min(540px, 94vw);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+    position: relative;
+    animation: fadeIn 0.25s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid #e5ecf4;
+}
+.popup-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0055a5;
+    margin-bottom: 18px;
+    text-align: center;
+}
+
+/* Fechar */
+.close-btn {
+    position: absolute;
+    right: 14px;
+    top: 10px;
+    font-size: 24px;
+    color: #888;
+    cursor: pointer;
+}
+.close-btn:hover { color: #000; }
+
+/* Form */
+.popup-form .form-group {
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+}
+.popup-form label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+.popup-form input[type="text"],
+.popup-form input[type="email"] {
+    padding: 10px 12px;
+    border: 1px solid #d6d6d6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: 0.2s;
+    background: #fff;
+}
+.popup-form input:focus {
+    border-color: #0055a5;
+    box-shadow: 0 0 0 3px rgba(0,85,165,0.12);
+    outline: none;
+}
+
+/* Botões */
+.popup-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    margin-top: 18px;
+}
+.btn-enviar, .btn-cancelar {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.btn-enviar {
+    background-color: #0055a5;
+    color: #fff;
+}
+.btn-enviar:hover { background-color: #004080; }
+.btn-cancelar {
+    background-color: #e5e5e5;
+    color: #333;
+}
+.btn-cancelar:hover { background-color: #cfcfcf; }
+
+/* Animação */
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+
+/* mensagens do rodapé */
+.note { margin: 10px 0; font-weight: 600; }
+.note-success { color: #0f7a28; }
+.note-error { color: #b30021; }
+
+/* destaque de erro no campo */
+.field-error {
+  border-color: #b30021 !important;
+  box-shadow: 0 0 0 3px rgba(179,0,33,0.12) !important;
+}
+
+.form-error {
+  background: #ffe5e9;
+  border: 1px solid #ffb3c0;
+  color: #8a0014;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.input-error {
+  color: #b30021;
+  font-size: 0.83rem;
+  margin-top: 6px;
+}
+
+.field-error {
+  border-color: #b30021 !important;
+  box-shadow: 0 0 0 3px rgba(179,0,33,0.12) !important;
+}
+
+/* opcional: pequena cor padrão do banner já está definida como erro
+   você pode criar uma classe .form-info para avisos neutros */
+.form-info {
+  background: #eaf6ff;
+  border: 1px solid #bfe3ff;
+  color: #003a66;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+
+/* Banner base */
+.form-banner {
+  display: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+/* Estado: erro (vermelho) */
+.form-banner.is-error {
+  background: #ffe5e9;
+  border: 1px solid #ffb3c0;
+  color: #8a0014;
+}
+
+/* Estado: informativo (azul) */
+.form-banner.is-info {
+  background: #eaf6ff;
+  border: 1px solid #bfe3ff;
+  color: #003a66;
+}
+
+/* Estado: sucesso (verde) */
+.form-banner.is-success {
+  background: #e8f6ee;
+  border: 1px solid #bfe8cf;
+  color: #0f5f2b;
+}
+
+#vencimento_update {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  font-size: 15px;
+  transition: all 0.2s ease-in-out;
+  color: #333;
+  cursor: pointer;
+}
+
+/* Ícone do calendário (remove padrão e adiciona customizado) */
+#vencimento_update::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml,%3Csvg fill='%234A90E2' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z'/%3E%3C/svg%3E")
+    no-repeat center;
+  opacity: 0.7;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+/* Efeito hover/focus */
+#vencimento_update:hover,
+#vencimento_update:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 4px rgba(74, 144, 226, 0.4);
+  outline: none;
+}
+
+/* Valor exibido */
+#vencimento_update:not(:disabled) {
+  color: #222;
+}
+
+/* Estado desabilitado */
+#vencimento_update:disabled {
+  background-color: #f8f8f8;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* Ajuste do pequeno texto de erro */
+.input-error[data-for="vencimento"] {
+  color: #c62828;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+#anos_para_vencimento,
+#vencimento_create {
+  border: 1.5px dashed #4a90e2;
+}
+.admin-fields {
+  border: 1px dashed var(--primary-light);
+  background: #f7fbff;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+/* (Opcional) Badge ADMIN ao lado do título/label da seção */
+.admin-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #0b3d7a;
+  background: #e6f0ff;
+  border: 1px solid #cfe2ff;
+  border-radius: 999px;
+}
+
+/* Inputs do bloco admin herdam estética dos demais, com um “sotaque” */
+#anos_para_vencimento,
+#vencimento_create {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d6d6d6;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: 0.2s;
+  background: #fff;
+  color: var(--text);
+}
+
+/* Sutil diferenciação visual para “admin” */
+#anos_para_vencimento,
+#vencimento_create {
+  box-shadow: inset 0 0 0 1px rgba(0,85,165,0.06);
+}
+
+/* Foco/hover coerentes com o tema */
+#anos_para_vencimento:hover,
+#vencimento_create:hover,
+#anos_para_vencimento:focus,
+#vencimento_create:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0,85,165,0.12);
+  outline: none;
+}
+
+/* Placeholder/valor */
+#anos_para_vencimento::placeholder,
+#vencimento_create::placeholder {
+  color: var(--text-light);
+}
+
+/* Estado inválido (quando marcado via JS) */
+#anos_para_vencimento.field-error,
+#vencimento_create.field-error {
+  border-color: #b30021 !important;
+  box-shadow: 0 0 0 3px rgba(179,0,33,0.12) !important;
+}
+
+/* Mensagens de erro por campo */
+.input-error[data-for="anos_para_vencimento"],
+.input-error[data-for="vencimento"] {
+  color: #b30021;
+  font-size: 0.83rem;
+  margin-top: 6px;
+  display: block;
+}
+
+/* Ícone do calendário para o campo de criação (coeso com o update) */
+#vencimento_create::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml,%3Csvg fill='%230055a5' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z'/%3E%3C/svg%3E")
+              no-repeat center;
+  opacity: 0.75;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+/* Harmonizar o campo de update e o de criação (mesma “pegada”) */
+#vencimento_update,
+#vencimento_create {
+  cursor: pointer;
+}
+
+/* Number input sem setinhas (mais limpo) */
+#anos_para_vencimento::-webkit-outer-spin-button,
+#anos_para_vencimento::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+#anos_para_vencimento {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* Responsividade do bloco admin */
+@media (max-width: 420px) {
+  .admin-fields {
+    padding: 12px;
+    border-radius: 8px;
+  }
+}
+
+#data_create {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d6d6d6;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: 0.2s;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+}
+
+#data_create:hover,
+#data_create:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0,85,165,0.12);
+  outline: none;
+}
+
+#data_create::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml,%3Csvg fill='%230055a5' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z'/%3E%3C/svg%3E") no-repeat center;
+  opacity: 0.75;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.input-error[data-for="data"] {
+  color: #b30021;
+  font-size: 0.83rem;
+  margin-top: 6px;
+  display: block;
 }

@@ -1,3 +1,4 @@
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -48,6 +49,8 @@
       display: flex;
       gap: 16px;
       z-index: 1000;
+      justify-content:space-between;
+      width: calc(100% - 40px);
     }
 
     .buttons_log {
@@ -89,7 +92,7 @@
     .login:hover { background-color: var(--primary-dark); box-shadow: 0 4px 14px var(--shadow-hover); }
 
     /* FORMULÁRIO */
-    form {
+    form#form-ocorrencia {
       background-color: white;
       padding: 2.5rem 3rem;
       border-radius: 10px;
@@ -157,6 +160,13 @@
     input[type="radio"] { appearance: none; width: 20px; height: 20px; border: 2px solid #ccc; border-radius: 50%; background-color: #fff; transition: background-color 0.2s ease; }
     input[type="radio"]:checked { background-color: #009EE0; border: 2px solid #009EE0; }
     input[type="radio"]:hover { cursor: pointer; border: 2px solid #15446D; }
+
+    .serial-hint {
+      display: none;
+      color: var(--primary);
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
 
     /* UPLOAD DE ARQUIVOS */
     .file-upload { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
@@ -251,121 +261,234 @@
 </head>
 <body>
   <div id="actions_log">
+    <span>
+      {% include 'ocorrencia/components/toogleCountry.html' with request=request %}
+    </span>
+    <span>
+
     {% if has_full_permission %}
-      <button class="new_user buttons_log" onclick="newUser()">Criar novo usuário</button>
+      <button class="new_user buttons_log" onclick="newUser()">{% trans "Criar novo usuário" %}</button>
     {% endif %}
     {% if user.is_authenticated %}
-      <button class="logout buttons_log" onclick="logOut()">Logout</button>
-      <button class="redirecionar buttons_log" onclick="redirecionar()">Voltar para tabela</button>
+      <button class="logout buttons_log" onclick="logOut()">{% trans "Logout" %}</button>
+      <button class="redirecionar buttons_log" onclick="redirecionar()">{% trans "Voltar para tabela" %}</button>
     {% else %}
-      <button class="login buttons_log" onclick="handleLogin()">Login</button>
+      <button class="login buttons_log" onclick="handleLogin()">{% trans "Login" %}</button>
     {% endif %}
+    </span>
   </div>
 
   <form method="POST" enctype="multipart/form-data" id="form-ocorrencia">
     {% csrf_token %}
 
     <div class="form-pair">
-      <label for="country">País</label>
+      <label for="country">{% trans "País" %}</label>
       {% if has_full_permission %}
         <select id="country" name="country" required>
-          <option value="">-- Selecione o país --</option>
+          <option value="">{% trans "-- Selecione o país --" %}</option>
           {% for pais in paises %}<option value="{{ pais.id }}">{{ pais.name }}</option>{% endfor %}
         </select>
       {% else %}
         {% if paises %}
           <select id="country" name="country">
-            <option value="">-- Selecione o país --</option>
+            <option value="">{% trans "-- Selecione o país --" %}</option>
             {% for pais in paises %}<option value="{{ pais.id }}">{{ pais.name }}</option>{% endfor %}
           </select>
         {% else %}
-          <input type="text" id="country" name="country" value="Sem país atribuído" readonly />
+          <input type="text" id="country" name="country" value="{% trans 'Sem país atribuído' %}" readonly />
         {% endif %}
       {% endif %}
     </div>
 
     <div class="form-pair">
-      <label for="technical">Técnico</label>
-      <input type="text" id="technical" name="technical" required />
+      <label for="technical">{% trans "Técnico" %}</label>
+      {% if username and not has_full_permission %}
+        <input type="text" id="technical" name="technical" required value="{{ username|default:'' }}">
+      {% else %}
+        <input type="text" id="technical" name="technical" required />
+      {% endif %}
     </div>
 
     <div class="form-pair full-width" id="span_ticket">
-      <label for="ticket">Ticket</label>
+      <label for="ticket">{% trans "Ticket" %}</label>
       <input type="text" id="ticket" name="ticket" />
     </div>
 
     {% if has_full_permission %}
       <div class="form-pair">
-        <label for="responsible">Responsável</label>
+        <label for="responsible">{% trans "Responsável" %}</label>
         <select id="responsible" name="responsible">
-          <option value="">-- Selecione o responsável --</option>
-          {% for responsavel in todos_responsaveis_raw %}<option value="{{ responsavel.name }}">{{ responsavel.name }}</option>{% endfor %}
+          <option value="">{% trans "-- Selecione o responsável --" %}</option>
+          {% for responsavel in todos_responsaveis_raw %}
+            <option value="{{ responsavel.name }}">{{ responsavel.name }}</option>
+          {% endfor %}
         </select>
       </div>
     {% endif %}
 
     <div class="form-pair">
-      <label for="device">Equipamentos</label>
+      <label for="device">{% trans "Equipamentos" %}</label>
       <select id="device" name="device" required>
-        <option value="">-- Selecione o equipamento --</option>
-        {% for device in todos_equipamentos_raw %}<option value="{{ device.id }}">{{ device.name }}</option>{% endfor %}
+        <option value="">{% trans "-- Selecione o equipamento --" %}</option>
+        {% for equipamento in todos_equipamentos_raw %}
+          <option value="{{ equipamento.id }}">{{ equipamento.name }}</option>
+        {% endfor %}
       </select>
     </div>
 
     <div class="form-pair full-width">
-      <label for="area">Área</label>
+      <label for="area">{% trans "Área" %}</label>
       <span class="area">
-        <span><input type="radio" name="area_radio" id="IMMO" value="IMMO" required><label for="IMMO" translate="no">IMMO</label></span>
-        <span><input type="radio" name="area_radio" id="Diagnosis" value="Diagnosis"><label for="Diagnosis">Diagnosis</label></span>
-        <span><input type="radio" name="area_radio" id="Device" value="Device"><label for="Device">Device</label></span>
+        <span><input type="radio" name="area_radio" id="IMMO" value="IMMO" required><label for="IMMO">{% trans "IMMO" %}</label></span>
+        <span><input type="radio" name="area_radio" id="Diagnosis" value="Diagnosis"><label for="Diagnosis">{% trans "Diagnosis" %}</label></span>
+        <span><input type="radio" name="area_radio" id="Device" value="Device"><label for="Device">{% trans "Device" %}</label></span>
       </span>
     </div>
 
-    <div class="form-pair"><label for="serial">Serial</label><input type="text" id="serial" name="serial" required /></div>
-    <div class="form-pair"><label for="brand">Marca</label><input type="text" id="brand" name="brand" required /></div>
-    <div class="form-pair full-width"><label for="model">Modelo</label><input type="text" id="model" name="model" required /></div>
-    <div class="form-pair"><label for="year">Ano</label><input type="text" id="year" name="year" required /></div>
-    <div class="form-pair"><label for="version">Versão</label><input type="text" id="version" name="version" required /></div>
+    <script>
+      // Lógica de exibição condicional para Tipo de ECU e Tipo de Motor
+      document.addEventListener('DOMContentLoaded', function() {
+        const areaRadios = document.querySelectorAll('input[name="area_radio"]');
+        const ecuField = document.getElementById('ecu-field');
+        const motorField = document.getElementById('motor-field');
+        const chaveField = document.getElementById('chave-field');
+
+        function updateConditionalFields() {
+          const selectedArea = document.querySelector('input[name="area_radio"]:checked');
+          
+          if (selectedArea) {
+            const areaValue = selectedArea.value;
+            
+            // Tipo de ECU: Exibir para IMMO e Diagnosis
+            if (areaValue === 'IMMO' || areaValue === 'Diagnosis') {
+              ecuField.style.display = 'flex';
+              chaveField.style.display = 'flex';
+            } else {
+              ecuField.style.display = 'none';
+              document.getElementById('tipo_ecu').value = ''; // Limpa o valor
+            }
+
+            if (areaValue === 'IMMO'){
+              chaveField.style.display = 'flex';
+            }else{
+              chaveField.style.display = 'none';
+              document.getElementById('tipo_chave').value = ''; // Limpa o valor
+            }
+
+            // Tipo de Motor: Exibir apenas para Diagnosis
+            if (areaValue === 'Diagnosis') {
+              motorField.style.display = 'flex';
+            } else {
+              motorField.style.display = 'none';
+              document.getElementById('tipo_motor').value = ''; // Limpa o valor
+            }
+          } else {
+            // Oculta tudo se nenhuma área estiver selecionada
+            ecuField.style.display = 'none';
+            motorField.style.display = 'none';
+            chaveField.style.display = 'none';
+            document.getElementById('tipo_ecu').value = '';
+            document.getElementById('tipo_motor').value = '';
+            document.getElementById('tipo_chave').value = '';
+          }
+        }
+
+        // Adiciona o listener para todos os botões de rádio
+        areaRadios.forEach(radio => {
+          radio.addEventListener('change', updateConditionalFields);
+        });
+
+        // Executa na carga da página para o caso de um valor já estar selecionado (ex: erro de submissão)
+        updateConditionalFields();
+      });
+    </script>
+
+    <div class="form-pair">
+      <label for="serial">{% trans "Serial" %}</label>
+      <input type="text" id="serial" name="serial" />
+      <small id="serial-hint" class="serial-hint"></small>
+    </div>
+
+    <div class="form-pair">
+      <label for="vin">{% trans "VIN" %}</label>
+      <input type="text" id="vin" name="vin" required maxlength="17"/>
+    </div>
+
+    <div class="form-pair">
+      <label for="brand">{% trans "Marca" %}</label>
+      <input type="text" id="brand" name="brand" required />
+    </div>
+
+    <div class="form-pair">
+      <label for="contact">{% trans "Telefone de contato" %}</label>
+      <input type="text" id="contact" name="contact" required />
+    </div>
+
+    <div class="form-pair">
+      <label for="model">{% trans "Modelo" %}</label>
+      <input type="text" id="model" name="model" required />
+    </div>
+
+    <div class="form-pair">
+      <label for="year">{% trans "Ano" %}</label>
+      <input type="text" id="year" name="year" required />
+    </div>
+
+    <div class="form-pair conditional-field" id="ecu-field" style="display: none;">
+      <label for="tipo_ecu">{% trans "Tipo de ECU" %}</label>
+      <input type="text" id="tipo_ecu" name="tipo_ecu" />
+    </div>
+
+    <div class="form-pair conditional-field" id="motor-field" style="display: none;">
+      <label for="tipo_motor">{% trans "Tipo de Motor" %}</label>
+      <input type="text" id="tipo_motor" name="tipo_motor" />
+    </div>
+    <div class="form-pair conditional-field" id="chave-field" style="display: none;">
+      <label for="tipo_chave">{% trans "Tipo Chave" %}</label>
+      <input type="text" id="tipo_chave" name="tipo_chave" />
+    </div>
+
+    <div class="form-pair">
+      <label for="version">{% trans "Versão" %}</label>
+      <input type="text" id="version" name="version" required />
+    </div>
+   
 
     {% if has_full_permission %}
       <div class="form-pair">
-        <label for="deadline">Deadline</label>
+        <label for="deadline">{% trans "Deadline" %}</label>
         <input type="text" id="deadline" name="deadline" required />
       </div>
-      <div class="form-pair">
-        <label for="status">Status</label>
-        <select id="status" name="status">
-          <option value="">-- Estado da ocorrência --</option>
-          <option value="Requisitado">Requisitado</option>
-          <option value="Concluído">Concluído</option>
-          <option value="Em progresso">Em progresso</option>
-          <option value="Atrasado">Atrasado</option>
-        </select>
-      </div>
-    {% else %}
-      <input type="hidden" name="status" value="Requisitado" />
     {% endif %}
 
+    <div class="form-pair">
+      <label for="status">{% trans "Status" %}</label>
+      <select id="status" name="status">
+        <option value="Requisitado" selected="selected">{% trans "Status padrão" %}</option>
+        <option value="Aguardando China">{% trans "Aguardando China" %}</option>
+      </select>
+    </div>
+
     <div class="form-pair full-width">
-      <label for="problem_detected">Problema Detectado</label>
+      <label for="problem_detected">{% trans "Problema Detectado" %}</label>
       <textarea id="problem_detected" name="problem_detected" required></textarea>
     </div>
 
     <div class="file-upload-wrapper full-width">
-      <label>Anexar Arquivo(s)</label>
+      <label>{% trans "Anexar Arquivo(s)" %}</label>
       <div id="file-preview-container" class="file-preview-container"></div>
       <span style="display:flex; gap:20px;">
         <div class="file-upload">
-          <label for="arquivo" class="custom-file-button">Selecionar Arquivos</label>
+          <label for="arquivo" class="custom-file-button">{% trans "Selecionar Arquivos" %}</label>
           <input type="file" id="arquivo" name="arquivo" multiple />
         </div>
-        <button type="button" id="clear-all-files-btn" class="clear-all-files-btn" style="display: none;">Limpar Tudo</button>
+        <button type="button" id="clear-all-files-btn" class="clear-all-files-btn" style="display: none;">{% trans "Limpar Tudo" %}</button>
       </span>
     </div>
 
     <div class="form-pair full-width">
       <button type="submit" id="submit-btn" required>
-        <span id="button-text" style="color:#fff">Cadastrar Ocorrência</span>
+        <span id="button-text" style="color:#fff">{% trans "Cadastrar Ocorrência" %}</span>
         <span class="spinner" id="button-spinner"></span>
       </button>
     </div>
@@ -375,9 +498,10 @@
     <div id="error-popup-content">
       <h3 id="popup-title" style="margin-bottom: 10px;"></h3>
       <p id="popup-message" style="text-align: center; margin-bottom: 20px;"></p>
-      <button id="error-popup-close-btn" style="background-color: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Fechar</button>
+      <button id="error-popup-close-btn" style="background-color: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">{% trans "Fechar" %}</button>
     </div>
   </div>
+
 
   <script>
     // Dados do backend
@@ -441,13 +565,78 @@
     document.addEventListener('DOMContentLoaded', function() {
       flatpickr('#deadline', { 'allowInput': false, 'dateFormat': 'd/m/Y', 'minDate': 'today' });
 
-      // Elementos do DOM para filtros
-      const countrySelect = document.getElementById('country');
-      const responsibleSelect = document.getElementById('responsible');
-      const inputTicket = document.getElementById('span_ticket');
-      const ticketField = document.getElementById("ticket");
+	    // Elementos do DOM para filtros
+	    const countrySelect = document.getElementById('country');
+	    const responsibleSelect = document.getElementById('responsible');
+	    const inputTicket = document.getElementById('span_ticket');
+	    const ticketField = document.getElementById("ticket");
 
-      // Funções de filtro para selects
+	    // Funções de filtro para selects
+
+	    // ----------------------------------------------------------------------------------
+	    // LÓGICA DE VALIDAÇÃO THINKCAR
+	    // ----------------------------------------------------------------------------------
+
+	    const deviceSelect = document.getElementById('device');
+	    const serialInput = document.getElementById('serial');
+	    const serialHint = document.getElementById('serial-hint');
+	    let todosEquipamentos = JSON.stringify({{ todos_equipamentos_raw|safe }}); // Lista de {id: X, name: 'Y'}
+	    todosEquipamentos = JSON.parse(todosEquipamentos)
+	    // Encontra o ID do equipamento Thinkcar para usar na lógica de validação
+	    const thinkcarDevice = todosEquipamentos.find(d => d.name.toUpperCase().includes('THINKCAR') || d.name.toUpperCase().includes('READER'));
+	    
+	    // Função de validação do serial (a mesma fornecida pelo usuário)
+	    function validarSerial(serial) {
+	        // Remove espaços e converte para maiúsculas
+	        serial = serial.trim().toUpperCase();
+	        
+	        // Padrão regex para Thinkcar: 12 alfanuméricos
+	        const padrao = /^[A-Za-z0-9]{0,12}$/;
+	        return padrao.test(serial);
+	    }
+
+	    function checkThinkcarValidation() {
+	        if (!thinkcarDevice) return true; // Se não houver Thinkcar cadastrado, ignora a validação
+
+	        const selectedDeviceId = deviceSelect.value;
+	        const selectedDevice = todosEquipamentos.find(d => d.id == selectedDeviceId);
+	        
+	        // Verifica se o equipamento selecionado é um Thinkcar
+	        // Verifica se o equipamento selecionado é um Thinkcar OU um Reader
+	        const isThinkcar = selectedDevice && (selectedDevice.name.toUpperCase().includes('THINKCAR') || selectedDevice.name.toUpperCase().includes('READER'));
+	        
+	        // Se o campo serial não existir, não faz nada (embora deva existir)
+	        if (!serialInput) return true;
+
+	        if (isThinkcar) {
+	            serialHint.style.display = 'block';
+	            serialHint.textContent = "Serial obrigatório para Thinkcar: 12 alfanuméricos.";
+	            
+	            const isValid = validarSerial(serialInput.value);
+	            if (!isValid) {
+	                serialInput.style.borderColor = 'var(--error)';
+	                serialInput.style.boxShadow = '0 0 4px var(--error)';
+	                return false;
+	            } else {
+	                serialInput.style.borderColor = '';
+	                serialInput.style.boxShadow = '';
+	                return true;
+	            }
+	        } else {
+	            serialHint.style.display = 'none';
+	            serialInput.style.borderColor = '';
+	            serialInput.style.boxShadow = '';
+	            return true;
+	        }
+	    }
+
+	    // Adiciona event listeners para validação em tempo real
+	    deviceSelect.addEventListener('change', checkThinkcarValidation);
+	    serialInput.addEventListener('input', checkThinkcarValidation);
+
+	    // ----------------------------------------------------------------------------------
+	    // FIM DA LÓGICA DE VALIDAÇÃO THINKCAR
+	    // ----------------------------------------------------------------------------------
       function filterResponsiblesByCountry(countryId) {
         const currentResponsible = responsibleSelect.value;
         responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
@@ -480,12 +669,12 @@
       }
 
       // Lógica de visibilidade do campo Ticket
-      inputTicket.style.display = 'none';
+      inputTicket.style.display = 'block';
       ticketField.required = false;
       countrySelect.addEventListener('change', function(e) {
         ticketField.value = '';
         const nomePais = paises[e.target.value];
-        const showTicket = nomePais && ["ESPANHA", "PORTUGAL"].includes(nomePais.toUpperCase());
+        const showTicket = nomePais;
         inputTicket.style.display = showTicket ? 'block' : 'none';
       });
 
@@ -506,7 +695,11 @@
         });
       }
 
-      // --- LÓGICA DE UPLOAD DE ARQUIVOS COM PRÉ-VISUALIZAÇÃO ---
+    // ----------------------------------------------------------------------------------
+    // LÓGICA DE VALIDAÇÃO THINKCAR (MOVIDA PARA DENTRO DO DOMContentLoaded)
+    // ----------------------------------------------------------------------------------
+    
+    // --- LÓGICA DE UPLOAD DE ARQUIVOS COM PRÉ-VISUALIZAÇÃO ---
       const uploadWrapper = document.querySelector('.file-upload-wrapper');
       const fileInput = document.getElementById('arquivo');
       const previewContainer = document.getElementById('file-preview-container');
@@ -527,10 +720,23 @@
           fileInput.files = fileStore.files;
         };
 
+        const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB em bytes
+
         const handleFiles = (files) => {
-          for (const file of files) { fileStore.items.add(file); }
+          for (const file of files) {
+            if (file.size > MAX_FILE_SIZE) {
+              showPopup(
+                'error',
+                'Arquivo muito grande',
+                `O arquivo "${file.name}" excede o limite de 1GB e não pode ser enviado.`
+              );
+              continue; // pula o arquivo grande
+            }
+            fileStore.items.add(file);
+          }
           renderPreviews();
         };
+
 
         previewContainer.addEventListener('click', (e) => {
           if (e.target.classList.contains('remove-file-btn')) {
@@ -560,71 +766,89 @@
         });
         uploadWrapper.addEventListener('drop', e => handleFiles(e.dataTransfer.files), false);
         fileInput.addEventListener('change', () => handleFiles(fileInput.files));
-      }
-    });
-
-    // Event listener para o submit do formulário
-    formOcorrencia.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const form = e.target;
-    const data = new FormData(form);
-
-    // Validação básica do país (frontend)
-    if (form.querySelector('#country') && form.querySelector('#country').value === "") {
-        showPopup('error', 'Falha', 'Por favor, selecione um país.');
-        return;
-    }
-
-    submitBtnText.style.display = 'none';
-    submitBtnSpinner.classList.add('visible');
-    submitBtn.disabled = true;
-
-    try {
-        const response = await fetch("{% url 'subir_ocorrencia' %}", {
-            method: "POST",
-            headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
-            body: data,
-            credentials: 'same-origin'
-        });
-
-        // Verifica se a resposta é JSON (sucesso/erro tratado)
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            const result = await response.json();
-            
-            if (result.status === "success") {
-                showPopup('success', 'Sucesso', result.message);
-                form.reset();
-                document.getElementById('clear-all-files-btn').click();
-                
-                if ('{{has_full_permission}}' == 'True') {
-                    const responsibleSelect = document.getElementById('responsible');
-                    responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
-                    todosResponsaveis.forEach(r => {
-                        const opt = document.createElement('option');
-                        opt.value = r.name;
-                        opt.textContent = r.name;
-                        responsibleSelect.appendChild(opt);
-                    });
-                }
-            } else {
-                // Exibe mensagem de erro específica do backend
-                showPopup('error', 'Falha', result.message || "Erro ao processar a requisição.");
-            }
-        } else {
-            // Se não for JSON, trata como erro genérico
-            throw new Error('Resposta inesperada do servidor');
-        }
-    } catch (error) {
-        // Captura erros de rede ou outros erros inesperados
-        showPopup('error', 'Erro inesperado', error.message || "Ocorreu um erro inesperado. Tente novamente.");
-    } finally {
-        submitBtnText.style.display = 'inline';
-        submitBtnSpinner.classList.remove('visible');
-        submitBtn.disabled = false;
-    }
-});
-  </script>
+	      }
+	    
+	    // Event listener para o submit do formulário
+	    formOcorrencia.addEventListener('submit', async (e) => {
+	    e.preventDefault();
+	    
+	    // Garante que os campos ocultos não sejam enviados com valores antigos
+	    if (document.getElementById('ecu-field').style.display === 'none') {
+	        document.getElementById('tipo_ecu').value = '';
+	    }
+	    if (document.getElementById('motor-field').style.display === 'none') {
+	        document.getElementById('tipo_motor').value = '';
+	    }
+	    if (document.getElementById('chave-field').style.display === 'none') {
+	        document.getElementById('tipo_chave').value = '';
+	    }
+	    
+	    const form = e.target;
+	    const data = new FormData(form);
+	
+	    // Validação básica do país (frontend)
+	    if (form.querySelector('#country') && form.querySelector('#country').value === "") {
+	        showPopup('error', 'Falha', 'Por favor, selecione um país.');
+	        return;
+	    }
+	    
+	    // Validação Thinkcar (frontend)
+	    if (!checkThinkcarValidation()) {
+	        // A função checkThinkcarValidation já estiliza o campo com erro
+	        showPopup('error', 'Falha', 'Serial inválido para o equipamento Thinkcar selecionado.');
+	        return;
+	    }
+	
+	    submitBtnText.style.display = 'none';
+	    submitBtnSpinner.classList.add('visible');
+	    submitBtn.disabled = true;
+	
+	    try {
+	        const response = await fetch("{% url 'subir_ocorrencia' %}", {
+	            method: "POST",
+	            headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
+	            body: data,
+	            credentials: 'same-origin'
+	        });
+	
+	        // Verifica se a resposta é JSON (sucesso/erro tratado)
+	        const contentType = response.headers.get('content-type');
+	        if (contentType && contentType.includes('application/json')) {
+	            const result = await response.json();
+	            
+	            if (result.status === "success") {
+	                showPopup('success', 'Sucesso', result.message);
+	                form.reset();
+	                document.getElementById('clear-all-files-btn').click();
+	                
+	                if ('{{has_full_permission}}' == 'True') {
+	                    const responsibleSelect = document.getElementById('responsible');
+	                    responsibleSelect.innerHTML = '<option value="">-- Selecione o responsável --</option>';
+	                    todosResponsaveis.forEach(r => {
+	                        const opt = document.createElement('option');
+	                        opt.value = r.name;
+	                        opt.textContent = r.name;
+	                        responsibleSelect.appendChild(opt);
+	                    });
+	                }
+	            } else {
+	                // Exibe mensagem de erro específica do backend
+	                showPopup('error', 'Falha', result.message || "Erro ao processar a requisição.");
+	            }
+	        } else {
+	            // Se não for JSON, trata como erro genérico
+	            throw new Error('Resposta inesperada do servidor');
+	        }
+	    } catch (error) {
+	        // Captura erros de rede ou outros erros inesperados
+	        showPopup('error', 'Erro inesperado', error.message || "Ocorreu um erro inesperado. Tente novamente.");
+	    } finally {
+	        submitBtnText.style.display = 'inline';
+	        submitBtnSpinner.classList.remove('visible');
+	        submitBtn.disabled = false;
+	    }
+	});
+	  });
+	  </script>
 </body>
 </html>

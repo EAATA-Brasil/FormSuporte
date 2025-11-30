@@ -1,4 +1,5 @@
 import json
+import base64
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import ChatMessage, Record, Notificacao
@@ -28,7 +29,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({
                 'message': message['message'],
                 'author': message['author__username'],
-                'timestamp': message['timestamp'].isoformat()
+                'timestamp': message['timestamp'].isoformat(),
+                'image_base64': message.get('image_base64'),
+                'image_type': message.get('image_type'),
+                'image_name': message.get('image_name')
             }))
             
     async def disconnect(self, close_code):
@@ -40,18 +44,32 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        message = text_data_json['message']
-        saved_message = await self.save_message(message)
+        message = text_data_json.get('message', '')
+        image_base64 = text_data_json.get('image_base64')
+        image_type = text_data_json.get('image_type')
+        image_name = text_data_json.get('image_name')
+        
+        # Salva a mensagem no banco de dados
+        saved_message = await self.save_message(message, image_base64, image_type, image_name)
+
+        # Prepara os dados para enviar para o grupo
+        message_data = {
+            'type': 'chat_message',
+            'message': message,
+            'author': self.user.username,
+            'timestamp': saved_message.timestamp.isoformat()
+        }
+        
+        # Adiciona dados da imagem se existirem
+        if image_base64:
+            message_data['image_base64'] = image_base64
+            message_data['image_type'] = image_type
+            message_data['image_name'] = image_name
 
         # Envia a mensagem para o grupo do chat
         await self.channel_layer.group_send(
             self.record_group_name,
-            {
-                'type': 'chat_message',
-                'message': message,
-                'author': self.user.username,
-                'timestamp': saved_message.timestamp.isoformat()
-            }
+            message_data
         )
 
         # Lógica para enviar a notificação
@@ -61,17 +79,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_send(
                 recipient_group_name,
                 {
-                    'type': 'new_chat_message',  # <--- Este é o manipulador de evento no NotificationConsumer
+                    'type': 'new_chat_message',
                     'message': "Nova mensagem de chat",
                     'sender': self.user.username,
                     'record_id': self.record_id,
                 }
             )
-            # print(f"RECEIVE: Notificação enviada para o grupo do usuário: {recipient_group_name}")
             await self.criar_notificacao_feedback(self.record_id, recipient_id, self.user.username)
-
-
-    # No seu ChatConsumer.py
 
     @database_sync_to_async
     def criar_notificacao_feedback(self, record_id, recipient_user_id, sender_username):
@@ -88,25 +102,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
             Notificacao.objects.create(
                 user=usuario,
                 record=record,
-                tipo='conversa_chat',  # Ou um tipo apropriado para o chat
+                tipo='conversa_chat',
                 titulo=titulo,
                 resumo=resumo
             )
-            # print("Notificação de mensagem criada com sucesso no banco de dados.")
 
         except Exception as e:
             print(f"Erro ao criar notificação de mensagem: {e}")
 
-
     async def chat_message(self, event):
-        message = event['message']
-        author = event['author']
-        timestamp = event['timestamp']
-        await self.send(text_data=json.dumps({
-            'message': message,
-            'author': author,
-            'timestamp': timestamp
-        }))
+        message_data = {
+            'message': event['message'],
+            'author': event['author'],
+            'timestamp': event['timestamp']
+        }
+        
+        # Adiciona dados da imagem se existirem
+        if 'image_base64' in event:
+            message_data['image_base64'] = event['image_base64']
+            message_data['image_type'] = event.get('image_type')
+            message_data['image_name'] = event.get('image_name')
+        
+        await self.send(text_data=json.dumps(message_data))
         
     @database_sync_to_async
     def get_chat_history(self):
@@ -114,15 +131,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
             ChatMessage.objects.filter(record_id=self.record_id)
             .select_related('author')
             .order_by('timestamp')
-            .values('message', 'author__username', 'timestamp')
+            .values('message', 'author__username', 'timestamp', 'image_base64', 'image_type', 'image_name')
         )
 
     @database_sync_to_async
-    def save_message(self, message):
+    def save_message(self, message, image_base64=None, image_type=None, image_name=None):
+        # Se a imagem em Base64 for muito grande, você pode truncar para salvar no banco
+        # Ou considerar armazenar apenas o fato de que há uma imagem
+        if image_base64 and len(image_base64) > 10000:  # Exemplo: se for maior que 10k caracteres
+            # Pode salvar apenas uma flag ou um thumbnail muito pequeno
+            # Para este exemplo, vamos salvar normalmente
+            pass
+            
         return ChatMessage.objects.create(
             record_id=self.record_id,
             author=self.user,
-            message=message
+            message=message,
+            image_base64=image_base64,
+            image_type=image_type,
+            image_name=image_name
         )
 
     @database_sync_to_async
@@ -132,7 +159,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             
             responsible_user = User.objects.filter(username=ocorrencia.responsible).first()
             if self.user.username == ocorrencia.responsible:
-                # Substitua 'nome_de_usuario_do_gestor' pelo valor que você define manualmente
                 manager_user = User.objects.filter(username='welton').first()
                 return manager_user.id if manager_user else None
             else:

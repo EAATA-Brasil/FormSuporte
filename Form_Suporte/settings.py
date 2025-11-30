@@ -13,6 +13,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import sys
+from dotenv import load_dotenv
+from django.utils.translation import gettext_lazy as _
+
+# Carregar variáveis do .env
+load_dotenv()
 
 # Configuração para WeasyPrint
 if sys.platform == 'win32':
@@ -36,13 +41,13 @@ elif sys.platform.startswith('linux'):
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+LOCALE_PATHS = [os.path.join(BASE_DIR,'locale'),]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-6u$z58nj9!@tqbyx5$f103&-jj3^%1ve=p@z@aomo89#ugn6wp'
+SECRET_KEY = os.getenv('SECRET_KEY', ''),
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -52,12 +57,20 @@ ALLOWED_HOSTS = [
     '0.0.0.0',
     'localhost',
     '*.ngrok-free.app',
+    '*.ngrok-free.dev',
     '*',
-	'82.25.71.76'
+	'82.25.71.76',
+    'http://82.25.71.76',
+    'http://127.0.0.1',
+    'http://localhost',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://4cd687ce291b.ngrok-free.app'
+    'https://jodi-nonbathing-cherise.ngrok-free.dev',
+    'http://82.25.71.76',
+    'http://127.0.0.1',
+    'http://0.0.0.0',
+    'https://eaatainterno.duckdns.org'
 ]
 
 # Application definition
@@ -90,7 +103,7 @@ CHANNEL_LAYERS = {
         # O Django Channels usará o Redis para gerenciar a comunicação entre os consumidores
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('localhost', 6379)], # Ajuste o host e a porta do seu servidor Redis
+            'hosts': [(os.getenv('REDIS_HOST', ''), 6379)], # Ajuste o host e a porta do seu servidor Redis
         },
     },
 }
@@ -106,6 +119,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -136,35 +150,16 @@ TEMPLATES = [
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db2.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
-        'NAME': 'servidorEaata',          # nome do banco de dados MySQL
-        'USER': 'root',           # usuário do MySQL
-        'PASSWORD': 'eaata360',         # senha do usuário
-        'HOST': 'localhost',                    # ou IP do servidor MySQL
-        'PORT': '3306',                        # porta padrão do MySQL
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': os.getenv('DB_NAME', os.path.join(BASE_DIR, 'db.sqlite3')),
+        'USER': os.getenv('DB_USER', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', ''),
+        'PORT': os.getenv('DB_PORT', ''),
     }
 }
-
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',  # MySQL como backend
-#         'NAME': 'servidorEaata',          # nome do banco de dados MySQL
-#         'USER': 'remote',           # usuário do MySQL
-#         'PASSWORD': 'eaata360',         # senha do usuário
-#         'HOST': '0.tcp.sa.ngrok.io',                    # ou IP do servidor MySQL
-#         'PORT': '13024',                        # porta padrão do MySQL
-#     }
-# }
 
 
 # Password validation
@@ -194,8 +189,14 @@ LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
+USE_L10N = True
 
 USE_TZ = True
+
+LANGUAGES = (
+    ('pt-br', _('Portuguese')),
+    ('es', _('Spanish')),
+)
 
 
 # Static files (CSS, JavaScript, Images)

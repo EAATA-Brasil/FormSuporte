@@ -164,6 +164,49 @@
     .shake {
       animation: shake 0.5s ease;
     }
+    .password-wrapper {
+      position: relative;
+    }
+
+    .eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      background: #fff;
+      border: 2px solid var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: box-shadow 0.2s ease;
+    }
+
+    .eye:hover {
+      box-shadow: 0 0 6px rgba(0, 86, 179, 0.3);
+    }
+
+    .pupil {
+      width: 10px;
+      height: 10px;
+      background: var(--primary);
+      border-radius: 50%;
+      transition: transform 0.05s ease-out;
+    }
+    @keyframes blink {
+      0%, 90%, 100% { height: 10px; }
+      92%, 98% { height: 2px; }
+    }
+
+    .eye.blinking .pupil {
+      animation: blink 1s ease-in-out;
+    }
+    .password-wrapper .form-control {
+      padding-right: 3rem; /* cria espaço interno pro ícone */
+    }
   </style>
 </head>
 <body>
@@ -204,8 +247,12 @@
         
         <div class="form-group">
           <label for="password">Senha</label>
-          <input type="password" id="password" class="form-control" name="password" 
-                 placeholder="Digite sua senha" required>
+          <div class="password-wrapper">
+            <input type="password" id="password" class="form-control" name="password" placeholder="Digite sua senha" required>
+            <div class="eye" id="eye">
+              <div class="pupil"></div>
+            </div>
+          </div>
           <div class="invalid-feedback">Por favor, informe sua senha</div>
         </div>
 
@@ -228,20 +275,20 @@
       // Reset feedback
       username.classList.remove('is-invalid');
       password.classList.remove('is-invalid');
-      username.nextElementSibling.style.display = 'none';
-      password.nextElementSibling.style.display = 'none';
+      document.querySelectorAll('.invalid-feedback').forEach(f => f.style.display = 'none');
+
       
       // Validação do usuário
       if (!username.value.trim()) {
         username.classList.add('is-invalid');
-        username.nextElementSibling.style.display = 'block';
+        username.parentElement.querySelector('.invalid-feedback').style.display = 'block';
         isValid = false;
       }
       
       // Validação da senha
       if (!password.value.trim()) {
         password.classList.add('is-invalid');
-        password.nextElementSibling.style.display = 'block';
+        password.parentElement.querySelector('.invalid-feedback').style.display = 'block';
         isValid = false;
       }
       
@@ -261,10 +308,65 @@
       input.addEventListener('input', function() {
         if (this.value.trim()) {
           this.classList.remove('is-invalid');
-          this.nextElementSibling.style.display = 'none';
+          this.parentElement.querySelector('.invalid-feedback').style.display = 'none';
         }
       });
     });
+    const eye = document.getElementById('eye');
+    const pupil = eye.querySelector('.pupil');
+    const passwordField = document.getElementById('password');
+    let showPassword = false;
+
+    // Segue o mouse
+    document.addEventListener('mousemove', (e) => {
+      if (showPassword) return
+      const rect = eye.getBoundingClientRect();
+      const eyeCenterX = rect.left + rect.width / 2;
+      const eyeCenterY = rect.top + rect.height / 2;
+      
+      const dx = e.clientX - eyeCenterX;
+      const dy = e.clientY - eyeCenterY;
+      const angle = Math.atan2(dy, dx);
+      const distance = Math.min(6, Math.hypot(dx, dy) / 25);
+      
+      pupil.style.transform = `translate(${distance * Math.cos(angle)}px, ${distance * Math.sin(angle)}px)`;
+    });
+
+    // Quando o mouse sai do body → pupila volta ao centro
+    document.body.addEventListener('mouseleave', () => {
+      pupil.style.transform = 'translate(0, 0)';
+    });
+
+    // Piscar de tempos em tempos
+    setInterval(() => {
+      if (showPassword) return;
+      eye.classList.add('blinking');
+      setTimeout(() => eye.classList.remove('blinking'), 1000);
+    }, 6000);
+
+    // Mostrar/ocultar senha ao clicar
+    eye.addEventListener('click', () => {
+      showPassword = !showPassword;
+      passwordField.type = showPassword ? 'text' : 'password';
+
+      // Altera cor da borda
+      eye.style.borderColor = showPassword ? 'var(--primary-light)' : 'var(--primary)';
+
+      // Animação de "fechar/abrir o olho"
+      if (showPassword) {
+        pupil.style.transition = 'all 0.15s ease';
+        pupil.style.height = '2px'; // fecha o olho
+        pupil.style.background = 'var(--primary-light)';
+        pupil.style.transform = 'translate(0, 0)';
+      } else {
+        pupil.style.height = '10px'; // abre o olho
+        pupil.style.background = 'var(--primary)';
+      }
+    });
+
+
+
   </script>
 </body>
 </html>
+

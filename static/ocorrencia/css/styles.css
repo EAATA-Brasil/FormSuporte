@@ -11,6 +11,7 @@
     --hover-bg: #e9ecef;
     --success: #198754;
     --error: #dc3545;
+    --error-china: #f17815;
     --warning: #ffc107;
     --waiting:#3c3c3c;
     --shadow: rgba(0, 0, 0, 0.1);
@@ -763,40 +764,7 @@ body {
     color: var(--error);
 }
 
-.table td[data-column="status"][data-initial-value="Concluído"] {
-    background-color: var(--success) !important;
-    color: white !important;
-    font-weight: bold;
-    border-radius: 4px;
-    padding: 5px 10px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: relative;
-}
 
-.table td[data-column="status"][data-initial-value="Concluído"]::after {
-    content: "✓";
-    margin-left: 5px;
-}
-
-/* Melhorar a visualização dos outros status */
-.table td[data-column="status"][data-initial-value="Em progresso"]{
-    background-color: var(--warning) !important;
-    color: var(--dark) !important;
-}
-.table td[data-column="status"][data-initial-value="Aguardando"] {
-    background-color: var(--waiting) !important;
-    color: var(--light) !important;
-}
-.table td[data-column="status"][data-initial-value="Atrasado"] {
-    background-color: var(--error) !important;
-    color: white !important;
-}
-
-.table td[data-column="status"][data-initial-value="Requisitado"] {
-    background-color: var(--primary) !important;
-    color: white !important;
-}
 
 /* Estilos específicos para o pop-up de detalhes do problema */
 .problem-details-popup {
@@ -876,7 +844,7 @@ body {
 /* Melhorias para a paginação */
 #paginate {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     gap: 15px;
     margin-top: 20px;
@@ -1003,24 +971,6 @@ footer select {
   font-weight: bold;
   font-size: 0.8rem;
   color: white;
-}
-
-/* cores status */
-.status-atrasado {
-  background-color: #e74c3c; /* vermelho */
-}
-
-.status-concluido {
-  background-color: #27ae60; /* verde */
-}
-
-.status-progresso {
-  background-color: #f1c40f; /* amarelo */
-  color: black;
-}
-
-.status-requisitado {
-  background-color: #3498db; /* azul */
 }
 
 /* Estilização do container de upload de arquivos no popup */
@@ -1165,4 +1115,50 @@ footer select {
     display: flex;
     flex-direction: row;
     gap: 20px;
+}
+
+.custom-swal-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #fff;
+  color: #333;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 99999;
+}
+
+.custom-swal-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.custom-swal-toast .swal2-icon {
+  width: 26px !important;
+  height: 26px !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+  transform: scale(0.8);
+}
+
+.custom-swal-toast .swal2-success {
+  border-color: #28a745 !important;
+}
+
+.custom-swal-toast .swal2-error {
+  border-color: #dc3545 !important;
+}
+
+.custom-swal-toast-text {
+  margin-left: 5px;
 }

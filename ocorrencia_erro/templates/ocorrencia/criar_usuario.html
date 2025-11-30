@@ -41,7 +41,7 @@
       border-radius: 12px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
       width: 100%;
-      max-width: 400px;
+      max-width: 600px;
       border: 1px solid var(--border-color);
     }
     .login-form h2 {
@@ -54,8 +54,8 @@
       position: relative;
     }
     .form-group label {
+      margin-bottom: 1px;
       display: block;
-      margin-bottom: 0.5rem;
       color: var(--text);
       font-weight: 500;
     }
@@ -239,6 +239,39 @@
     .logout:hover { background-color: #7a0015; box-shadow: 0 4px 14px rgba(176, 0, 32, 0.4); }
     .redirecionar { background-color: #525252ff; box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2); }
     .redirecionar:hover { background-color: #3f3f3fff; box-shadow: 0 2px 6px rgba(176, 0, 32, 0.2); }
+    .radio-group {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--gray);
+    }
+    
+    .radio-group-header {
+      margin-bottom: 0.5rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+    
+    .radio-options {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .radio-item {
+      display: flex;
+      align-items: center;
+    }
+    
+    .radio-item label {
+      margin-left: 0.5rem;
+      cursor: pointer;
+      color: var(--text);
+    }
+    
+    .radio-item input[type="radio"] {
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -276,7 +309,30 @@
                aria-required="true" aria-describedby="password-help">
         <span id="password-help" class="sr-only">Campo obrigatório</span>
       </div>
-
+      <div class="form-group">
+        <div class="radio-group">
+          <div class="radio-group-header">
+            <strong>Tipo de usuário:</strong>
+          </div>
+          <div class="radio-options">
+            <div class="radio-item">
+              <input type="radio" id="tipo-responsavel" name="tipo_usuario" value="responsavel" checked
+                     aria-label="Usuário do tipo Responsável">
+              <label for="tipo-responsavel">Responsável</label>
+            </div>
+            <div class="radio-item">
+              <input type="radio" id="tipo-reporte" name="tipo_usuario" value="reporte"
+                     aria-label="Usuário do tipo Reporte">
+              <label for="tipo-reporte">Reporte</label>
+            </div>
+            <div class="radio-item">
+              <input type="radio" id="tipo-semi-admin" name="tipo_usuario" value="semi_admin"
+                     aria-label="Usuário do tipo Semi Admin">
+              <label for="tipo-semi-admin">Semi Admin</label>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="form-group">
         <div class="checkbox-group">
           <div class="checkbox-group-header">

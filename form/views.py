@@ -6,103 +6,183 @@ from .models import Veiculo
 from django.db.models import Q
 from django.core.paginator import Paginator
 
+# views.py - Lógica de Negócio para o App 'form'
+
 def cadastrar_veiculo(request):
+    """
+    Processa o formulário de cadastro de um novo veículo.
+    
+    Se a requisição for POST, valida e salva o formulário.
+    Caso contrário, exibe um formulário vazio.
+    """
     if request.method == 'POST':
         form = VeiculoForm(request.POST)
         if form.is_valid():
+            # Salva o novo veículo no banco de dados
             form.save()
             messages.success(request, 'Veículo cadastrado com sucesso!')
+            # Redireciona para a página de listagem após o sucesso
             return redirect('index_form')
         else:
+            # Exibe mensagem de erro se a validação falhar
             messages.error(request, 'Por favor, corrija os erros abaixo.')
     else:
         form = VeiculoForm()
     
+    # Renderiza o template de criação com o formulário (vazio ou com erros)
     return render(request, 'form/create.html', {'form': form})
 
 def index(request):
-    filtros = Q()
+    """
+    Exibe a lista de veículos com suporte a filtros e paginação.
+    """
+    # Inicializa um objeto Q vazio para construir a consulta de filtros
+    query_filters = Q()
     
-    # Filtros com ordenação
-    if request.GET.get('pais'):
-        filtros &= Q(pais__icontains=request.GET['pais'])
-    if request.GET.get('brand'):
-        filtros &= Q(brand__icontains=request.GET['brand'])
-    if request.GET.get('modelo'):
-        filtros &= Q(modelo__icontains=request.GET['modelo'])
-    if request.GET.get('ano'):
-        filtros &= Q(ano__icontains=request.GET['ano'])
+    # Mapeamento dos parâmetros de filtro da URL para os campos do modelo
+    filter_params = {
+        'pais': 'pais__icontains',
+        'brand': 'brand__icontains',
+        'modelo': 'modelo__icontains',
+        'ano': 'ano__icontains',
+    }
     
-    veiculos = Veiculo.objects.filter(filtros).order_by('pais', 'brand', 'modelo', 'ano')
+    # Aplica os filtros dinamicamente
+    for param, field_lookup in filter_params.items():
+        value = request.GET.get(param)
+        if value:
+            # Adiciona a condição de filtro ao objeto Q
+            query_filters &= Q(**{field_lookup: value})
+    
+    # Busca os veículos aplicando os filtros e ordenando por campos chave
+    veiculos_filtrados = Veiculo.objects.filter(query_filters).order_by('pais', 'brand', 'modelo', 'ano')
 
-    # Paginação
-    paginator = Paginator(object_list=veiculos, per_page=10)
+    # --- Paginação ---
+    # Define o paginador com 10 itens por página
+    paginator = Paginator(object_list=veiculos_filtrados, per_page=10)
+    # Obtém o número da página a partir dos parâmetros da requisição
     page_number = request.GET.get('page')
+    # Obtém o objeto da página solicitada
     page_obj = paginator.get_page(page_number)
     
+    # Renderiza o template de índice com os dados paginados e os filtros aplicados
     return render(request, 'form/index.html', {
         'page_obj': page_obj,
+        # Passa os parâmetros GET para manter o estado dos filtros no template
         'filtros': request.GET,
     })
 
+
+
 def get_opcoes_filtro(request):
-    pais = request.GET.get('pais', '')
-    marca = request.GET.get('marca', '')
+    """
+    Retorna opções de filtro (países, marcas, modelos, anos) em formato JSON,
+    baseado nos filtros de país e marca já aplicados.
     
-    resultados = Veiculo.objects.all()
+    Útil para preencher dinamicamente dropdowns de filtro.
+    """
+    # Obtém os parâmetros de filtro da requisição
+    pais_filtro = request.GET.get('pais', '')
+    marca_filtro = request.GET.get('marca', '')
     
-    if pais:
-        resultados = resultados.filter(pais__icontains=pais)
-    if marca:
-        resultados = resultados.filter(brand__icontains=marca)
+    # Inicia a consulta com todos os veículos
+    consulta_filtrada = Veiculo.objects.all()
     
-    data = {
-        'pais': list(resultados.order_by('pais').values_list('pais', flat=True).distinct()),
-        'marcas': list(resultados.order_by('brand').values_list('brand', flat=True).distinct()),
-        'modelos': list(resultados.order_by('modelo').values_list('modelo', flat=True).distinct()),
-        'anos': list(resultados.order_by('ano').values_list('ano', flat=True).distinct()),
+    # Aplica filtro de país, se fornecido
+    if pais_filtro:
+        consulta_filtrada = consulta_filtrada.filter(pais__icontains=pais_filtro)
+    # Aplica filtro de marca, se fornecido
+    if marca_filtro:
+        consulta_filtrada = consulta_filtrada.filter(brand__icontains=marca_filtro)
+    
+    # Prepara os dados de resposta, obtendo valores distintos e ordenados
+    opcoes_filtro = {
+        'paises': list(consulta_filtrada.order_by('pais').values_list('pais', flat=True).distinct()),
+        'marcas': list(consulta_filtrada.order_by('brand').values_list('brand', flat=True).distinct()),
+        'modelos': list(consulta_filtrada.order_by('modelo').values_list('modelo', flat=True).distinct()),
+        'anos': list(consulta_filtrada.order_by('ano').values_list('ano', flat=True).distinct()),
     }
-    return JsonResponse(data)
+    
+    # Retorna as opções de filtro como resposta JSON
+    return JsonResponse(opcoes_filtro)
 
 def update_vehicle(request):
+    """
+    Atualiza um campo específico de um veículo via requisição POST.
+    
+    Esta função é uma alternativa mais simples para update_vehicle_field,
+    mas é menos robusta em termos de tratamento de exibição de valores.
+    """
     if request.method == 'POST':
         try:
-            veiculo = Veiculo.objects.get(id=request.POST.get('id'))
-            field_name = request.POST.get('field')
-            new_value = request.POST.get('value')
+            # Obtém o ID, nome do campo e novo valor da requisição POST
+            veiculo_id = request.POST.get('id')
+            nome_campo = request.POST.get('field')
+            novo_valor = request.POST.get('value')
             
-            setattr(veiculo, field_name, new_value)
+            # Busca o veículo pelo ID
+            veiculo = Veiculo.objects.get(id=veiculo_id)
+            
+            # Atualiza o atributo do objeto e salva no banco de dados
+            setattr(veiculo, nome_campo, novo_valor)
             veiculo.save()
             
+            # Retorna sucesso com o novo valor
             return JsonResponse({
                 'status': 'success',
-                'new_display': new_value
+                'new_display': novo_valor
             })
+        except Veiculo.DoesNotExist:
+            # Trata o caso de veículo não encontrado
+            return JsonResponse({'status': 'error', 'message': 'Veículo não encontrado'}, status=404)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-    return JsonResponse({'status': 'error'}, status=405)
+            # Trata outros erros de atualização
+            return JsonResponse({'status': 'error', 'message': f'Erro ao atualizar veículo: {str(e)}'}, status=400)
+            
+    # Retorna erro se o método não for POST
+    return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
 def update_vehicle_field(request):
+    """
+    Atualiza um campo específico de um veículo e retorna o valor de exibição (display value)
+    para campos com choices definidos no modelo.
+    
+    É a função de atualização mais robusta.
+    """
     if request.method == 'POST':
+        # Obtém os dados da requisição POST
         veiculo_id = request.POST.get('id')
-        field_name = request.POST.get('field')
-        new_value = request.POST.get('value')
+        nome_campo = request.POST.get('field')
+        novo_valor = request.POST.get('value')
         
         try:
+            # 1. Busca o veículo
             veiculo = Veiculo.objects.get(id=veiculo_id)
-            setattr(veiculo, field_name, new_value)
-            veiculo.save(update_fields=[field_name])
+            
+            # 2. Atualiza o campo e salva, especificando o campo para otimização
+            setattr(veiculo, nome_campo, novo_valor)
+            veiculo.save(update_fields=[nome_campo])
+
+            # 3. Prepara os dados de resposta
+            # Tenta obter o valor de exibição (display value) se o campo tiver choices
+            display_func = getattr(veiculo, f'get_{nome_campo}_display', lambda: novo_valor)
+            display_value = display_func()
 
             response_data = {
                 'status': 'success',
-                'new_value': new_value,
-                'display_value': getattr(veiculo, f'get_{field_name}_display', lambda: None)()
+                'new_value': novo_valor,
+                'display_value': display_value
             }
 
+            # 4. Retorna a resposta JSON
             return JsonResponse(response_data)
+        
         except Veiculo.DoesNotExist:
+            # Trata o caso de veículo não encontrado
             return JsonResponse({'status': 'error', 'message': 'Veículo não encontrado'}, status=404)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            # Trata outros erros de atualização
+            return JsonResponse({'status': 'error', 'message': f'Erro ao atualizar campo: {str(e)}'}, status=400)
         
-    return JsonResponse({'status': 'error'}, status=405)
+    # Retorna erro se o método não for POST
+    return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)

@@ -1,3 +1,5 @@
+# ocorrencia/models.py
+
 from django.db import models
 from datetime import timedelta
 from django.core.exceptions import ValidationError
@@ -36,12 +38,16 @@ def gerar_codigo_espanha():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
 class Record(models.Model):
+    def is_awaiting_china_late(self):
+        return self.status == self.STATUS_OCORRENCIA.AWAITING_CHINA and self.deadline and self.deadline < timezone.now().date()
+    
     class STATUS_OCORRENCIA(models.TextChoices):
         DONE = "DONE", "Concluído"
         LATE = "LATE", "Atrasado"
         PROGRESS = "PROGRESS", "Em progresso"
         REQUESTED = "REQUESTED", "Requisitado"
-        AWAITING = "AWAITING", "Aguardando"
+        AWAITING_CHINA = "AWAITING_CHINA", "Aguardando China"
+        AWAITING_CHINA_LATE = "AWAITING_CHINA_LATE", "China Atrasada"
 
     # ID padrão autoincremental
     id = models.AutoField(primary_key=True)
@@ -120,6 +126,20 @@ class Record(models.Model):
         default="N/A",
         verbose_name='Modelo'
     )
+    contact = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default="N/A",
+        verbose_name='Contato'
+    )
+    vin = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default="N/A",
+        verbose_name='VIN'
+    )
     year = models.CharField(
         max_length=100,
         blank=True,
@@ -133,6 +153,18 @@ class Record(models.Model):
         null=True,
         blank=True,
         verbose_name='País'
+    )
+    tipo_ecu = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Tipo de ECU'
+    )
+    tipo_motor = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Tipo de Motor'
     )
     # FIXED: Removed on_delete from CharField
     country_original = models.CharField(
@@ -154,7 +186,7 @@ class Record(models.Model):
         verbose_name="Problema detectado"
     )
     status = models.CharField(
-        max_length=20,
+        max_length=25,
         choices=STATUS_OCORRENCIA.choices,
         default=STATUS_OCORRENCIA.REQUESTED
     )
@@ -171,30 +203,54 @@ class Record(models.Model):
         default="Não identificado",
         verbose_name="Feedback Manager"
     )
+    tipo_chave = models.TextField(
+        blank=True,
+        null=True,
+        default="Não identificado",
+        verbose_name="Tipo Chave"
+    )
 
     # Em seu arquivo models.py, dentro da classe Record
-
+    def clear_finished_date(self):
+        """Método para limpar explicitamente a data de finished"""
+        self.finished = None
+        self._explicitly_cleared_finished = True  # Flag para evitar auto-preencher
+        if self.status == self.STATUS_OCORRENCIA.DONE:
+            self.status = self.STATUS_OCORRENCIA.PROGRESS
+    def clear_deadline_date(self):
+        """Método para limpar explicitamente a data de finished"""
+        self.deadline= None
+        self._explicitly_cleared_deadline = True  # Flag para evitar auto-preencher
+        if self.status != self.STATUS_OCORRENCIA.AWAITING_CHINA:
+            self.status = self.STATUS_OCORRENCIA.REQUESTED
+            
     def clean(self):
         """
-        Validações e lógica de status normal (quando o país NÃO é China).
+        Validações e lógica de status com a ordem de prioridade correta.
         """
         super().clean()
-
-        # Se o país for China, a lógica de status será tratada no save(), então pulamos o resto.
-        if self.country and self.country.name == 'China':
-            return
-
         today = timezone.now().date()
 
-        if self.status == self.STATUS_OCORRENCIA.DONE and not self.finished:
-            self.finished = today
-        elif self.finished and self.status != self.STATUS_OCORRENCIA.DONE:
+        # 1. LÓGICA DE PRIORIDADE MÁXIMA: VERIFICAÇÃO DOS STATUS DA CHINA
+        if self.status in [self.STATUS_OCORRENCIA.AWAITING_CHINA, self.STATUS_OCORRENCIA.AWAITING_CHINA_LATE]:
+            # Se o prazo existe e já passou, o status DEVE ser AWAITING_CHINA_LATE.
+            if self.deadline and self.deadline < today:
+                self.status = self.STATUS_OCORRENCIA.AWAITING_CHINA_LATE
+            # Caso contrário (se não há prazo ou o prazo está no futuro), deve ser AWAITING_CHINA.
+            else:
+                self.status = self.STATUS_OCORRENCIA.AWAITING_CHINA
+            # Retornamos para garantir que a lógica de status geral abaixo não seja executada e não sobrescreva a nossa decisão.
+            return
+
+        # 2. LÓGICA DE STATUS GERAL (só é executada se o status não for relacionado à China)
+        if self.finished and self.status != self.STATUS_OCORRENCIA.DONE:
             self.status = self.STATUS_OCORRENCIA.DONE
         elif self.status != self.STATUS_OCORRENCIA.DONE and self.finished:
             self.finished = None
 
         if not self.finished:
             if self.deadline:
+                # Esta verificação agora não interfere mais com os status da China.
                 if (self.deadline - today).days < 0:
                     if self.status != self.STATUS_OCORRENCIA.DONE:
                         self.status = self.STATUS_OCORRENCIA.LATE
@@ -208,28 +264,15 @@ class Record(models.Model):
         self.model = self.model.upper() if self.model else ''
         self.technical = self.technical.capitalize() if self.technical else ''
 
-        if self.finished and self.data and self.finished < self.data:
-            raise ValidationError({"finished": "Data de conclusão não pode ser anterior à data de reporte."})
-
+    # O método save() não precisa de alterações.
     def save(self, *args, **kwargs):
-        """
-        Garante a ordem correta de execução e a prioridade da regra da China.
-        """
-        # 1. Armazena o país original se ainda não foi definido
         if not self.country_original and self.country:
             self.country_original = self.country.name
         
-        # 2. Chama clean() para validações
         self.clean()
-
-        # 3. REGRA DA CHINA (PRIORIDADE MÁXIMA): Sobrescreve qualquer status anterior
-        if self.country and self.country.name == 'China':
-            self.status = self.STATUS_OCORRENCIA.AWAITING
         
-        # 4. Salva o registro
         super().save(*args, **kwargs)
 
-        # 5. Lógica para gerar código externo (apenas para novos registros)
         if not self.codigo_externo and 'codigo_externo' not in (kwargs.get('update_fields') or []):
             self.codigo_externo = str(self.id)
             super().save(update_fields=['codigo_externo'])
@@ -238,6 +281,7 @@ class ArquivoOcorrencia(models.Model):
     record = models.ForeignKey(Record, on_delete=models.CASCADE, related_name='arquivos', null=True)
     arquivo = models.FileField(upload_to='download_arquivo/')
     nome_original = models.CharField(max_length=255, blank=True)
+    data_upload = models.DateTimeField(verbose_name="Data de upload", default=timezone.now)
 
     def __str__(self):
         return f"{self.record} salve {self.arquivo}"
@@ -304,16 +348,19 @@ class Notificacao(models.Model):
     def marcar_como_lida(self):
         """Marca a notificação como lida"""
         if not self.lida:
-            self.lida = True
-            self.lida_em = timezone.now()
-            self.save(update_fields=['lida', 'lida_em'])
+            self.delete()
+            # self.lida = True
+            # self.lida_em = timezone.now()
+            # self.save(update_fields=['lida', 'lida_em'])
 
 class ChatMessage(models.Model):
-    # FIXED: Removed invalid app reference from ForeignKey
-    record = models.ForeignKey(Record, on_delete=models.CASCADE, related_name='chat_messages')
+    record = models.ForeignKey(Record, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-    message = models.TextField()
+    message = models.TextField(blank=True)
+    image_base64 = models.TextField(blank=True, null=True)  # Para armazenar Base64
+    image_type = models.CharField(max_length=50, blank=True, null=True)
+    image_name = models.CharField(max_length=255, blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-
+    
     class Meta:
         ordering = ['timestamp']
