@@ -1,14 +1,13 @@
-# Use a imagem oficial do Python como base
+# Usa imagem oficial Python
 FROM python:3.11-slim
 
-# Define o diretório de trabalho dentro do container
+# Diretório base para dependências (não é montado pelo volume)
 WORKDIR /usr/src/app
 
-# Define variáveis de ambiente para o Python
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Instala dependências do sistema necessárias para algumas bibliotecas Python (como mysqlclient e pillow)
+# Instalar dependências de sistema
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         gcc \
@@ -24,14 +23,15 @@ RUN apt-get update \
         zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia o arquivo de requisitos e instala as dependências
+# Instalar dependências Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia o restante do código da aplicação
-COPY . .
+# Criar pasta para código-fonte (essa SIM será montada pelo volume)
+RUN mkdir /usr/src/app/src
 
-# Define o comando padrão para rodar a aplicação com Gunicorn (servidor de produção)
-# O projeto parece usar Gunicorn (visto em requirements.txt) e o arquivo settings.py deve estar em Form_Suporte/settings.py
-# Assumindo que o módulo WSGI é Form_Suporte.wsgi
-CMD ["python", "manage.py","runserver", "0.0.0.0:8000"]
+# Copiar seu código para dentro da pasta src
+COPY . /usr/src/app/src
+
+# Rodar Django
+CMD ["python", "src/manage.py", "runserver", "0.0.0.0:8000"]
