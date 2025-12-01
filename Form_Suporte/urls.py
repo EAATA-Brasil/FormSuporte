@@ -5,24 +5,27 @@ from django.conf.urls.static import static
 from django.conf.urls.i18n import i18n_patterns
 
 urlpatterns = [
-    # URLs sem prefixo de idioma (normalmente admin)
+    # URLs sem prefixo de idioma
     path('admin/', admin.site.urls),
+
     path("simulador/", include("simulador.urls")),
     path("api/", include("API.urls")),
     path("form/", include("form.urls")),
     path("seriais/", include("serial_vci.urls")),
-    path("situacao/", include("situacao_veiculo.urls"))
+
+    # URL para trocar idioma
+    path('i18n/', include('django.conf.urls.i18n')),
 ]
 
-# URLs que devem ter prefixo de idioma
+
+# URLs que você quer que tenham prefixo de idioma
 urlpatterns += i18n_patterns(
     path("", include("ocorrencia_erro.urls")),
-    path("ocorrencia/", include("ocorrencia_erro.urls"))
-    
+    path("ocorrencia/", include("ocorrencia_erro.urls")),
+    path("situacao/", include("situacao_veiculo.urls")),
 )
 
-path('i18n/', include('django.conf.urls.i18n')),
 
-# Arquivos estáticos
+# Arquivos estáticos no modo DEBUG
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
