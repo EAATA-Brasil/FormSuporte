@@ -107,48 +107,97 @@
 <!-- POPUP NOVO SERIAL -->
 <div id="modal-novo" onclick="fecharModalNovo()"
      style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-            background:rgba(0,0,0,0.6);justify-content:center;align-items:center;">
-    
+            background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:9999">
+
     <div onclick="event.stopPropagation()"
-         style="background:white;padding:30px;width:480px;border-radius:10px;box-shadow:0px 0px 20px rgba(0,0,0,0.2);">
-        
-        <h2>Novo Serial</h2>
+         style="background:white;padding:30px;width:520px;border-radius:12px;
+                box-shadow:0px 4px 20px rgba(0,0,0,0.25);animation:fadeIn .2s ease;">
+
+        <h2 style="margin-top:0;margin-bottom:20px;font-size:26px;">Novo Serial</h2>
 
         <form id="form-novo-serial" enctype="multipart/form-data">
-            <label>VCI</label>
-            <input name="numero_vci" class="form-control" required>
+            {% csrf_token %}
 
-            <label>Tablet</label>
-            <input name="numero_tablet" class="form-control">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
 
-            <label>Prog</label>
-            <input name="numero_prog" class="form-control">
+                <div style="grid-column: span 2;">
+                    <label>VCI</label>
+                    <input name="numero_vci" class="input" required>
+                </div>
 
-            <label>Cliente</label>
-            <input name="cliente" class="form-control">
+                <div>
+                    <label>Tablet</label>
+                    <input name="numero_tablet" class="input">
+                </div>
 
-            <label>Email</label>
-            <input name="email" type="email" class="form-control">
+                <div>
+                    <label>Prog</label>
+                    <input name="numero_prog" class="input">
+                </div>
 
-            <label>Telefone</label>
-            <input name="telefone" class="form-control">
+                <div>
+                    <label>Cliente</label>
+                    <input name="cliente" class="input">
+                </div>
 
-            <label>Pedido</label>
-            <input name="pedido" class="form-control">
+                <div>
+                    <label>Email</label>
+                    <input name="email" type="email" class="input">
+                </div>
 
-            <label>Fotos (múltiplas)</label>
-            <input type="file" name="fotos" multiple>
+                <div>
+                    <label>Telefone</label>
+                    <input name="telefone" class="input">
+                </div>
 
-            <button type="button" onclick="salvarNovoSerial()" class="btn btn-primary" style="margin-top:20px;">
-                Salvar
-            </button>
+                <div>
+                    <label>Pedido</label>
+                    <input name="pedido" class="input">
+                </div>
+
+                <div style="grid-column: span 2;">
+                    <label>Fotos (múltiplas)</label>
+
+                    <div id="preview-container" 
+                        style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;"></div>
+
+                    <!-- input escondido -->
+                    <input type="file" id="input-fotos" multiple accept="image/*"
+                        style="display:none" onchange="handleAddImages(event)">
+
+                    <button type="button" onclick="document.getElementById('input-fotos').click()"
+                            class="btn btn-primary" style="margin-top:10px;">
+                        + Adicionar fotos
+                    </button>
+                </div>
+
+            </div>
+
+            <div style="margin-top:25px;display:flex;justify-content:space-between;align-items:center;">
+                <button type="button" onclick="fecharModalNovo()" class="btn btn-dark">Cancelar</button>
+                <button type="button" onclick="salvarNovoSerial()" class="btn btn-primary">Salvar</button>
+            </div>
+
         </form>
-
-        <button onclick="fecharModalNovo()" class="btn btn-dark" style="margin-top:10px;">
-            Cancelar
-        </button>
     </div>
 </div>
+
+<style>
+    .input {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        margin-top: 5px;
+        font-size: 14px;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+</style>
+
 
 
 <script>
@@ -244,16 +293,25 @@ function salvarNovoSerial() {
     const form = document.getElementById("form-novo-serial");
     const formData = new FormData(form);
 
+    // adicionar as fotos da nossa lista manual
+    fotosSelecionadas.forEach(file => {
+        formData.append("fotos", file);
+    });
+
     fetch("/seriais/adicionar/", {
         method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        // A CORREÇÃO CRÍTICA É AQUI: REMOVEMOS O HEADERS PARA NÃO QUEBRAR O UPLOAD DE ARQUIVOS.
+        // O CSRFToken JÁ ESTÁ NO formData graças ao {% csrf_token %} no HTML.
         body: formData
     })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
                 fecharModalNovo();
-                buscar(document.getElementById("busca").value); // refresca tabela
+                form.reset(); // <<< ADIÇÃO: Resetar campos de texto
+                fotosSelecionadas = [];
+                atualizarPreview();
+                buscar(document.getElementById("busca").value);
             } else {
                 alert("Erro: " + JSON.stringify(data.errors));
             }
@@ -275,5 +333,57 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+/* ===========================
+   PRÉ-VISUALIZAÇÃO DE FOTOS
+=========================== */
+
+let fotosSelecionadas = []; // armazenar File objects
+
+function handleAddImages(event) {
+    const novosArquivos = Array.from(event.target.files);
+
+    novosArquivos.forEach(file => {
+        fotosSelecionadas.push(file);
+    });
+
+    atualizarPreview();
+}
+
+function atualizarPreview() {
+    const container = document.getElementById("preview-container");
+    container.innerHTML = "";
+
+    fotosSelecionadas.forEach((file, index) => {
+        const url = URL.createObjectURL(file);
+
+        const div = document.createElement("div");
+        div.style.position = "relative";
+        div.style.width = "90px";
+        div.style.height = "90px";
+
+        div.innerHTML = `
+            <img src="${url}" 
+                 style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
+
+            <button type="button" 
+                    onclick="removerFoto(${index})"
+                    style="position:absolute;top:-6px;right:-6px;
+                           background:#ff4444;color:white;border:none;
+                           width:22px;height:22px;border-radius:50%;
+                           cursor:pointer;font-size:12px;">
+                ✕
+            </button>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+function removerFoto(index) {
+    fotosSelecionadas.splice(index, 1);
+    atualizarPreview();
+}
+
 
 </script>

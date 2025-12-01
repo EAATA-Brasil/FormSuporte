@@ -1,7 +1,5 @@
 from django.db import models
 
-from django.db import models
-
 class SerialVCI(models.Model):
     numero_vci = models.CharField(max_length=100)
     numero_tablet = models.CharField(max_length=100)
@@ -11,15 +9,10 @@ class SerialVCI(models.Model):
     telefone = models.CharField(max_length=20)
     pedido = models.CharField(max_length=100)
 
-    criado_em = models.DateTimeField(auto_now_add=True)  # ← AQUI
+    criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.numero_vci} - {self.cliente}"
-
-
-
-    def __str__(self):
-        return f"{self.numero_vci} - {self.cliente}"
+        return f"{self.numero_vci} - {self.cliente}" # <<< CORREÇÃO: Apenas uma definição
 
 
 class SerialFoto(models.Model):
