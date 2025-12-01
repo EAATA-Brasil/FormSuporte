@@ -119,7 +119,7 @@
 
                 <div style="grid-column: span 2;">
                     <label>VCI</label>
-                    <input name="numero_vci" class="input">
+                    <input name="numero_vci" class="input" required>
                 </div>
 
                 <div>
@@ -134,7 +134,7 @@
 
                 <div>
                     <label>Cliente</label>
-                    <input name="cliente" class="input">
+                    <input name="cliente" class="input"> 
                 </div>
 
                 <div>
@@ -197,9 +197,7 @@
 
 <script>
 /* =======================================
-   VARIÁVEIS GLOBAIS (CORREÇÃO DE SCOPE/INITIALIZATION) 
-   Corrigindo ReferenceError: Variável 'fotosSelecionadas'
-   deve ser declarada antes de ser usada.
+   VARIÁVEIS GLOBAIS (CORREÇÃO DE ESCOPO) 
 ======================================= */
 let fotosSelecionadas = []; // armazenar File objects
 let timer = null;
@@ -265,7 +263,7 @@ function fecharPopup() {
 /* ===========================
    WEBSOCKET REALTIME (CORRIGIDO)
 =========================== */
-// CORREÇÃO: Usar o protocolo seguro (wss://) se a página for HTTPS, para evitar Mixed Content Error.
+// CORREÇÃO: Usar o protocolo seguro (wss://) se a página for HTTPS.
 const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
 const socket = new WebSocket(
     protocol + window.location.host + "/ws/seriais/"
@@ -280,7 +278,7 @@ socket.onmessage = function(e) {
 };
 
 /* ===========================
-   MODAL NOVO SERIAL
+   MODAL NOVO SERIAL (CORRIGIDO UPLOAD)
 =========================== */
 
 function abrirModalNovo() {
@@ -302,6 +300,7 @@ function salvarNovoSerial() {
 
     fetch("/seriais/adicionar/", {
         method: "POST",
+        // CORREÇÃO: REMOVER O HEADERS PARA PERMITIR UPLOAD DE ARQUIVOS
         body: formData 
     })
         .then(res => res.json())
@@ -309,16 +308,16 @@ function salvarNovoSerial() {
             if (data.success) {
                 fecharModalNovo();
                 form.reset(); // ADIÇÃO: Limpar campos após sucesso
-                fotosSelecionadas = []; // Resetar a lista de arquivos
+                fotosSelecionadas = []; 
                 atualizarPreview();
                 buscar(document.getElementById("busca").value);
             } else {
-                 alert("Erro: " + JSON.stringify(data.errors));
+                alert("Erro: " + JSON.stringify(data.errors));
             }
         });
 }
 
-/* Função utilitária para pegar o CSRF (mantida, caso precise em outro local) */
+/* Função utilitária para pegar o CSRF (mantida, mas não mais usada em salvarNovoSerial) */
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== "") {
