@@ -104,6 +104,52 @@
     </div>
 </div>
 
+<!-- POPUP NOVO SERIAL -->
+<div id="modal-novo" onclick="fecharModalNovo()"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.6);justify-content:center;align-items:center;">
+    
+    <div onclick="event.stopPropagation()"
+         style="background:white;padding:30px;width:480px;border-radius:10px;box-shadow:0px 0px 20px rgba(0,0,0,0.2);">
+        
+        <h2>Novo Serial</h2>
+
+        <form id="form-novo-serial" enctype="multipart/form-data">
+            <label>VCI</label>
+            <input name="numero_vci" class="form-control" required>
+
+            <label>Tablet</label>
+            <input name="numero_tablet" class="form-control">
+
+            <label>Prog</label>
+            <input name="numero_prog" class="form-control">
+
+            <label>Cliente</label>
+            <input name="cliente" class="form-control">
+
+            <label>Email</label>
+            <input name="email" type="email" class="form-control">
+
+            <label>Telefone</label>
+            <input name="telefone" class="form-control">
+
+            <label>Pedido</label>
+            <input name="pedido" class="form-control">
+
+            <label>Fotos (múltiplas)</label>
+            <input type="file" name="fotos" multiple>
+
+            <button type="button" onclick="salvarNovoSerial()" class="btn btn-primary" style="margin-top:20px;">
+                Salvar
+            </button>
+        </form>
+
+        <button onclick="fecharModalNovo()" class="btn btn-dark" style="margin-top:10px;">
+            Cancelar
+        </button>
+    </div>
+</div>
+
 
 <script>
 /* ===========================
@@ -181,4 +227,53 @@ socket.onmessage = function(e) {
         buscar(document.getElementById("busca").value);
     }
 };
+
+/* ===========================
+   MODAL NOVO SERIAL
+=========================== */
+
+function abrirModalNovo() {
+    document.getElementById("modal-novo").style.display = "flex";
+}
+
+function fecharModalNovo() {
+    document.getElementById("modal-novo").style.display = "none";
+}
+
+function salvarNovoSerial() {
+    const form = document.getElementById("form-novo-serial");
+    const formData = new FormData(form);
+
+    fetch("/seriais/adicionar/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: formData
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                fecharModalNovo();
+                buscar(document.getElementById("busca").value); // refresca tabela
+            } else {
+                alert("Erro: " + JSON.stringify(data.errors));
+            }
+        });
+}
+
+/* Função utilitária para pegar o CSRF */
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 </script>
