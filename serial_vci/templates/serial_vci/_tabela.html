@@ -1,0 +1,59 @@
+<table>
+    <thead>
+        <tr>
+            <th>VCI</th>
+            <th>Tablet</th>
+            <th>Prog</th>
+            <th>Cliente</th>
+            <th>Email</th>
+            <th>Telefone</th>
+            <th>Pedido</th>
+            <th>Fotos</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+
+    <tbody>
+    {% for s in seriais %}
+        <tr>
+            <td>{{ s.numero_vci }}</td>
+            <td>{{ s.numero_tablet }}</td>
+            <td>{{ s.numero_prog }}</td>
+            <td>{{ s.cliente }}</td>
+            <td>{{ s.email }}</td>
+            <td>{{ s.telefone }}</td>
+            <td>{{ s.pedido }}</td>
+            <td>{{ s.fotos.count }}</td>
+            <td>
+                <button class="btn btn-dark" onclick="abrirDetalhes({{ s.id }})">
+                    Ver
+                </button>
+            </td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="9" style="text-align:center;padding:20px;">
+                Nenhum registro encontrado.
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+
+<!-- PAGINAÇÃO AJAX -->
+<div style="margin-top:20px;">
+    {% if seriais.has_previous %}
+        <button class="btn btn-dark" onclick="mudarPagina({{ seriais.previous_page_number }})">
+            ← Anterior
+        </button>
+    {% endif %}
+
+    <span style="margin:0 10px;">Página {{ seriais.number }} de {{ seriais.paginator.num_pages }}</span>
+
+    {% if seriais.has_next %}
+        <button class="btn btn-dark" onclick="mudarPagina({{ seriais.next_page_number }})">
+            Próxima →
+        </button>
+    {% endif %}
+</div>

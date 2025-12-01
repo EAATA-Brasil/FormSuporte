@@ -6,6 +6,9 @@ import json
 import mimetypes
 import requests
 
+from utils.weasyprint_loader import configure_weasyprint
+configure_weasyprint()
+
 from langdetect import detect, DetectorFactory
 DetectorFactory.seed = 0
 

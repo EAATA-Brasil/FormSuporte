@@ -8,14 +8,15 @@ urlpatterns = [
     # URLs sem prefixo de idioma (normalmente admin)
     path('admin/', admin.site.urls),
     path("simulador/", include("simulador.urls")),
-    path("api/", include("API.urls"))
+    path("api/", include("API.urls")),
+    path("form/", include("form.urls")),
+    path("seriais/", include("serial_vci.urls")),
+    path("situacao/", include("situacao_veiculo.urls"))
 ]
 
 # URLs que devem ter prefixo de idioma
 urlpatterns += i18n_patterns(
     path("", include("ocorrencia_erro.urls")),
-    path("form/", include("form.urls")),
-    path("situacao/", include("situacao_veiculo.urls")),
     path("ocorrencia/", include("ocorrencia_erro.urls"))
     
 )
