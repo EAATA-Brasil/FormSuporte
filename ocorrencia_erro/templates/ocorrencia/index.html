@@ -2366,7 +2366,19 @@
             }
         }
         window.applyFiltersAndSort = applyFiltersAndSort;
-    
+        // Transformar dados da tabela
+        document.querySelectorAll("#table-body td").forEach(td => {
+            const col = td.getAttribute("data-column");
+            if (!td.innerText) return;
+
+            if (col === "technical") {
+                // Técnico = Primeira maiúscula
+                td.innerText = td.innerText.charAt(0).toUpperCase() + td.innerText.slice(1).toLowerCase();
+            } else {
+                // Demais colunas = UPPERCASE
+                td.innerText = td.innerText.toUpperCase();
+            }
+        });
 
         /**
         * Atualiza o corpo da tabela.

@@ -1,0 +1,68 @@
+<div class="modal fade" id="addModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Registrar Novo Serial</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <form id="serialForm">
+
+          {% csrf_token %}
+
+          <div class="row">
+              <div class="col-md-6 mb-3">
+                <label>Número Série VCI</label>
+                <input name="numero_vci" class="form-control" required />
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label>Número Série Tablet</label>
+                <input name="numero_tablet" class="form-control" />
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label>Número Série Prog</label>
+                <input name="numero_prog" class="form-control" />
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label>Cliente</label>
+                <input name="cliente" class="form-control" required />
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label>Email</label>
+                <input type="email" name="email" class="form-control" required />
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label>Telefone</label>
+                <input name="telefone" class="form-control" />
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label>Pedido</label>
+                <input name="pedido" class="form-control" required />
+              </div>
+
+              <div class="col-md-12 mb-3">
+                <label>Fotos (múltiplas)</label>
+                <input type="file" name="fotos" multiple class="form-control" />
+              </div>
+          </div>
+
+        </form>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button onclick="submitForm()" class="btn btn-primary">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
