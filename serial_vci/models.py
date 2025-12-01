@@ -1,18 +1,22 @@
 from django.db import models
 
 class SerialVCI(models.Model):
-    numero_vci = models.CharField(max_length=100)
-    numero_tablet = models.CharField(max_length=100)
-    numero_prog = models.CharField(max_length=100)
-    cliente = models.CharField(max_length=255)
-    email = models.EmailField()
-    telefone = models.CharField(max_length=20)
-    pedido = models.CharField(max_length=100)
+    # VCI continua obrigatório (padrão)
+    numero_vci = models.CharField(max_length=100) 
+    numero_tablet = models.CharField(max_length=100, blank=True, null=True)
+    numero_prog = models.CharField(max_length=100, blank=True, null=True)
+    
+    # CORREÇÃO: Tornando não obrigatórios
+    cliente = models.CharField(max_length=255, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    telefone = models.CharField(max_length=20, blank=True, null=True)
+    pedido = models.CharField(max_length=100, blank=True, null=True)
 
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.numero_vci} - {self.cliente}"
+        # CORREÇÃO: Removida a definição duplicada
+        return f"{self.numero_vci} - {self.cliente or 'Sem Cliente'}"
 
 
 class SerialFoto(models.Model):
