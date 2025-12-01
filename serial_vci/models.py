@@ -12,7 +12,7 @@ class SerialVCI(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.numero_vci} - {self.cliente}" # <<< CORREÇÃO: Apenas uma definição
+        return f"{self.numero_vci} - {self.cliente}"
 
 
 class SerialFoto(models.Model):
