@@ -69,6 +69,29 @@
     tr:hover {
         background: #fafafa;
     }
+
+    .input {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        margin-top: 5px;
+        font-size: 14px;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    
+    /* CORREÇÃO VISUAL DAS FOTOS */
+    .foto-miniatura {
+        width: 80px;
+        height: 80px;
+        object-fit: cover; /* Garante que a imagem preencha o espaço sem distorcer */
+        margin: 5px;
+        border-radius: 4px;
+    }
 </style>
 
 <div style="padding: 25px;">
@@ -96,7 +119,7 @@
         <h2>Detalhes do Serial</h2>
         <div id="conteudo-detalhes"></div>
 
-        <button onclick="fecharPopup()" class="btn btn-primary" style="margin-top:20px;">
+        <button onclick="fecharPopup()" class="btn btn-dark" style="margin-top:20px;">
             Fechar
         </button>
     </div>
@@ -134,12 +157,12 @@
 
                 <div>
                     <label>Cliente</label>
-                    <input name="cliente" class="input"> 
+                    <input name="cliente" class="input" required>
                 </div>
 
                 <div>
                     <label>Email</label>
-                    <input name="email" type="email" class="input">
+                    <input name="email" type="email" class="input" required>
                 </div>
 
                 <div>
@@ -149,7 +172,7 @@
 
                 <div>
                     <label>Pedido</label>
-                    <input name="pedido" class="input">
+                    <input name="pedido" class="input" required>
                 </div>
 
                 <div style="grid-column: span 2;">
@@ -178,28 +201,75 @@
     </div>
 </div>
 
-<style>
-    .input {
-        width: 100%;
-        padding: 8px 10px;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        margin-top: 5px;
-        font-size: 14px;
-    }
+<div id="modal-edicao" onclick="fecharModalEdicao()"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:9999">
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-    }
-</style>
+    <div onclick="event.stopPropagation()"
+         style="background:white;padding:30px;width:520px;border-radius:12px;
+                box-shadow:0px 4px 20px rgba(0,0,0,0.25);animation:fadeIn .2s ease;">
 
+        <h2 style="margin-top:0;margin-bottom:20px;font-size:26px;">
+            Editar Serial <span id="edicao-serial-id-text"></span>
+        </h2>
+        
+        <form id="form-edicao-serial" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="serial_id" id="edicao-serial-id">
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                
+                <div style="grid-column: span 2;">
+                    <label>VCI</label>
+                    <input name="numero_vci" class="input" id="edicao-numero_vci" required>
+                </div>
+
+                <div>
+                    <label>Tablet</label>
+                    <input name="numero_tablet" class="input" id="edicao-numero_tablet">
+                </div>
+
+                <div>
+                    <label>Prog</label>
+                    <input name="numero_prog" class="input" id="edicao-numero_prog">
+                </div>
+                
+                <div style="grid-column: span 2;">
+                    <label>Fotos Existentes (Clique na ✕ para remover)</label>
+                    <div id="preview-edicao-existente-container" 
+                        style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;margin-bottom:15px;"></div>
+
+                    <label>Adicionar Novas Fotos</label>
+                    <div id="preview-edicao-nova-container" 
+                        style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;"></div>
+
+                    <input type="file" id="input-fotos-edicao" multiple accept="image/*"
+                        style="display:none" onchange="handleAddImagesEdicao(event)">
+
+                    <button type="button" onclick="document.getElementById('input-fotos-edicao').click()"
+                            class="btn btn-primary" style="margin-top:10px;">
+                        + Adicionar mais fotos
+                    </button>
+                </div>
+
+            </div>
+
+            <div style="margin-top:25px;display:flex;justify-content:space-between;align-items:center;">
+                <button type="button" onclick="fecharModalEdicao()" class="btn btn-dark">Cancelar</button>
+                <button type="button" onclick="salvarEdicaoSerial()" class="btn btn-primary">Salvar Edição</button>
+            </div>
+
+        </form>
+    </div>
+</div>
 
 <script>
 /* =======================================
-   VARIÁVEIS GLOBAIS (CORREÇÃO DE ESCOPO) 
+   VARIÁVEIS GLOBAIS
 ======================================= */
-let fotosSelecionadas = []; // armazenar File objects
+let fotosSelecionadasNovo = []; // para o modal de NOVO SERIAL
+let fotosSelecionadasEdicao = []; // para o modal de EDIÇÃO (Novas fotos a serem adicionadas)
+let fotosExistentesEdicao = []; // para o modal de EDIÇÃO (Fotos já salvas no DB)
 let timer = null;
 let paginaAtual = 1;
 
@@ -228,7 +298,7 @@ function mudarPagina(pagina) {
 }
 
 /* ===========================
-   POPUP DETALHES
+   POPUP DETALHES (CORRIGIDO EXIBIÇÃO DA FOTO)
 =========================== */
 
 function abrirDetalhes(id) {
@@ -236,19 +306,27 @@ function abrirDetalhes(id) {
         .then(res => res.json())
         .then(data => {
             let html = `
-                <p><b>VCI:</b> ${data.numero_vci}</p>
-                <p><b>Tablet:</b> ${data.numero_tablet}</p>
-                <p><b>Prog:</b> ${data.numero_prog}</p>
-                <p><b>Cliente:</b> ${data.cliente}</p>
-                <p><b>Email:</b> ${data.email}</p>
-                <p><b>Telefone:</b> ${data.telefone}</p>
-                <p><b>Pedido:</b> ${data.pedido}</p>
+                <p><b>VCI:</b> ${data.numero_vci || '-'}</p>
+                <p><b>Tablet:</b> ${data.numero_tablet || '-'}</p>
+                <p><b>Prog:</b> ${data.numero_prog || '-'}</p>
+                <p><b>Cliente:</b> ${data.cliente || '-'}</p>
+                <p><b>Email:</b> ${data.email || '-'}</p>
+                <p><b>Telefone:</b> ${data.telefone || '-'}</p>
+                <p><b>Pedido:</b> ${data.pedido || '-'}</p>
                 <p><b>Fotos:</b></p>
+                <div style="display:flex;flex-wrap:wrap;">
             `;
 
+            // CORREÇÃO: Usar a classe foto-miniatura
             data.fotos.forEach(url => {
-                html += `<img src="${url}" style="width:80px;margin:5px;border-radius:4px;">`;
+                html += `<img src="${url}" class="foto-miniatura" alt="Foto do Serial">`;
             });
+
+            html += `</div>`;
+            
+            // Botão para abrir o modal de edição
+            html += `<button onclick="abrirModalEdicao(${data.id}); fecharPopup()" class="btn btn-primary" style="margin-top:20px;">Editar Serial</button>`;
+
 
             document.getElementById("conteudo-detalhes").innerHTML = html;
             document.getElementById("popup").style.display = "flex";
@@ -261,9 +339,8 @@ function fecharPopup() {
 
 
 /* ===========================
-   WEBSOCKET REALTIME (CORRIGIDO)
+   WEBSOCKET REALTIME (CORRIGIDO PROTOCOLO)
 =========================== */
-// CORREÇÃO: Usar o protocolo seguro (wss://) se a página for HTTPS.
 const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
 const socket = new WebSocket(
     protocol + window.location.host + "/ws/seriais/"
@@ -278,46 +355,8 @@ socket.onmessage = function(e) {
 };
 
 /* ===========================
-   MODAL NOVO SERIAL (CORRIGIDO UPLOAD)
+   CSRF Utility
 =========================== */
-
-function abrirModalNovo() {
-    document.getElementById("modal-novo").style.display = "flex";
-}
-
-function fecharModalNovo() {
-    document.getElementById("modal-novo").style.display = "none";
-}
-
-function salvarNovoSerial() {
-    const form = document.getElementById("form-novo-serial");
-    const formData = new FormData(form);
-
-    // adicionar as fotos da nossa lista manual
-    fotosSelecionadas.forEach(file => {
-        formData.append("fotos", file);
-    });
-
-    fetch("/seriais/adicionar/", {
-        method: "POST",
-        // CORREÇÃO: REMOVER O HEADERS PARA PERMITIR UPLOAD DE ARQUIVOS
-        body: formData 
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                fecharModalNovo();
-                form.reset(); // ADIÇÃO: Limpar campos após sucesso
-                fotosSelecionadas = []; 
-                atualizarPreview();
-                buscar(document.getElementById("busca").value);
-            } else {
-                alert("Erro: " + JSON.stringify(data.errors));
-            }
-        });
-}
-
-/* Função utilitária para pegar o CSRF (mantida, mas não mais usada em salvarNovoSerial) */
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== "") {
@@ -334,53 +373,232 @@ function getCookie(name) {
 }
 
 /* ===========================
-   PRÉ-VISUALIZAÇÃO DE FOTOS
+   MODAL NOVO SERIAL (Ajustado)
+=========================== */
+
+function abrirModalNovo() {
+    document.getElementById("modal-novo").style.display = "flex";
+    document.getElementById("form-novo-serial").reset();
+    fotosSelecionadasNovo = []; 
+    atualizarPreviewNovo();
+}
+
+function fecharModalNovo() {
+    document.getElementById("modal-novo").style.display = "none";
+}
+
+function salvarNovoSerial() {
+    const form = document.getElementById("form-novo-serial");
+    const formData = new FormData(form);
+
+    fotosSelecionadasNovo.forEach(file => {
+        formData.append("fotos", file);
+    });
+
+    fetch("/seriais/adicionar/", {
+        method: "POST",
+        body: formData 
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                fecharModalNovo();
+                form.reset(); 
+                fotosSelecionadasNovo = []; 
+                atualizarPreviewNovo();
+                buscar(document.getElementById("busca").value);
+            } else {
+                alert("Erro: " + JSON.stringify(data.errors));
+            }
+        });
+}
+
+/* ===========================
+   PRÉ-VISUALIZAÇÃO DE FOTOS (NOVO SERIAL)
 =========================== */
 
 function handleAddImages(event) {
     const novosArquivos = Array.from(event.target.files);
 
     novosArquivos.forEach(file => {
-        fotosSelecionadas.push(file);
+        fotosSelecionadasNovo.push(file);
     });
 
-    atualizarPreview();
+    atualizarPreviewNovo();
 }
 
-function atualizarPreview() {
+function atualizarPreviewNovo() {
     const container = document.getElementById("preview-container");
     container.innerHTML = "";
 
-    fotosSelecionadas.forEach((file, index) => {
+    fotosSelecionadasNovo.forEach((file, index) => {
         const url = URL.createObjectURL(file);
-
-        const div = document.createElement("div");
-        div.style.position = "relative";
-        div.style.width = "90px";
-        div.style.height = "90px";
-
-        div.innerHTML = `
-            <img src="${url}" 
-                 style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
-
-            <button type="button" 
-                    onclick="removerFoto(${index})"
-                    style="position:absolute;top:-6px;right:-6px;
-                           background:#ff4444;color:white;border:none;
-                           width:22px;height:22px;border-radius:50%;
-                           cursor:pointer;font-size:12px;">
-                ✕
-            </button>
-        `;
-
-        container.appendChild(div);
+        adicionarMiniatura(container, url, index, 'removerFotoNovo');
     });
 }
 
-function removerFoto(index) {
-    fotosSelecionadas.splice(index, 1);
-    atualizarPreview();
+function removerFotoNovo(index) {
+    fotosSelecionadasNovo.splice(index, 1);
+    atualizarPreviewNovo();
 }
 
 
+/* ===========================
+   MODAL EDIÇÃO SERIAL (Implementação)
+=========================== */
+
+function abrirModalEdicao(id) {
+    document.getElementById("modal-edicao").style.display = "flex";
+    document.getElementById("form-edicao-serial").reset();
+    fotosSelecionadasEdicao = []; 
+    fotosExistentesEdicao = []; 
+    document.getElementById("input-fotos-edicao").value = ''; // Limpa o input de arquivo
+
+    fetch(`/seriais/detalhes/${id}/`)
+        .then(res => res.json())
+        .then(data => {
+            // Preencher campos permitidos para edição
+            document.getElementById("edicao-serial-id").value = data.id;
+            document.getElementById("edicao-serial-id-text").textContent = `(${data.numero_vci})`;
+            document.getElementById("edicao-numero_vci").value = data.numero_vci;
+            document.getElementById("edicao-numero_tablet").value = data.numero_tablet || '';
+            document.getElementById("edicao-numero_prog").value = data.numero_prog || '';
+
+            // Carregar fotos existentes (usando o novo campo 'fotos_edicao')
+            fotosExistentesEdicao = data.fotos_edicao || [];
+            atualizarPreviewEdicao();
+        });
+}
+
+function fecharModalEdicao() {
+    document.getElementById("modal-edicao").style.display = "none";
+}
+
+function salvarEdicaoSerial() {
+    const id = document.getElementById("edicao-serial-id").value;
+    const form = document.getElementById("form-edicao-serial");
+    const formData = new FormData(form);
+
+    // Adicionar as novas fotos selecionadas para upload
+    fotosSelecionadasEdicao.forEach(file => {
+        formData.append("fotos", file);
+    });
+
+    fetch(`/seriais/editar/${id}/`, {
+        method: "POST",
+        body: formData 
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                fecharModalEdicao();
+                buscar(document.getElementById("busca").value);
+            } else {
+                alert("Erro: " + JSON.stringify(data.errors));
+            }
+        });
+}
+
+function removerFotoExistente(index, fotoId) {
+    const confirmacao = confirm("Tem certeza de que deseja remover esta foto? A remoção é permanente.");
+    if (!confirmacao) return;
+
+    const csrftoken = getCookie('csrftoken');
+    fetch(`/seriais/remover_foto/${fotoId}/`, {
+        method: "POST",
+        headers: { "X-CSRFToken": csrftoken },
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Remove do array local para atualizar o preview
+            fotosExistentesEdicao.splice(index, 1);
+            atualizarPreviewEdicao();
+        } else {
+            alert("Erro ao remover foto do servidor: " + data.error);
+        }
+    })
+    .catch(error => {
+        alert("Erro na comunicação com o servidor.");
+    });
+}
+
+
+/* ===========================
+   PRÉ-VISUALIZAÇÃO DE FOTOS (EDIÇÃO SERIAL)
+=========================== */
+
+function handleAddImagesEdicao(event) {
+    const novosArquivos = Array.from(event.target.files);
+
+    novosArquivos.forEach(file => {
+        fotosSelecionadasEdicao.push(file);
+    });
+
+    atualizarPreviewEdicao();
+}
+
+function removerFotoEdicao(index) {
+    // Remove do array de novas fotos (antes do upload)
+    fotosSelecionadasEdicao.splice(index, 1);
+    atualizarPreviewEdicao();
+}
+
+function atualizarPreviewEdicao() {
+    const containerExistente = document.getElementById("preview-edicao-existente-container");
+    const containerNova = document.getElementById("preview-edicao-nova-container");
+    
+    if (!containerExistente || !containerNova) return;
+
+    containerExistente.innerHTML = fotosExistentesEdicao.length > 0 ? '' : 'Nenhuma foto salva.';
+    containerNova.innerHTML = '';
+
+    // Renderizar fotos existentes (salvas no DB)
+    fotosExistentesEdicao.forEach((foto, index) => {
+        // Passa o ID da foto para a função de remoção
+        adicionarMiniatura(containerExistente, foto.url, index, 'removerFotoExistente', foto.id);
+    });
+
+    // Renderizar novas fotos (a serem adicionadas)
+    fotosSelecionadasEdicao.forEach((file, index) => {
+        const url = URL.createObjectURL(file);
+        adicionarMiniatura(containerNova, url, index, 'removerFotoEdicao');
+    });
+}
+
+/* ===========================
+   UTILITÁRIO DE MINIATURA (REAPROVEITÁVEL)
+=========================== */
+
+function adicionarMiniatura(container, url, index, funcaoRemocao, fotoId = null) {
+    const div = document.createElement("div");
+    div.style.position = "relative";
+    div.style.width = "90px";
+    div.style.height = "90px";
+    
+    let acaoRemocao = '';
+    if (funcaoRemocao === 'removerFotoExistente' && fotoId !== null) {
+        // Para fotos existentes, a função precisa do índice local E do ID do DB
+        acaoRemocao = `${funcaoRemocao}(${index}, ${fotoId})`;
+    } else {
+        // Para novas fotos, a função precisa apenas do índice local
+        acaoRemocao = `${funcaoRemocao}(${index})`;
+    }
+
+    div.innerHTML = `
+        <img src="${url}" 
+             style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="Miniatura">
+
+        <button type="button" 
+                onclick="${acaoRemocao}"
+                style="position:absolute;top:-6px;right:-6px;
+                       background:#ff4444;color:white;border:none;
+                       width:22px;height:22px;border-radius:50%;
+                       cursor:pointer;font-size:12px;">
+            ✕
+        </button>
+    `;
+
+    container.appendChild(div);
+}
 </script>

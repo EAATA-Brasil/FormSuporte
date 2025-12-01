@@ -25,8 +25,11 @@
             <td>{{ s.pedido }}</td>
             <td>{{ s.fotos.count }}</td>
             <td>
-                <button class="btn btn-dark" onclick="abrirDetalhes({{ s.id }})">
+                <button class="btn btn-dark" onclick="abrirDetalhes({{ s.id }})" style="margin-right:5px;">
                     Ver
+                </button>
+                <button class="btn btn-primary" onclick="abrirModalEdicao({{ s.id }})">
+                    Editar
                 </button>
             </td>
         </tr>
@@ -41,7 +44,6 @@
 </table>
 
 
-<!-- PAGINAÇÃO AJAX -->
 <div style="margin-top:20px;">
     {% if seriais.has_previous %}
         <button class="btn btn-dark" onclick="mudarPagina({{ seriais.previous_page_number }})">

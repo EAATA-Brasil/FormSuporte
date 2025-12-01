@@ -26,6 +26,9 @@ urlpatterns += i18n_patterns(
 )
 
 
-# Arquivos estáticos no modo DEBUG
+# Arquivos estáticos E DE MÍDIA no modo DEBUG
 if settings.DEBUG:
+    # Já estava: Servindo arquivos estáticos
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # NOVO: Servindo arquivos de mídia (imagens do SerialFoto)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # <--- ESSA É A LINHA CRÍTICA
