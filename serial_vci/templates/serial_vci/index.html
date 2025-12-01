@@ -84,13 +84,13 @@
         to { opacity: 1; transform: scale(1); }
     }
     
-    /* CORREÇÃO VISUAL DAS FOTOS */
     .foto-miniatura {
         width: 80px;
         height: 80px;
-        object-fit: cover; /* Garante que a imagem preencha o espaço sem distorcer */
+        object-fit: cover;
         margin: 5px;
         border-radius: 4px;
+        cursor: pointer; /* Adicionado cursor pointer para indicar clicável */
     }
 </style>
 
@@ -263,20 +263,38 @@
     </div>
 </div>
 
+<div id="modal-imagem" onclick="fecharModalImagem()"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.85);justify-content:center;align-items:center;z-index:10000">
+
+    <div onclick="event.stopPropagation()"
+         style="background:transparent;padding:0;max-width:90%;max-height:90%;
+                box-shadow:none;">
+        <img id="imagem-completa" src="" style="max-width:100%;max-height:100%;display:block;margin:auto;">
+    </div>
+    
+    <button onclick="fecharModalImagem()"
+            style="position:absolute;top:20px;right:30px;
+                   background:white;color:#333;border:none;
+                   padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 20px;z-index:10001;">
+        ✕ Fechar
+    </button>
+</div>
+
+
 <script>
 /* =======================================
    VARIÁVEIS GLOBAIS
 ======================================= */
-let fotosSelecionadasNovo = []; // para o modal de NOVO SERIAL
-let fotosSelecionadasEdicao = []; // para o modal de EDIÇÃO (Novas fotos a serem adicionadas)
-let fotosExistentesEdicao = []; // para o modal de EDIÇÃO (Fotos já salvas no DB)
+let fotosSelecionadasNovo = []; 
+let fotosSelecionadasEdicao = []; 
+let fotosExistentesEdicao = []; 
 let timer = null;
 let paginaAtual = 1;
 
 /* ===========================
    BUSCA + PAGINAÇÃO AJAX
 =========================== */
-
 function debounceBuscar(valor) {
     clearTimeout(timer);
     timer = setTimeout(() => buscar(valor), 300);
@@ -298,7 +316,7 @@ function mudarPagina(pagina) {
 }
 
 /* ===========================
-   POPUP DETALHES (CORRIGIDO EXIBIÇÃO DA FOTO)
+   POPUP DETALHES (Modificado)
 =========================== */
 
 function abrirDetalhes(id) {
@@ -317,9 +335,9 @@ function abrirDetalhes(id) {
                 <div style="display:flex;flex-wrap:wrap;">
             `;
 
-            // CORREÇÃO: Usar a classe foto-miniatura
+            // ALTERAÇÃO: Adicionado onclick à miniatura na modal de detalhes
             data.fotos.forEach(url => {
-                html += `<img src="${url}" class="foto-miniatura" alt="Foto do Serial">`;
+                html += `<img src="${url}" class="foto-miniatura" onclick="abrirImagemCompleta('${url}')" alt="Foto do Serial">`;
             });
 
             html += `</div>`;
@@ -337,9 +355,23 @@ function fecharPopup() {
     document.getElementById("popup").style.display = "none";
 }
 
+/* ===========================
+   VISUALIZADOR DE IMAGEM (NOVO)
+=========================== */
+
+function abrirImagemCompleta(url) {
+    document.getElementById("imagem-completa").src = url;
+    document.getElementById("modal-imagem").style.display = "flex";
+}
+
+function fecharModalImagem() {
+    document.getElementById("modal-imagem").style.display = "none";
+    document.getElementById("imagem-completa").src = ""; 
+}
+
 
 /* ===========================
-   WEBSOCKET REALTIME (CORRIGIDO PROTOCOLO)
+   WEBSOCKET REALTIME
 =========================== */
 const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
 const socket = new WebSocket(
@@ -373,7 +405,7 @@ function getCookie(name) {
 }
 
 /* ===========================
-   MODAL NOVO SERIAL (Ajustado)
+   MODAL NOVO SERIAL
 =========================== */
 
 function abrirModalNovo() {
@@ -444,7 +476,7 @@ function removerFotoNovo(index) {
 
 
 /* ===========================
-   MODAL EDIÇÃO SERIAL (Implementação)
+   MODAL EDIÇÃO SERIAL
 =========================== */
 
 function abrirModalEdicao(id) {
@@ -452,19 +484,17 @@ function abrirModalEdicao(id) {
     document.getElementById("form-edicao-serial").reset();
     fotosSelecionadasEdicao = []; 
     fotosExistentesEdicao = []; 
-    document.getElementById("input-fotos-edicao").value = ''; // Limpa o input de arquivo
+    document.getElementById("input-fotos-edicao").value = ''; 
 
     fetch(`/seriais/detalhes/${id}/`)
         .then(res => res.json())
         .then(data => {
-            // Preencher campos permitidos para edição
             document.getElementById("edicao-serial-id").value = data.id;
             document.getElementById("edicao-serial-id-text").textContent = `(${data.numero_vci})`;
             document.getElementById("edicao-numero_vci").value = data.numero_vci;
             document.getElementById("edicao-numero_tablet").value = data.numero_tablet || '';
             document.getElementById("edicao-numero_prog").value = data.numero_prog || '';
 
-            // Carregar fotos existentes (usando o novo campo 'fotos_edicao')
             fotosExistentesEdicao = data.fotos_edicao || [];
             atualizarPreviewEdicao();
         });
@@ -479,7 +509,6 @@ function salvarEdicaoSerial() {
     const form = document.getElementById("form-edicao-serial");
     const formData = new FormData(form);
 
-    // Adicionar as novas fotos selecionadas para upload
     fotosSelecionadasEdicao.forEach(file => {
         formData.append("fotos", file);
     });
@@ -511,7 +540,6 @@ function removerFotoExistente(index, fotoId) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // Remove do array local para atualizar o preview
             fotosExistentesEdicao.splice(index, 1);
             atualizarPreviewEdicao();
         } else {
@@ -539,7 +567,6 @@ function handleAddImagesEdicao(event) {
 }
 
 function removerFotoEdicao(index) {
-    // Remove do array de novas fotos (antes do upload)
     fotosSelecionadasEdicao.splice(index, 1);
     atualizarPreviewEdicao();
 }
@@ -555,7 +582,6 @@ function atualizarPreviewEdicao() {
 
     // Renderizar fotos existentes (salvas no DB)
     fotosExistentesEdicao.forEach((foto, index) => {
-        // Passa o ID da foto para a função de remoção
         adicionarMiniatura(containerExistente, foto.url, index, 'removerFotoExistente', foto.id);
     });
 
@@ -567,7 +593,7 @@ function atualizarPreviewEdicao() {
 }
 
 /* ===========================
-   UTILITÁRIO DE MINIATURA (REAPROVEITÁVEL)
+   UTILITÁRIO DE MINIATURA (REAPROVEITÁVEL - Modificado)
 =========================== */
 
 function adicionarMiniatura(container, url, index, funcaoRemocao, fotoId = null) {
@@ -578,16 +604,14 @@ function adicionarMiniatura(container, url, index, funcaoRemocao, fotoId = null)
     
     let acaoRemocao = '';
     if (funcaoRemocao === 'removerFotoExistente' && fotoId !== null) {
-        // Para fotos existentes, a função precisa do índice local E do ID do DB
         acaoRemocao = `${funcaoRemocao}(${index}, ${fotoId})`;
     } else {
-        // Para novas fotos, a função precisa apenas do índice local
         acaoRemocao = `${funcaoRemocao}(${index})`;
     }
 
     div.innerHTML = `
         <img src="${url}" 
-             style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="Miniatura">
+             onclick="abrirImagemCompleta('${url}')" style="width:100%;height:100%;object-fit:cover;border-radius:6px;cursor:pointer;" alt="Miniatura">
 
         <button type="button" 
                 onclick="${acaoRemocao}"
