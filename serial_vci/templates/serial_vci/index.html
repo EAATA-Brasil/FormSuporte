@@ -201,6 +201,7 @@
 
 
 <script>
+fotosSelecionadas = [];
 /* ===========================
    BUSCA + PAGINAÇÃO AJAX
 =========================== */
@@ -266,7 +267,7 @@ function fecharPopup() {
 =========================== */
 
 const socket = new WebSocket(
-    "ws://" + window.location.host + "/ws/seriais/"
+    "wss://" + window.location.host + "/ws/seriais/"
 );
 
 socket.onmessage = function(e) {
