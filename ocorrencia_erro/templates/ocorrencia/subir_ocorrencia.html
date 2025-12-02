@@ -521,10 +521,10 @@
     });
 
     // Funções de navegação
-    function newUser() { window.location.href = '/criar_usuario'; }
+    function newUser() { window.location.href = "{% url 'criar_usuario' %}"; }
     function redirecionar() { window.location.href = '/'; }
-    function logOut() { window.location.href = '/logout'; }
-    function handleLogin() { window.location.href = '/login'; }
+    function logOut() { window.location.href = '/logout/'; }
+    function handleLogin() { window.location.href = '/login/'; }
 
     // Função do Popup genérico
     function showPopup(type, title, message) {
