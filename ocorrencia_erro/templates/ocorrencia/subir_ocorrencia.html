@@ -522,9 +522,9 @@
 
     // Funções de navegação
     function newUser() { window.location.href = "{% url 'criar_usuario' %}"; }
-    function redirecionar() { window.location.href = '/'; }
-    function logOut() { window.location.href = '/logout/'; }
-    function handleLogin() { window.location.href = '/login/'; }
+    function redirecionar() { window.location.href = "{% url 'index' %}"; }
+    function logOut() { window.location.href = "{% url 'logout' %}"; }
+    function handleLogin() { window.location.href = "{% url 'login_ocorrencias' %}"; }
 
     // Função do Popup genérico
     function showPopup(type, title, message) {
