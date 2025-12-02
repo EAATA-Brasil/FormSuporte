@@ -21,7 +21,6 @@ urlpatterns = [
 # URLs que você quer que tenham prefixo de idioma
 urlpatterns += i18n_patterns(
     path("", include("ocorrencia_erro.urls")),
-    path("ocorrencia/", include("ocorrencia_erro.urls")),
     path("situacao/", include("situacao_veiculo.urls")),
 )
 
