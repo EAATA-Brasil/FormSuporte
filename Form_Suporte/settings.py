@@ -95,6 +95,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 #     "https://meusitefrontend.com",
 # ]
 
+APPEND_SLASH = True
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
