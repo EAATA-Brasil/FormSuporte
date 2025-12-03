@@ -97,6 +97,9 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 APPEND_SLASH = True
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = '/home/ubuntu/Sistema_Suporte/download_arquivo'
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
