@@ -98,7 +98,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 APPEND_SLASH = True
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/home/ubuntu/Sistema_Suporte/download_arquivo'
+MEDIA_ROOT = '/home/ubuntu/Sistema_Suporte'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
