@@ -1060,15 +1060,13 @@ def download_arquivo(request, arquivo_id):
         record = arquivo.record
         user = request.user
         
-        if not user.is_superuser:
-            # Verifica se o usuário tem permissão para o país da ocorrência
-            if record.country:
-                has_permission = CountryPermission.objects.filter(
-                    user=user,
-                    country=record.country
-                ).exists()
-                if not has_permission:
-                    raise Http404("Arquivo não encontrado ou sem permissão")
+
+        has_permission = CountryPermission.objects.filter(
+            user=user,
+            country=record.country
+        ).exists()
+        if not has_permission:
+            raise Http404("Arquivo não encontrado ou sem permissão")
         
         # Caminho completo do arquivo
         file_path = arquivo.arquivo.path
