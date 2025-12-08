@@ -318,38 +318,82 @@ function mudarPagina(pagina) {
 /* ===========================
    POPUP DETALHES (Modificado)
 =========================== */
-
 function abrirDetalhes(id) {
     fetch(`/seriais/detalhes/${id}/`)
         .then(res => res.json())
         .then(data => {
+
+            // Puxa corretamente a data de ativação do SerialVCI
+            const ativacao = data.data || "-";
+
+            // Dados do cliente
+            const clienteNome = data.cliente || "-";
+            const clienteTel  = data.telefone || "-";
+
             let html = `
-                <p><b>VCI:</b> ${data.numero_vci || '-'}</p>
-                <p><b>Tablet:</b> ${data.numero_tablet || '-'}</p>
-                <p><b>Prog:</b> ${data.numero_prog || '-'}</p>
-                <p><b>Cliente:</b> ${data.cliente || '-'}</p>
-                <p><b>Email:</b> ${data.email || '-'}</p>
-                <p><b>Telefone:</b> ${data.telefone || '-'}</p>
-                <p><b>Pedido:</b> ${data.pedido || '-'}</p>
-                <p><b>Fotos:</b></p>
-                <div style="display:flex;flex-wrap:wrap;">
+                <div style="
+                    background:#f1f5f9;
+                    padding:15px;
+                    border-radius:8px;
+                    margin-bottom:15px;
+                    border-left:4px solid #0a75c2;
+                ">
+                    <h3 style="margin:0 0 10px 0;font-size:20px;color:#0a75c2;">
+                        Informações Gerais
+                    </h3>
+
+                    <p><b>VCI:</b> ${data.numero_vci}</p>
+                    <p><b>Tablet:</b> ${data.numero_tablet || '-'}</p>
+                    <p><b>Prog:</b> ${data.numero_prog || '-'}</p>
+                    <p><b>Pedido:</b> ${data.pedido || '-'}</p>
+                </div>
+
+                <div style="
+                    background:#eef8ff;
+                    padding:15px;
+                    border-radius:8px;
+                    margin-bottom:15px;
+                    border-left:4px solid #0093ff;
+                ">
+                    <h3 style="margin:0 0 10px 0;font-size:20px;color:#007acc;">
+                        Cliente
+                    </h3>
+
+                    <p><b>Nome:</b> ${clienteNome}</p>
+                    <p><b>Telefone:</b> ${clienteTel}</p>
+                    <p><b>Email:</b> ${data.email || '-'}</p>
+                    <p><b>Data de Ativação:</b> ${ativacao}</p>
+                </div>
+
+                <div style="padding:10px 0;border-bottom:1px solid #ddd;margin-bottom:10px;">
+                    <h3 style="margin:0;font-size:20px;">Fotos</h3>
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:10px;">
             `;
 
-            // ALTERAÇÃO: Adicionado onclick à miniatura na modal de detalhes
             data.fotos.forEach(url => {
-                html += `<img src="${url}" class="foto-miniatura" onclick="abrirImagemCompleta('${url}')" alt="Foto do Serial">`;
+                html += `
+                    <img src="${url}" class="foto-miniatura"
+                         onclick="abrirImagemCompleta('${url}')">
+                `;
             });
 
             html += `</div>`;
-            
-            // Botão para abrir o modal de edição
-            html += `<button onclick="abrirModalEdicao(${data.id}); fecharPopup()" class="btn btn-primary" style="margin-top:20px;">Editar Serial</button>`;
 
+            html += `
+                <button onclick="abrirModalEdicao(${data.id}); fecharPopup()"
+                        class="btn btn-primary" style="margin-top:20px;">
+                    Editar Serial
+                </button>
+            `;
 
             document.getElementById("conteudo-detalhes").innerHTML = html;
             document.getElementById("popup").style.display = "flex";
         });
 }
+
+
 
 function fecharPopup() {
     document.getElementById("popup").style.display = "none";

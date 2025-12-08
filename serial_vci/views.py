@@ -73,6 +73,7 @@ def detalhes_serial(request, serial_id):
         "email": serial.email,
         "telefone": serial.telefone,
         "pedido": serial.pedido,
+        "data": serial.data.strftime("%d/%m/%Y") if serial.data else None,
         # URLs de fotos para exibição no modal de Detalhes
         "fotos": [f.imagem.url for f in fotos],
         # Dados de foto (ID e URL) para o modal de Edição (NOVO)

@@ -1,19 +1,22 @@
 from django.db import models
+from django.utils import timezone
 
 class SerialVCI(models.Model):
     # Campos que você quer EDITAR (VCI, Tablet, Prog)
-    numero_vci = models.CharField(max_length=100) 
+    numero_vci = models.CharField(max_length=100, blank=True, null=True) 
     # Tornados opcionais (blank=True, null=True) para edição e criação
     numero_tablet = models.CharField(max_length=100, blank=True, null=True) 
     numero_prog = models.CharField(max_length=100, blank=True, null=True)   
     
     # Campos não-editáveis (apenas criação)
-    cliente = models.CharField(max_length=255) # Mantido como obrigatório
-    email = models.EmailField()                # Mantido como obrigatório
-    telefone = models.CharField(max_length=20, blank=True, null=True) # Tornados opcionais
-    pedido = models.CharField(max_length=100)  # Mantido como obrigatório
+    cliente = models.CharField(max_length=255, blank=True, null=True) # Mantido como obrigatório
+    email = models.EmailField(blank=True, null=True)                # Mantido como obrigatório
+    telefone = models.CharField(max_length=100, blank=True, null=True) # Tornados opcionais
+    pedido = models.CharField(max_length=100, blank=True, null=True)  # Mantido como obrigatório
 
     criado_em = models.DateTimeField(auto_now_add=True)
+
+    data = models.DateField(verbose_name="Data", blank=False, default=timezone.now)
 
     def __str__(self):
         return f"{self.numero_vci} - {self.cliente or 'Sem Cliente'}"

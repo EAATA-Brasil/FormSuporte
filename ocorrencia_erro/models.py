@@ -230,8 +230,17 @@ class Record(models.Model):
         """
         super().clean()
         today = timezone.now().date()
+        # =====================================================
+        # 0. PRIORIDADE ABSOLUTA — FINALIZADO → DONE
+        # =====================================================
+        if self.finished:
+            self.status = self.STATUS_OCORRENCIA.DONE
+            return  # Nada mais pode sobrescrever
+            
 
-        # 1. LÓGICA DE PRIORIDADE MÁXIMA: VERIFICAÇÃO DOS STATUS DA CHINA
+        # =====================================================
+        # 1. STATUS CHINA TEM PRIORIDADE (desde que não esteja finalizado)
+        # =====================================================
         if self.status in [self.STATUS_OCORRENCIA.AWAITING_CHINA, self.STATUS_OCORRENCIA.AWAITING_CHINA_LATE]:
             # Se o prazo existe e já passou, o status DEVE ser AWAITING_CHINA_LATE.
             if self.deadline and self.deadline < today:

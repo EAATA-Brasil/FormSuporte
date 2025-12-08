@@ -67,12 +67,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'form',
-    'situacao_veiculo',
     'ocorrencia_erro',
     'API',
     'rest_framework',
     'simulador',
-    'serial_vci'
+    'serial_vci',
+    'situacao_veiculo.apps.SituacaoVeiculoConfig'
 ]
 
 
