@@ -44,18 +44,69 @@
 </table>
 
 
-<div style="margin-top:20px;">
+<div style="display:flex;justify-content:center;margin-top:20px;gap:10px;align-items:center;">
+
+    <!-- Botão Anterior -->
     {% if seriais.has_previous %}
-        <button class="btn btn-dark" onclick="mudarPagina({{ seriais.previous_page_number }})">
+        <button onclick="mudarPagina({{ seriais.previous_page_number }})"
+                style="padding:8px 14px;border-radius:6px;background:#333;color:white;border:none;cursor:pointer;">
             ← Anterior
         </button>
     {% endif %}
 
-    <span style="margin:0 10px;">Página {{ seriais.number }} de {{ seriais.paginator.num_pages }}</span>
+    <!-- Números da paginação -->
+    <div style="display:flex;gap:6px;align-items:center;">
 
+        {% if seriais.number > 2 %}
+            <button onclick="mudarPagina(1)"
+                style="padding:6px 10px;border-radius:6px;background:#e5e5e5;border:none;cursor:pointer;">
+                1
+            </button>
+            {% if seriais.number > 3 %}
+                <span style="opacity:0.6;">…</span>
+            {% endif %}
+        {% endif %}
+
+        {# Página anterior #}
+        {% if seriais.has_previous %}
+            <button onclick="mudarPagina({{ seriais.number|add:"-1" }})"
+                style="padding:6px 10px;border-radius:6px;background:#e5e5e5;border:none;cursor:pointer;">
+                {{ seriais.number|add:"-1" }}
+            </button>
+        {% endif %}
+
+        {# Página atual #}
+        <button disabled
+            style="padding:6px 12px;border-radius:6px;background:#007bff;color:white;border:none;font-weight:bold;">
+            {{ seriais.number }}
+        </button>
+
+        {# Próxima página #}
+        {% if seriais.has_next %}
+            <button onclick="mudarPagina({{ seriais.number|add:"1" }})"
+                style="padding:6px 10px;border-radius:6px;background:#e5e5e5;border:none;cursor:pointer;">
+                {{ seriais.number|add:"1" }}
+            </button>
+        {% endif %}
+
+        {% if seriais.number < seriais.paginator.num_pages|add:"-1" %}
+            {% if seriais.number < seriais.paginator.num_pages|add:"-2" %}
+                <span style="opacity:0.6;">…</span>
+            {% endif %}
+
+            <button onclick="mudarPagina({{ seriais.paginator.num_pages }})"
+                style="padding:6px 10px;border-radius:6px;background:#e5e5e5;border:none;cursor:pointer;">
+                {{ seriais.paginator.num_pages }}
+            </button>
+        {% endif %}
+    </div>
+
+    <!-- Botão Próximo -->
     {% if seriais.has_next %}
-        <button class="btn btn-dark" onclick="mudarPagina({{ seriais.next_page_number }})">
+        <button onclick="mudarPagina({{ seriais.next_page_number }})"
+                style="padding:8px 14px;border-radius:6px;background:#333;color:white;border:none;cursor:pointer;">
             Próxima →
         </button>
     {% endif %}
+
 </div>

@@ -23,4 +23,6 @@ class SerialVCIEditForm(forms.ModelForm):
             "numero_vci",
             "numero_tablet",
             "numero_prog",
+            "email", 
+            "telefone"
         ]

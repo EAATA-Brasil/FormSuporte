@@ -2,10 +2,18 @@ from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
 
-from .models import SerialVCI, SerialFoto
-# Importar ambos os formulários
 from .forms import SerialVCIForm, SerialVCIEditForm 
+from .models import (
+    SerialVCI,
+    SerialFoto,
+    Garantia,
+    GarantiaFoto,
+    GarantiaComentario,
+    GarantiaComentarioFoto
+)
+
 
 # websocket broadcast
 from channels.layers import get_channel_layer
@@ -60,9 +68,28 @@ def lista_seriais(request):
 
 
 def detalhes_serial(request, serial_id):
-    """Retorna detalhes (e dados de edição) para pop-ups."""
     serial = get_object_or_404(SerialVCI, id=serial_id)
-    fotos = serial.fotos.all()
+    
+    garantias = []
+    for g in serial.garantias.all().order_by("-id"):
+
+        comentarios = []
+        for c in g.comentarios.all().order_by("id"):
+            comentarios.append({
+                "id": c.id,
+                "texto": c.texto,
+                "criado_em": c.criado_em.strftime("%d/%m/%Y %H:%M"),
+                "fotos": [f.imagem.url for f in c.fotos.all()]
+            })
+
+        garantias.append({
+            "id": g.id,
+            "titulo": g.titulo,
+            "descricao": g.descricao,
+            "criado_em": g.criado_em.strftime("%d/%m/%Y %H:%M"),
+            "fotos": [f.imagem.url for f in g.fotos.all()],
+            "comentarios": comentarios         #  <<< AGORA EXISTE!!
+        })
 
     return JsonResponse({
         "id": serial.id,
@@ -74,11 +101,16 @@ def detalhes_serial(request, serial_id):
         "telefone": serial.telefone,
         "pedido": serial.pedido,
         "data": serial.data.strftime("%d/%m/%Y") if serial.data else None,
-        # URLs de fotos para exibição no modal de Detalhes
-        "fotos": [f.imagem.url for f in fotos],
-        # Dados de foto (ID e URL) para o modal de Edição (NOVO)
-        "fotos_edicao": [{"id": f.id, "url": f.imagem.url} for f in fotos],
+        "fotos": [f.imagem.url for f in serial.fotos.all()],
+        "fotos_edicao": [
+            {"id": f.id, "url": f.imagem.url}
+            for f in serial.fotos.all()
+        ],
+        "garantias": garantias,
+        "is_superuser": request.user.is_superuser,
+
     })
+
 
 
 def adicionar_serial(request):
@@ -145,3 +177,111 @@ def remover_foto(request, foto_id):
         return JsonResponse({"success": True})
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+    
+
+@csrf_exempt
+def add_garantia(request, serial_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "Método inválido"}, status=400)
+
+    serial = get_object_or_404(SerialVCI, id=serial_id)
+
+    titulo = request.POST.get("titulo", "")
+    descricao = request.POST.get("descricao", "")
+
+    garantia = Garantia.objects.create(
+        serial=serial,
+        titulo=titulo,
+        descricao=descricao,
+    )
+
+    for foto in request.FILES.getlist("fotos"):
+        GarantiaFoto.objects.create(
+            garantia=garantia,
+            imagem=foto
+        )
+
+    return JsonResponse({"success": True})
+
+def garantia_detalhes(request, garantia_id):
+    garantia = get_object_or_404(Garantia, id=garantia_id)
+
+    comentarios = []
+    for c in garantia.comentarios.all().order_by("id"):
+        comentarios.append({
+            "id": c.id,
+            "texto": c.texto,
+            "criado_em": c.criado_em.strftime("%d/%m/%Y %H:%M"),
+            "fotos": [f.imagem.url for f in c.fotos.all()]
+        })
+
+    return JsonResponse({
+        "id": garantia.id,
+        "titulo": garantia.titulo,
+        "comentarios": comentarios
+    })
+
+@csrf_exempt
+def add_comentario(request, garantia_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Método inválido"}, status=400)
+
+    garantia = get_object_or_404(Garantia, id=garantia_id)
+
+    texto = request.POST.get("texto", "").strip()
+    if not texto:
+        return JsonResponse({"success": False, "error": "Comentário vazio"}, status=400)
+
+    # cria comentário
+    comentario = GarantiaComentario.objects.create(
+        garantia=garantia,
+        texto=texto
+    )
+
+    # adiciona fotos
+    for foto in request.FILES.getlist("fotos"):
+        GarantiaComentarioFoto.objects.create(
+            comentario=comentario,
+            imagem=foto
+        )
+
+    return JsonResponse({"success": True})
+
+@csrf_exempt
+def deletar_garantia(request, garantia_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Método inválido"}, status=400)
+
+    garantia = get_object_or_404(Garantia, id=garantia_id)
+
+    # Remove fotos da garantia
+    for foto in garantia.fotos.all():
+        foto.imagem.delete(save=False)
+        foto.delete()
+
+    # Remove comentários + fotos de comentários
+    for comentario in garantia.comentarios.all():
+        for foto in comentario.fotos.all():
+            foto.imagem.delete(save=False)
+            foto.delete()
+        comentario.delete()
+
+    garantia.delete()
+
+    return JsonResponse({"success": True})
+
+@csrf_exempt
+def delete_comentario(request, comentario_id):
+    if not request.user.is_superuser:
+        return JsonResponse({"success": False, "error": "Permissão negada"}, status=403)
+
+    comentario = get_object_or_404(GarantiaComentario, id=comentario_id)
+
+    # remover fotos físicas
+    for foto in comentario.fotos.all():
+        foto.imagem.delete(save=False)
+        foto.delete()
+
+    comentario.delete()
+
+    return JsonResponse({"success": True})
