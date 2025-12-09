@@ -188,7 +188,7 @@
         <button onclick="fecharPopup()" class="fechar-popup-x">
             ✕
         </button>
-        <h2>Detalhes do Serial</h2>
+        <h2 id="titulo-detalhes-serial">Detalhes do Serial</h2>
 
         <div id="conteudo-detalhes"></div>
 
@@ -510,6 +510,8 @@ function abrirDetalhes(id) {
         .then(res => res.json())
         .then(data => {
 
+            document.getElementById("titulo-detalhes-serial").innerHTML =
+                `Detalhes do Serial <span style="opacity:0.6;font-size:18px;">#${data.id}</span>`;
             const ativacao = data.data || "-";
             const clienteNome = data.cliente || "-";
             const clienteTel  = data.telefone || "-";
