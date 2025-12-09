@@ -16,6 +16,9 @@ from rest_framework.response import Response
 from .models import Equipamentos, TipoEquipamento, MarcaEquipamento
 from .serializers import EquipamentosSerializer, TipoEquipamentoSerializer, MarcaEquipamentoSerializer
 
+from .decorators import api_metrics
+from .metrics import PDF_GERADO, PDF_FALHA, HTML_FALLBACK
+
 # Configuração de caminhos GTK para Windows (necessário para WeasyPrint no Windows)
 if sys.platform == 'win32':
     try:
@@ -58,15 +61,37 @@ class EquipamentosViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Equipamentos.objects.all().order_by('nome')
     serializer_class = EquipamentosSerializer
 
+    @api_metrics("equipamentos_list")
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @api_metrics("equipamentos_retrieve")
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
 class TipoEquipamentoViewSet(viewsets.ReadOnlyModelViewSet):
     """API ViewSet para listar e recuperar tipos de equipamento (somente leitura)."""
     queryset = TipoEquipamento.objects.all().order_by('nome')
     serializer_class = TipoEquipamentoSerializer
+    @api_metrics("tipoequipamento_list")
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @api_metrics("tipoequipamento_retrieve")
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
 
 class MarcaEquipamentoViewSet(viewsets.ReadOnlyModelViewSet):
     """API ViewSet para listar e recuperar marcas de equipamento (somente leitura)."""
     queryset = MarcaEquipamento.objects.all().order_by('nome')
     serializer_class = MarcaEquipamentoSerializer
+    @api_metrics("marcaequipamento_list")
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @api_metrics("marcaequipamento_retrieve")
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
 
 # --- Funções Utilitárias ---
 
@@ -235,12 +260,14 @@ def generate_pdf(request):
         
         # 7. Retornar Resposta
         if pdf:
+            PDF_GERADO.inc()
             # Retorna o PDF como anexo
             response = HttpResponse(pdf, content_type='application/pdf')
             filename = f"Simulação_de_Venda_{hoje.strftime('%Y-%m-%d_%H-%M')}.pdf"
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
         else:
+            HTML_FALLBACK.inc()
             # Fallback: retorna o HTML para debug ou se WeasyPrint falhar
             response = HttpResponse(html_string, content_type='text/html')
             filename = f"Simulação_HTML_{hoje.strftime('%Y-%m-%d_%H-%M')}.html"
@@ -248,6 +275,7 @@ def generate_pdf(request):
             return response
         
     except Exception as e:
+        PDF_FALHA.inc()
         # Loga o erro e retorna uma resposta de erro 500
         print(f"Erro na geração do PDF: {e}")
         return Response({'error': str(e)}, status=500)

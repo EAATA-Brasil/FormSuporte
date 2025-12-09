@@ -12,6 +12,8 @@ from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 class RequestMetricsMiddleware(MiddlewareMixin):
     """Coleta métricas básicas de requisições HTTP para o Prometheus."""
 
+    METRICS_PATHS = ("/metrics", "/metrics/")
+
     def process_view(
         self,
         request: HttpRequest,
@@ -19,14 +21,25 @@ class RequestMetricsMiddleware(MiddlewareMixin):
         view_args: list,
         view_kwargs: dict,
     ) -> None:
+        # Não medir acesso ao próprio endpoint de métricas
+        if request.path in self.METRICS_PATHS:
+            return None
+
         request._metrics_start_time = perf_counter()
         request._metrics_view = f"{view_func.__module__}.{view_func.__name__}"
 
     def process_response(self, request: HttpRequest, response: HttpResponse) -> HttpResponse:
-        self._observe_metrics(request, getattr(response, "status_code", 0))
+        # Ignora o /metrics — evita 404 e evita poluir métricas
+        if request.path in self.METRICS_PATHS:
+            return response
+
+        self._observe_metrics(request, response.status_code)
         return response
 
     def process_exception(self, request: HttpRequest, exception: Exception) -> None:
+        if request.path in self.METRICS_PATHS:
+            return None
+
         # Incrementa o contador mesmo quando a resposta é 500.
         self._observe_metrics(request, 500)
 
@@ -42,4 +55,3 @@ class RequestMetricsMiddleware(MiddlewareMixin):
             REQUEST_LATENCY.labels(endpoint=endpoint, method=method).observe(
                 perf_counter() - start_time
             )
-

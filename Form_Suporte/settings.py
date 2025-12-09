@@ -57,6 +57,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'django_prometheus',
     'daphne',
     'channels',
     'corsheaders',
@@ -67,7 +68,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'form',
-    'ocorrencia_erro',
+    'ocorrencia_erro.apps.OcorrenciaErroConfig',
     'API',
     'rest_framework',
     'simulador',
@@ -101,6 +102,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = '/home/ubuntu/Sistema_Suporte'
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -112,6 +114,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'Form_Suporte.urls'

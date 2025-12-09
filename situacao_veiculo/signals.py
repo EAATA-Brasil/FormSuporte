@@ -1,9 +1,37 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 from situacao_veiculo.models import Cliente
 from serial_vci.models import SerialVCI
 
+# ---- IMPORTAR MÉTRICAS ----
+from .metrics import (
+    CLIENTES_EXISTENTES,
+    CADASTRO_SUCESSO as CADASTRO_CRIADO,
+)
+
+
+# ==========================================================
+# 1) MÉTRICAS AUTOMÁTICAS — Cliente criado / removido
+# ==========================================================
+
+@receiver(post_save, sender=Cliente)
+def atualizar_metricas_cliente(sender, instance, created, **kwargs):
+    """Atualiza métricas sempre que um Cliente é criado ou alterado."""
+    if created:
+        CADASTRO_CRIADO.inc()
+
+    CLIENTES_EXISTENTES.set(Cliente.objects.count())
+
+
+@receiver(post_delete, sender=Cliente)
+def atualizar_metricas_delete(sender, instance, **kwargs):
+    CLIENTES_EXISTENTES.set(Cliente.objects.count())
+
+
+# ==========================================================
+# 2) SINCRONIZAÇÃO Cliente → SerialVCI
+# ==========================================================
 
 @receiver(post_save, sender=Cliente)
 def sincronizar_serial(sender, instance, **kwargs):
@@ -24,5 +52,5 @@ def sincronizar_serial(sender, instance, **kwargs):
     if not created:
         serial.cliente = instance.nome
         serial.telefone = instance.tel
-        serial.data = instance.data  # <- agora atualiza a data também
+        serial.data = instance.data
         serial.save()

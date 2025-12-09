@@ -8,6 +8,8 @@ from django.contrib.auth.models import User
 import uuid
 import random
 import string
+from .metrics import TEMPO_RESOLUCAO
+from django.utils import timezone
 
 class Country(models.Model):
     class Meta:
@@ -234,6 +236,10 @@ class Record(models.Model):
         # 0. PRIORIDADE ABSOLUTA — FINALIZADO → DONE
         # =====================================================
         if self.finished:
+            inicio = self.data.timestamp()
+            fim = timezone.now().timestamp()
+            TEMPO_RESOLUCAO.observe(fim - inicio)
+            
             self.status = self.STATUS_OCORRENCIA.DONE
             return  # Nada mais pode sobrescrever
             

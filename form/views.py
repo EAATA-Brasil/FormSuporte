@@ -5,6 +5,14 @@ from .forms import VeiculoForm
 from .models import Veiculo
 from django.db.models import Q
 from django.core.paginator import Paginator
+from .metrics import (
+    VEICULOS_CADASTRADOS,
+    VEICULOS_ATUALIZADOS,
+    VEICULOS_ATUALIZACAO_ERRO,
+    FILTROS_CONSULTADOS,
+    AJAX_FILTRO
+)
+from .decorators import form_metrics
 
 # views.py - Lógica de Negócio para o App 'form'
 
@@ -20,6 +28,7 @@ def cadastrar_veiculo(request):
         if form.is_valid():
             # Salva o novo veículo no banco de dados
             form.save()
+            VEICULOS_CADASTRADOS.inc()
             messages.success(request, 'Veículo cadastrado com sucesso!')
             # Redireciona para a página de listagem após o sucesso
             return redirect('index_form')
@@ -36,6 +45,7 @@ def index(request):
     """
     Exibe a lista de veículos com suporte a filtros e paginação.
     """
+    FILTROS_CONSULTADOS.inc()
     # Inicializa um objeto Q vazio para construir a consulta de filtros
     query_filters = Q()
     
@@ -81,6 +91,7 @@ def get_opcoes_filtro(request):
     
     Útil para preencher dinamicamente dropdowns de filtro.
     """
+    AJAX_FILTRO.inc()
     # Obtém os parâmetros de filtro da requisição
     pais_filtro = request.GET.get('pais', '')
     marca_filtro = request.GET.get('marca', '')
@@ -126,7 +137,7 @@ def update_vehicle(request):
             # Atualiza o atributo do objeto e salva no banco de dados
             setattr(veiculo, nome_campo, novo_valor)
             veiculo.save()
-            
+            VEICULOS_ATUALIZADOS.labels(nome_campo).inc()
             # Retorna sucesso com o novo valor
             return JsonResponse({
                 'status': 'success',
@@ -136,6 +147,7 @@ def update_vehicle(request):
             # Trata o caso de veículo não encontrado
             return JsonResponse({'status': 'error', 'message': 'Veículo não encontrado'}, status=404)
         except Exception as e:
+            VEICULOS_ATUALIZACAO_ERRO.inc()
             # Trata outros erros de atualização
             return JsonResponse({'status': 'error', 'message': f'Erro ao atualizar veículo: {str(e)}'}, status=400)
             
@@ -168,6 +180,8 @@ def update_vehicle_field(request):
             display_func = getattr(veiculo, f'get_{nome_campo}_display', lambda: novo_valor)
             display_value = display_func()
 
+            VEICULOS_ATUALIZADOS.labels(nome_campo).inc()
+
             response_data = {
                 'status': 'success',
                 'new_value': novo_valor,
@@ -181,6 +195,7 @@ def update_vehicle_field(request):
             # Trata o caso de veículo não encontrado
             return JsonResponse({'status': 'error', 'message': 'Veículo não encontrado'}, status=404)
         except Exception as e:
+            VEICULOS_ATUALIZACAO_ERRO.inc()
             # Trata outros erros de atualização
             return JsonResponse({'status': 'error', 'message': f'Erro ao atualizar campo: {str(e)}'}, status=400)
         

@@ -14,6 +14,7 @@ urlpatterns = [
     path("api/", include("API.urls")),
     path("form/", include("form.urls")),
     path("seriais/", include("serial_vci.urls")),
+    path("metrics", metrics),
     path("metrics/", metrics, name="metrics"),
 
     # URL para trocar idioma

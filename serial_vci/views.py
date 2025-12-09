@@ -14,11 +14,21 @@ from .models import (
     GarantiaComentarioFoto
 )
 
+from .metrics import (
+    SERIAL_CADASTRADO, SERIAL_EDITADO, FOTO_ADICIONADA, FOTO_REMOVIDA,
+    GARANTIA_CRIADA, GARANTIA_DELETADA,
+    COMENTARIO_CRIADO, COMENTARIO_DELETADO,
+    TOTAL_SERIAIS, TOTAL_GARANTIAS, TOTAL_COMENTARIOS
+)
+
 
 # websocket broadcast
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from .metrics import SERIAL_CADASTRADO
 
+def executar_simulacao(request):
+    SERIAL_CADASTRADO.inc()
 
 def broadcast_update():
     """Envia aviso para TODOS os usuários atualizarem a tabela."""
@@ -112,9 +122,7 @@ def detalhes_serial(request, serial_id):
     })
 
 
-
 def adicionar_serial(request):
-    """View para adicionar novo serial."""
     if request.method != "POST":
         return HttpResponseBadRequest("Método inválido")
 
@@ -125,36 +133,39 @@ def adicionar_serial(request):
 
     serial = form.save()
 
-    # salvar múltiplas imagens
+    SERIAL_CADASTRADO.inc()
+    TOTAL_SERIAIS.set(SerialVCI.objects.count())
+
+    # Salvar fotos
     fotos = request.FILES.getlist("fotos")
     for foto in fotos:
         SerialFoto.objects.create(serial=serial, imagem=foto)
+        FOTO_ADICIONADA.inc()
 
     broadcast_update()
 
     return JsonResponse({"success": True})
 
-
 def editar_serial(request, serial_id):
-    """View para editar SerialVCI (restrito aos campos VCI, Tablet, Prog e Fotos)."""
+
     if request.method != "POST":
         return HttpResponseBadRequest("Método inválido")
 
     serial = get_object_or_404(SerialVCI, id=serial_id)
-    
-    # Usa o SerialVCIEditForm que contém apenas os campos VCI, Tablet e Prog
+
     form = SerialVCIEditForm(request.POST, request.FILES, instance=serial)
 
     if not form.is_valid():
         return JsonResponse({"success": False, "errors": form.errors})
 
-    # Salva apenas os campos VCI, Tablet, Prog 
-    serial = form.save()
+    form.save()
 
-    # Adicionar novas imagens
-    fotos = request.FILES.getlist("fotos")
-    for foto in fotos:
+    SERIAL_EDITADO.inc()
+
+    # adicionar novas fotos
+    for foto in request.FILES.getlist("fotos"):
         SerialFoto.objects.create(serial=serial, imagem=foto)
+        FOTO_ADICIONADA.inc()
 
     broadcast_update()
 
@@ -162,46 +173,45 @@ def editar_serial(request, serial_id):
 
 
 def remover_foto(request, foto_id):
-    """View para remover uma foto existente (usada no modal de edição)."""
-    if request.method != "POST":
-        return JsonResponse({"success": False, "error": "Método inválido"}, status=400)
 
-    try:
-        foto = get_object_or_404(SerialFoto, id=foto_id)
-        # Remove o arquivo físico e do DB
-        foto.imagem.delete(save=False) 
-        foto.delete()
-        
-        broadcast_update()
-        
-        return JsonResponse({"success": True})
-    except Exception as e:
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
+    if request.method != "POST":
+        return JsonResponse({"success": False}, status=400)
+
+    foto = get_object_or_404(SerialFoto, id=foto_id)
     
+    foto.imagem.delete(save=False)
+    foto.delete()
+
+    FOTO_REMOVIDA.inc()
+
+    broadcast_update()
+
+    return JsonResponse({"success": True})
+   
 
 @csrf_exempt
 def add_garantia(request, serial_id):
+
     if request.method != "POST":
         return JsonResponse({"error": "Método inválido"}, status=400)
 
     serial = get_object_or_404(SerialVCI, id=serial_id)
 
-    titulo = request.POST.get("titulo", "")
-    descricao = request.POST.get("descricao", "")
-
     garantia = Garantia.objects.create(
         serial=serial,
-        titulo=titulo,
-        descricao=descricao,
+        titulo=request.POST.get("titulo", ""),
+        descricao=request.POST.get("descricao", "")
     )
 
+    GARANTIA_CRIADA.inc()
+    TOTAL_GARANTIAS.set(Garantia.objects.count())
+
     for foto in request.FILES.getlist("fotos"):
-        GarantiaFoto.objects.create(
-            garantia=garantia,
-            imagem=foto
-        )
+        GarantiaFoto.objects.create(garantia=garantia, imagem=foto)
+        FOTO_ADICIONADA.inc()
 
     return JsonResponse({"success": True})
+
 
 def garantia_detalhes(request, garantia_id):
     garantia = get_object_or_404(Garantia, id=garantia_id)
@@ -223,65 +233,72 @@ def garantia_detalhes(request, garantia_id):
 
 @csrf_exempt
 def add_comentario(request, garantia_id):
+
     if request.method != "POST":
-        return JsonResponse({"success": False, "error": "Método inválido"}, status=400)
+        return JsonResponse({"error": "Método inválido"}, status=400)
 
     garantia = get_object_or_404(Garantia, id=garantia_id)
 
-    texto = request.POST.get("texto", "").strip()
-    if not texto:
-        return JsonResponse({"success": False, "error": "Comentário vazio"}, status=400)
-
-    # cria comentário
     comentario = GarantiaComentario.objects.create(
         garantia=garantia,
-        texto=texto
+        texto=request.POST.get("texto", "")
     )
 
-    # adiciona fotos
+    COMENTARIO_CRIADO.inc()
+    TOTAL_COMENTARIOS.set(GarantiaComentario.objects.count())
+
     for foto in request.FILES.getlist("fotos"):
         GarantiaComentarioFoto.objects.create(
             comentario=comentario,
             imagem=foto
         )
+        FOTO_ADICIONADA.inc()
 
     return JsonResponse({"success": True})
 
+
 @csrf_exempt
 def deletar_garantia(request, garantia_id):
+
     if request.method != "POST":
-        return JsonResponse({"success": False, "error": "Método inválido"}, status=400)
+        return JsonResponse({"error": "Método inválido"}, status=400)
 
     garantia = get_object_or_404(Garantia, id=garantia_id)
 
-    # Remove fotos da garantia
-    for foto in garantia.fotos.all():
-        foto.imagem.delete(save=False)
-        foto.delete()
-
-    # Remove comentários + fotos de comentários
+    # deletar fotos e comentários normalmente
     for comentario in garantia.comentarios.all():
         for foto in comentario.fotos.all():
             foto.imagem.delete(save=False)
             foto.delete()
         comentario.delete()
+        COMENTARIO_DELETADO.inc()
+
+    for foto in garantia.fotos.all():
+        foto.imagem.delete(save=False)
+        foto.delete()
 
     garantia.delete()
 
+    GARANTIA_DELETADA.inc()
+    TOTAL_GARANTIAS.set(Garantia.objects.count())
+    TOTAL_COMENTARIOS.set(GarantiaComentario.objects.count())
+
     return JsonResponse({"success": True})
+
 
 @csrf_exempt
 def delete_comentario(request, comentario_id):
-    if not request.user.is_superuser:
-        return JsonResponse({"success": False, "error": "Permissão negada"}, status=403)
 
     comentario = get_object_or_404(GarantiaComentario, id=comentario_id)
 
-    # remover fotos físicas
     for foto in comentario.fotos.all():
         foto.imagem.delete(save=False)
         foto.delete()
 
     comentario.delete()
 
+    COMENTARIO_DELETADO.inc()
+    TOTAL_COMENTARIOS.set(GarantiaComentario.objects.count())
+
     return JsonResponse({"success": True})
+

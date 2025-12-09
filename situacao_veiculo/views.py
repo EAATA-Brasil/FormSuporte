@@ -10,42 +10,56 @@ from openpyxl import load_workbook
 from openpyxl.utils.datetime import from_excel
 
 from .models import Cliente
+from .metrics import (
+    CLIENTES_EXISTENTES, BUSCA_SUCESSO, BUSCA_FALHA, BUSCA_MULTIPLOS,
+    CADASTRO_SUCESSO, CADASTRO_ERRO, CLIENTES_ATUALIZADOS,
+    IMPORTADOS_SUCESSO, IMPORTADOS_DUPLICADOS, IMPORTADOS_ERRO
+)
+
 
 def buscar_serial(request):
     context = {}
+
     if request.method == 'POST':
         serial = request.POST.get('serial', '').strip()
         context['serial_digitado'] = serial
 
         clientes = Cliente.objects.filter(serial=serial)
 
+        # Nenhum encontrado
         if not clientes.exists():
+            BUSCA_FALHA.inc()
             context['status_message'] = 'SEM DADOS'
             context['mensagem'] = 'Passar para o comercial atualizar o cadastro.'
             return render(request, 'situacao/index.html', context)
 
+        # Múltiplos encontrados
         if clientes.count() > 1:
-            lista_clientes = []
-            for cliente in clientes:
-                lista_clientes.append({
+            BUSCA_MULTIPLOS.inc()
+            lista_clientes = [
+                {
                     'cliente': cliente,
                     'status': cliente.status,
                     'vencimento_dias': getattr(cliente, '_vencimento_dias', None),
-                    'status_message': cliente.status_message,  # já é “efetiva”
-                })
+                    'status_message': cliente.status_message,
+                }
+                for cliente in clientes
+            ]
             context['clientes_duplicados'] = lista_clientes
-            context['mensagem'] = 'Encontradas múltiplas ocorrências para esse serial. Verifique os dados abaixo:'
+            context['mensagem'] = 'Encontradas múltiplas ocorrências para esse serial.'
             return render(request, 'situacao/index.html', context)
 
-        # Único cliente
+        # Encontrou exatamente 1
+        BUSCA_SUCESSO.inc()
+
         cliente = clientes.first()
         context['cliente'] = cliente
         context['status'] = cliente.status
-        context['mensagem'] = cliente.message_effective   # detalhada efetiva
-        context['status_message'] = cliente.status_message  # curta efetiva
+        context['mensagem'] = cliente.message_effective
+        context['status_message'] = cliente.status_message
         return render(request, 'situacao/index.html', context)
 
-    return redirect('index')  # GET -> homepage
+    return redirect('index')
 
 def _anos_por_equipamento(equipamento: str) -> int:
     if not equipamento:
@@ -165,6 +179,9 @@ def cadastrar_serial(request):
             vencimento=vencimento_data if request.user.is_superuser else None,
         )
 
+        CADASTRO_SUCESSO.inc()
+        CLIENTES_EXISTENTES.set(Cliente.objects.count())
+
         return JsonResponse(
             {
                 "ok": True,
@@ -185,16 +202,19 @@ def cadastrar_serial(request):
         )
 
     except IntegrityError:
+        CADASTRO_ERRO.inc()
         return JsonResponse(
             {"ok": False, "message": "Não foi possível cadastrar (restrição de unicidade)."},
             status=409,
         )
     except ValueError as e:
+        CADASTRO_ERRO.inc()
         return JsonResponse(
             {"ok": False, "message": f"Erro de validação: {e}"},
             status=400,
         )
     except Exception:
+        CADASTRO_ERRO.inc()
         return JsonResponse(
             {"ok": False, "message": "Erro interno ao cadastrar."},
             status=500,
@@ -256,6 +276,8 @@ def api_atualizar_cliente(request):
 
     setattr(cliente, field, value)
     cliente.save(update_fields=[field])
+
+    CLIENTES_ATUALIZADOS.labels(campo=field).inc()
 
     return JsonResponse({"ok": True, "message": f"{field.capitalize()} atualizado.", "data": {field: value}})
 
@@ -341,6 +363,7 @@ def importar_excel(request):
         except Exception as exc:
             errors.append({"row": row_index, "message": str(exc)})
 
+    CLIENTES_EXISTENTES.set(Cliente.objects.count())
     message = "Importação concluída."
     if created or duplicates or errors:
         message = (

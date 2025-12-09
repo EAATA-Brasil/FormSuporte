@@ -41,6 +41,7 @@ from django.utils.translation import gettext as _
 
 
 from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao
+from .metrics import REGISTROS_EXISTENTES, REGISTROS_CRIADOS, ARQUIVOS_ENVIADOS, ARQUIVOS_BAIXADOS, REGISTROS_ATUALIZADOS,LOGIN_SUCESSO, LOGIN_ERRO, TEMPO_RESOLUCAO
 
 # Constantes
 DATE_COLUMNS = ["data", "deadline", "finished"]
@@ -229,6 +230,7 @@ def download_todos_arquivos(request, record_id):
 
 @login_required(login_url=URL_LOGIN)
 def index(request):
+    REGISTROS_EXISTENTES.set(Record.objects.count())
     responsaveis_por_pais_json, todos_responsaveis_json = get_responsaveis()
     
     ocorrencias_queryset = Record.objects.all()
@@ -576,9 +578,11 @@ def login_view(request):
             user = authenticate(request, username=username.upper(), password=password)
 
         if user:
+            LOGIN_SUCESSO.inc()
             login_django(request, user)
             return redirect(next_url) if next_url else redirect('/ocorrencia')
         else:
+            LOGIN_ERRO.inc()
             messages.error(request, "Usuário ou senha inválidos.")
             return redirect(reverse('login_ocorrencias'))
 
@@ -825,6 +829,7 @@ def subir_ocorrencia(request):
                     record_data['responsible'] = request.POST.get("technical").capitalize()
             try:
                 record = Record.objects.create(**record_data)
+                REGISTROS_CRIADOS.inc()
             except IntegrityError as e:
                 return JsonResponse({
                     "status": "error",
@@ -833,6 +838,7 @@ def subir_ocorrencia(request):
 
             # Processa arquivos anexados
             for file in request.FILES.getlist("arquivo"):
+                ARQUIVOS_ENVIADOS.inc()
                 ArquivoOcorrencia.objects.create(
                     record=record,
                     arquivo=file,
@@ -970,7 +976,9 @@ def alterar_dados(request):
                 try:
                     arquivo = ArquivoOcorrencia.objects.get(id=file_id)
                     arquivo.delete()
+                    REGISTROS_ATUALIZADOS.labels(campo=field_name).inc()
                     return JsonResponse({'status': 'success'})
+                
                 except ArquivoOcorrencia.DoesNotExist:
                     return JsonResponse({'status': 'error', 'message': 'Arquivo não encontrado'}, status=404)
 
@@ -983,6 +991,7 @@ def alterar_dados(request):
                             arquivo=file,
                             nome_original=file.name
                         )
+                    REGISTROS_ATUALIZADOS.labels(campo=field_name).inc()
                     return JsonResponse({'status': 'success', 'page_num': body.get("page_num")})
                 except Exception as e:
                     return JsonResponse({'status': 'error','message': f'Erro ao salvar arquivos: {str(e)}'}, status=500)
@@ -1027,6 +1036,7 @@ def alterar_dados(request):
             # SALVA O REGISTRO UMA ÚNICA VEZ.
             # O modelo (models.py) irá aplicar toda a lógica de status necessária.
             record.save()
+            REGISTROS_ATUALIZADOS.labels(campo=field_name).inc()
 
             if field_name == 'feedback_manager' and new_value and str(new_value).strip():
                 criar_notificacao_feedback(record, 'feedback_manager', request.user)
@@ -1087,7 +1097,8 @@ def download_arquivo(request, arquivo_id):
         # Define o cabeçalho para forçar download
         filename = arquivo.nome_original or os.path.basename(file_path)
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
+
+        ARQUIVOS_BAIXADOS.inc()
         return response
         
     except ArquivoOcorrencia.DoesNotExist:
