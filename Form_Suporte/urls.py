@@ -1,8 +1,10 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.conf.urls.i18n import i18n_patterns
+
+from .views import metrics
 
 urlpatterns = [
     # URLs sem prefixo de idioma
@@ -12,6 +14,7 @@ urlpatterns = [
     path("api/", include("API.urls")),
     path("form/", include("form.urls")),
     path("seriais/", include("serial_vci.urls")),
+    path("metrics/", metrics, name="metrics"),
 
     # URL para trocar idioma
     path('i18n/', include('django.conf.urls.i18n')),
