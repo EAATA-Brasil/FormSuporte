@@ -1,0 +1,40 @@
+<form method="post">
+  {% csrf_token %}
+
+  <h2>Dados do Pedido</h2>
+  {{ form.as_p }}
+
+  <h2>Itens do Pedido</h2>
+
+  <table border="1" width="100%" id="itens-table">
+    <thead>
+      <tr>
+        <th>Ref</th>
+        <th>Qtd</th>
+        <th>Un</th>
+        <th>Descrição</th>
+        <th>Preço Unit.</th>
+        <th>Excluir</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ formset.management_form }}
+      {% for form in formset %}
+      <tr>
+        <td>{{ form.referencia }}</td>
+        <td>{{ form.quantidade }}</td>
+        <td>{{ form.unidade }}</td>
+        <td>{{ form.descricao }}</td>
+        <td>{{ form.preco_unitario }}</td>
+        <td>{{ form.DELETE }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <button type="button" onclick="addRow()">➕ Adicionar linha</button>
+
+  <br><br>
+  <button type="submit">Salvar Pedido</button>
+</form>
+

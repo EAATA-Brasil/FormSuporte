@@ -1,0 +1,245 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Pedido | EAATA Brasil</title>
+  <link rel="stylesheet" href="{% static 'pedido/css/pedido.css' %}">
+</head>
+
+<body>
+
+<form method="post">
+{% csrf_token %}
+
+<div class="orcamento">
+
+<!-- ================= CABEÇALHO ================= -->
+<table class="table-head">
+  <tr>
+    <td rowspan="4" class="center">
+      <img src="{% static 'pedido/img/logo.png' %}" class="logo"><br>
+      <div class="empresa">
+        <strong>EAATA BRASIL</strong><br>
+        (11) 2538-0877<br>
+        www.eaata.pro<br>
+        <span class="small">
+          R. Múcio Leão, 68 – Freguesia do Ó<br>
+          CEP 02910-050 – São Paulo – SP<br>
+          CNPJ: 40.818.167/0001-89
+        </span>
+      </div>
+    </td>
+    <td colspan="3" class="pedido-title">PEDIDO</td>
+  </tr>
+  <tr>
+    <td colspan="3"><div class="pedido-box"></div></td>
+  </tr>
+  <tr>
+    <td class="label center">DATA</td>
+    <td colspan="2">{{ form.data }}</td>
+  </tr>
+</table>
+
+<!-- ================= DADOS CLIENTE ================= -->
+<table class="table-section">
+  <tr>
+    <td class="label">Nome / Razão Social</td>
+    <td colspan="3">{{ form.cliente }}</td>
+  </tr>
+
+    <tr>
+        <td class="label">CEP</td>
+        <td>{{ form.cep }}</td>
+        <td class="label">Cidade</td>
+        <td>{{ form.cidade }}</td>
+    </tr>
+
+    <tr>
+        <td class="label">Rua</td>
+        <td>{{ form.rua }}</td>
+        <td class="label">Bairro</td>
+        <td>{{ form.bairro }}</td>
+    </tr>
+
+    <tr>
+        <td class="label">Número</td>
+        <td>{{ form.numero }}</td>
+        <td class="label">Complemento</td>
+        <td>{{ form.complemento }}</td>
+    </tr>
+
+
+  <tr>
+    <td class="label">CNPJ / CPF</td>
+    <td>{{ form.cnpj_cpf }}</td>
+    <td class="label">IE</td>
+    <td>{{ form.ie }}</td>
+  </tr>
+
+  <tr>
+    <td class="label">E-mail</td>
+    <td>{{ form.email }}</td>
+    <td class="label">Transporte</td>
+    <td>{{ form.transporte }}</td>
+  </tr>
+
+  <tr>
+    <td class="label">Vendedor</td>
+    <td colspan="3">{{ form.vendedor }}</td>
+  </tr>
+</table>
+
+<!-- ================= ITENS ================= -->
+<table id="itens-table" class="table-itens">
+  <thead>
+    <tr>
+      <th>Ref.</th>
+      <th>Quant.</th>
+      <th>Un.</th>
+      <th>Descrição</th>
+      <th>Preço Unit.</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ formset.management_form }}
+    {% for f in formset %}
+    <tr class="item-row">
+      <td>{{ f.referencia }}</td>
+      <td>{{ f.quantidade }}</td>
+      <td>{{ f.unidade }}</td>
+      <td>{{ f.descricao }}</td>
+      <td>{{ f.preco_unitario }}</td>
+      <td class="total-linha">R$ 0,00</td>
+      <td style="display:none">{{ f.id }}</td>
+      <td style="display:none">{{ f.DELETE }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- ================= OBS ================= -->
+<table class="table-section">
+  <tr>
+    <td class="label">Observações</td>
+    <td colspan="5">{{ form.observacoes }}</td>
+  </tr>
+</table>
+
+<!-- ================= TOTAL ================= -->
+<table class="table-total">
+  <tr>
+    <td class="bold left">TOTAL GERAL</td>
+    <td class="total-geral right" id="total-geral">
+    R$ 0,00
+    </td>
+  </tr>
+</table>
+
+</div>
+
+<!-- ================= AÇÕES ================= -->
+<div class="actions">
+  <button type="button" onclick="addRow()">+ Linha</button>
+  <button type="submit" class="primary">Salvar Pedido</button>
+</div>
+
+</form>
+
+</body>
+</html>
+
+
+<!-- ================= JS ================= -->
+<script>
+function addRow() {
+  const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
+  const tbody = document.querySelector('#itens-table tbody');
+  const formCount = parseInt(totalForms.value, 10);
+
+  const firstRow = tbody.querySelector('.item-row');
+  const newRow = firstRow.cloneNode(true);
+
+  newRow.querySelectorAll('input, select, textarea').forEach(el => {
+    if (el.name) el.name = el.name.replace('-0-', `-${formCount}-`);
+    if (el.id)   el.id   = el.id.replace('-0-', `-${formCount}-`);
+
+    if (el.type === 'checkbox') {
+      el.checked = false;
+    } else {
+      el.value = '';
+    }
+  });
+
+  newRow.querySelector('.total-linha').textContent = 'R$ 0,00';
+
+  tbody.appendChild(newRow);
+  totalForms.value = formCount + 1;
+}
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const cepInput = document.getElementById("id_cep");
+  const cidadeInput = document.getElementById("id_cidade");
+  const bairroInput = document.getElementById("id_bairro");
+  const ruaInput = document.getElementById("id_rua");
+
+  if (!cepInput) return;
+
+  cepInput.addEventListener("blur", function () {
+    const cep = cepInput.value.replace(/\D/g, "");
+
+    if (cep.length !== 8) return;
+
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.erro) {
+          alert("CEP não encontrado");
+          return;
+        }
+
+        cidadeInput.value = `${data.localidade} - ${data.uf}`;
+        bairroInput.value = data.bairro || "";
+        ruaInput.value = data.logradouro || "";
+      })
+      .catch(() => {
+        alert("Erro ao consultar o CEP");
+      });
+  });
+});
+</script>
+
+<script>
+function calcularTotais() {
+  let totalGeral = 0;
+
+  document.querySelectorAll('.item-row').forEach(row => {
+    const qtd = parseFloat(row.querySelector('[name$="quantidade"]').value) || 0;
+    const preco = parseFloat(row.querySelector('[name$="preco_unitario"]').value) || 0;
+
+    const totalLinha = qtd * preco;
+    row.querySelector('.total-linha').textContent =
+      'R$ ' + totalLinha.toFixed(2).replace('.', ',');
+
+    totalGeral += totalLinha;
+  });
+
+  document.getElementById('total-geral').textContent =
+    'R$ ' + totalGeral.toFixed(2).replace('.', ',');
+}
+
+// recalcula ao digitar
+document.addEventListener('input', function (e) {
+  if (
+    e.target.name?.includes('quantidade') ||
+    e.target.name?.includes('preco_unitario')
+  ) {
+    calcularTotais();
+  }
+});
+</script>
+
+</body>
+</html>

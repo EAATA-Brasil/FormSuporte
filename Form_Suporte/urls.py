@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/", include("API.urls")),
     path("form/", include("form.urls")),
     path("seriais/", include("serial_vci.urls")),
+    path("pedido/", include("pedido.urls")),
 
     # URL para trocar idioma
     path('i18n/', include('django.conf.urls.i18n')),

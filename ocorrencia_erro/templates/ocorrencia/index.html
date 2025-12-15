@@ -11,6 +11,34 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 24px;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn-dashboard {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #0056b3;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.btn-dashboard:hover {
+    background: #004494;
+}
+
         .table td[data-column="status"][data-initial-value='{%trans "Concluído"%}'] {
     background-color: var(--success) !important;
     color: white !important;
@@ -477,19 +505,31 @@
     {%if has_full_permission%}
     <footer>
         <div id="ocorrencias-panel">
-            <label for="responsavel-select">{% trans "Selecionar responsável:" %}</label>
+            <label for="responsavel-select">
+                {% trans "Selecionar responsável:" %}
+            </label>
+
             <div id="selector-and-info">
                 <select id="responsavel-select">
                     <option value="">-- {% trans "Escolha" %} --</option>
                 </select>
 
                 <div id="ocorrencias-info" style="display: none;">
-                    <strong>{% trans "Total de ocorrências:" %} <span id="total-ocorrencias">0</span></strong>
+                    <strong>
+                        {% trans "Total de ocorrências:" %}
+                        <span id="total-ocorrencias">0</span>
+                    </strong>
                     <ul id="status-percentuais"></ul>
                 </div>
             </div>
         </div>
+
+        <!-- 🔥 BOTÃO DASHBOARD -->
+        <a href="{% url 'dashboard_ocorrencias' %}" class="btn-dashboard">
+            📊 {% trans "Abrir Dashboard" %}
+        </a>
     </footer>
+
     {%endif%}
 <script>
     function getCookie(name) { 

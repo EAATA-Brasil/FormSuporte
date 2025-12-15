@@ -72,7 +72,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'simulador',
     'serial_vci',
-    'situacao_veiculo.apps.SituacaoVeiculoConfig'
+    'situacao_veiculo.apps.SituacaoVeiculoConfig',
+    'pedido'
 ]
 
 

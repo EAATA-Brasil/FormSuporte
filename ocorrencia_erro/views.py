@@ -5,6 +5,7 @@ import os
 import json
 import mimetypes
 import requests
+from datetime import timedelta
 
 from utils.weasyprint_loader import configure_weasyprint
 configure_weasyprint()
@@ -39,7 +40,20 @@ from django.utils.encoding import smart_str
 from time import timezone
 from django.utils.translation import gettext as _
 
+from ocorrencia_erro.services.dashboard import (
+    dashboard_responsavel,
+    dashboard_por_status,
+    dashboard_por_pais,
+    lista_detalhada
+)
+from ocorrencia_erro.services.dashboard import dashboard_responsavel
 
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from django.utils import timezone
+from weasyprint import HTML
+
+from ocorrencia_erro.services.dashboard import dashboard_responsavel
 from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao
 
 # Constantes
@@ -1445,3 +1459,78 @@ def download_arquivo(request, arquivo_id):
         # Log do erro (em produção, usar logging adequado)
         print(f"Erro no download do arquivo {arquivo_id}: {str(e)}")
         raise Http404("Erro ao processar download")
+
+@login_required(login_url='subir_ocorrencia')
+def dashboard_view(request):
+    context = {
+        'dashboard': dashboard_responsavel(
+            request.user,
+            request,
+            responsible=request.GET.get('responsible'),
+            status=request.GET.get('status'),
+            country=request.GET.get('country'),
+        ),
+        'responsaveis': Record.objects.values_list(
+            'responsible', flat=True
+        ).exclude(responsible__isnull=True).exclude(
+            responsible=''
+        ).distinct(),
+        'status_list': Record.STATUS_OCORRENCIA.choices,
+        'paises_permitidos': Country.objects.all() if request.user.is_superuser else Country.objects.filter(
+            id__in=CountryPermission.objects.filter(
+                user=request.user
+            ).values_list("country_id", flat=True)
+        ),
+    }
+
+    return render(request, 'ocorrencia/dashboard.html', context)
+
+
+@login_required(login_url='subir_ocorrencia')
+def gerar_relatorio_dashboard(request):
+    records = lista_detalhada(
+        request.user,
+        request,
+        responsible=request.GET.get("responsible"),
+        status=request.GET.get("status"),
+        country=request.GET.get("country"),
+    )
+
+    html_string = render_to_string(
+        "ocorrencia/dashboard_pdf.html",
+        {
+            "records": records,
+            "filters": {
+                "status": request.GET.get("status") or "Todos",
+                "responsible": request.GET.get("responsible") or "Todos",
+            },
+            "now": timezone.now(),
+        }
+    )
+
+    pdf = HTML(
+        string=html_string,
+        base_url=request.build_absolute_uri("/")
+    ).write_pdf()
+
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = "inline; filename=relatorio_ocorrencias.pdf"
+    return response
+
+
+@login_required(login_url='subir_ocorrencia')
+def dashboard_detalhes(request):
+    records = lista_detalhada(
+        request.user,
+        request,
+        responsible=request.GET.get("responsible"),
+        status=request.GET.get("status"),
+        country=request.GET.get("country"),
+    )
+
+    return render(
+        request,
+        "ocorrencia/dashboard_detalhes.html",
+        {"records": records}
+    )
+
