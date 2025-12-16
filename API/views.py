@@ -189,33 +189,46 @@ def generate_pdf(request):
         desconto_valor = float(data.get('desconto', 0) or 0)
         entrada_valor = float(data.get('entrada', 0) or 0)
         valor_parcela = float(data.get('valorParcela', 0) or 0)
-        
-        valor_total_final = valor_total_equipamentos - desconto_valor
+        frete_valor = float(data.get('frete', 0) or 0)
+
+        tem_frete = frete_valor > 0
+        valor_total_final = valor_total_equipamentos - desconto_valor + frete_valor
         
         # 4. Preparar Dados para o Template
         template_data = {
             'equipamentos': equipamentos_data,
+
             'entrada': entrada_valor,
             'entrada_formatado': format_currency(entrada_valor),
+
             'parcelas': int(data.get('parcelas', 0) or 0),
             'localizacao': data.get('localizacao', ''),
             'faturamento': data.get('faturamento', ''),
+
             'valorParcela': valor_parcela,
             'valorParcela_formatado': format_currency(valor_parcela),
+
             'valorTotal': valor_total_equipamentos,
             'valorTotal_formatado': format_currency(valor_total_equipamentos),
+
             'valorTotalFinal': valor_total_final,
             'valorTotalFinal_formatado': format_currency(valor_total_final),
+
             'desconto': desconto_valor,
             'desconto_formatado': format_currency(desconto_valor),
-            'observacao': data.get('observacao', ''), # Observação já é string
+
+            'observacao': data.get('observacao', ''),
             'descricao': data.get('descricao', ''),
             'tipoPagamento': data.get('tipoPagamento', ''),
             'nomeVendedor': data.get('nomeVendedor', ''),
             'nomeCNPJ': data.get('nomeCNPJ', ''),
             'nomeCliente': data.get('nomeCliente', ''),
         }
-        
+
+        if tem_frete:
+            template_data['frete'] = frete_valor
+            template_data['frete_formatado'] = format_currency(frete_valor)
+
         # 5. Calcular Datas de Geração e Validade
         hoje = datetime.now()
         

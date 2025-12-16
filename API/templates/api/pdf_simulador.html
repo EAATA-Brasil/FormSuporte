@@ -276,7 +276,7 @@
             </tbody>
             <tfoot>
                 <tr class="total-row">
-                    <td colspan="3" style="text-align: right;"><strong>Valor Total:</strong></td>
+                    <td colspan="3" style="text-align: right;"><strong>Subtotal (Equipamentos):</strong></td>
                     <td class="text-right valor"><strong>{{ valorTotal_formatado }}</strong></td>
                 </tr>
                 {% if desconto > 0 %}
@@ -284,6 +284,13 @@
                     <td colspan="3" style="text-align: right;"><strong>Desconto:</strong></td>
                     <td class="text-right valor"><strong>- {{ desconto_formatado }}</strong></td>
                 </tr>
+                
+                {% endif %}
+                {% if frete %}
+                    <tr class="total-row">
+                    <td colspan="3" style="text-align: right;"><strong>Frete:</strong></td>
+                    <td class="text-right valor"><strong>{{ frete_formatado }}</strong></td>
+                    </tr>
                 {% endif %}
                 <tr class="total-row">
                     <td colspan="3" style="text-align: right;"><strong>Valor Final:</strong></td>
