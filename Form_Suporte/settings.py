@@ -31,14 +31,12 @@ LOCALE_PATHS = [os.path.join(BASE_DIR,'locale'),]
 SECRET_KEY = os.getenv('SECRET_KEY', ''),
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
     '0.0.0.0',
     'localhost',
-    '*.ngrok-free.app',
-    '*.ngrok-free.dev',
     '*',
 	'82.25.71.76',
     'http://82.25.71.76',
@@ -47,7 +45,6 @@ ALLOWED_HOSTS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://jodi-nonbathing-cherise.ngrok-free.dev',
     'http://82.25.71.76',
     'http://127.0.0.1',
     'http://0.0.0.0',
@@ -71,6 +68,7 @@ INSTALLED_APPS = [
     'ocorrencia_erro.apps.OcorrenciaErroConfig',
     'API',
     'rest_framework',
+    'rest_framework.authtoken',
     'simulador',
     'serial_vci',
     'situacao_veiculo.apps.SituacaoVeiculoConfig'
@@ -149,6 +147,15 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST', ''),
         'PORT': os.getenv('DB_PORT', ''),
     }
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 }
 
 

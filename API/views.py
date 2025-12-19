@@ -16,8 +16,14 @@ from rest_framework.response import Response
 from .models import Equipamentos, TipoEquipamento, MarcaEquipamento
 from .serializers import EquipamentosSerializer, TipoEquipamentoSerializer, MarcaEquipamentoSerializer
 
+<<<<<<< Updated upstream
 from .decorators import api_metrics
 from .metrics import PDF_GERADO, PDF_FALHA, HTML_FALLBACK
+=======
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.authentication import TokenAuthentication
+>>>>>>> Stashed changes
 
 # Configuração de caminhos GTK para Windows (necessário para WeasyPrint no Windows)
 if sys.platform == 'win32':
@@ -60,6 +66,7 @@ class EquipamentosViewSet(viewsets.ReadOnlyModelViewSet):
     """API ViewSet para listar e recuperar equipamentos (somente leitura)."""
     queryset = Equipamentos.objects.all().order_by('nome')
     serializer_class = EquipamentosSerializer
+    permission_classes = [IsAuthenticated]
 
     @api_metrics("equipamentos_list")
     def list(self, request, *args, **kwargs):
@@ -73,6 +80,7 @@ class TipoEquipamentoViewSet(viewsets.ReadOnlyModelViewSet):
     """API ViewSet para listar e recuperar tipos de equipamento (somente leitura)."""
     queryset = TipoEquipamento.objects.all().order_by('nome')
     serializer_class = TipoEquipamentoSerializer
+<<<<<<< Updated upstream
     @api_metrics("tipoequipamento_list")
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -80,11 +88,15 @@ class TipoEquipamentoViewSet(viewsets.ReadOnlyModelViewSet):
     @api_metrics("tipoequipamento_retrieve")
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
+=======
+    permission_classes = [IsAuthenticated]
+>>>>>>> Stashed changes
 
 class MarcaEquipamentoViewSet(viewsets.ReadOnlyModelViewSet):
     """API ViewSet para listar e recuperar marcas de equipamento (somente leitura)."""
     queryset = MarcaEquipamento.objects.all().order_by('nome')
     serializer_class = MarcaEquipamentoSerializer
+<<<<<<< Updated upstream
     @api_metrics("marcaequipamento_list")
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -92,6 +104,9 @@ class MarcaEquipamentoViewSet(viewsets.ReadOnlyModelViewSet):
     @api_metrics("marcaequipamento_retrieve")
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
+=======
+    permission_classes = [IsAuthenticated]
+>>>>>>> Stashed changes
 
 # --- Funções Utilitárias ---
 
@@ -150,6 +165,8 @@ def html_to_pdf_weasyprint(html_string):
 
 @csrf_exempt
 @api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def generate_pdf(request):
     """
     Endpoint da API para gerar um PDF de simulação de venda a partir dos dados POST.
