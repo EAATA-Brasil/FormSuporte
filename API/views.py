@@ -16,6 +16,52 @@ from rest_framework.response import Response
 from .models import Equipamentos, TipoEquipamento, MarcaEquipamento
 from .serializers import EquipamentosSerializer, TipoEquipamentoSerializer, MarcaEquipamentoSerializer
 
+import re
+import unicodedata
+from urllib.parse import quote
+
+def sanitize_filename_component(value: str, max_len: int = 80) -> str:
+    """
+    Sanitiza uma parte do nome do arquivo:
+    - remove caracteres inválidos: \ / : * ? " < > |
+    - remove controles e trim
+    - troca espaços por underscore
+    - limita tamanho
+    """
+    if not value:
+        return ""
+
+    # garante string
+    s = str(value).strip()
+
+    # remove caracteres de controle (0x00-0x1F, 0x7F)
+    s = re.sub(r"[\x00-\x1f\x7f]", "", s)
+
+    # remove caracteres inválidos em filenames (Windows)
+    s = re.sub(r'[\\/:*?"<>|]+', "", s)
+
+    # colapsa espaços e troca por underscore
+    s = re.sub(r"\s+", "_", s)
+
+    # evita nomes só com pontos/underscores
+    s = s.strip("._ ")
+
+    # limita tamanho
+    if len(s) > max_len:
+        s = s[:max_len].rstrip("._ ")
+
+    return s
+
+
+def ascii_fallback(value: str) -> str:
+    """
+    Faz um fallback ASCII (sem acentos) para browsers que não suportam filename*.
+    """
+    if not value:
+        return ""
+    nfkd = unicodedata.normalize("NFKD", value)
+    return "".join(c for c in nfkd if ord(c) < 128)
+
 # Configuração de caminhos GTK para Windows (necessário para WeasyPrint no Windows)
 if sys.platform == 'win32':
     try:
@@ -250,9 +296,28 @@ def generate_pdf(request):
         if pdf:
             # Retorna o PDF como anexo
             response = HttpResponse(pdf, content_type='application/pdf')
-            filename = f"Simulação_de_Venda_{hoje.strftime('%Y-%m-%d_%H-%M')}.pdf"
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            raw_nome = data.get('nomeCliente') or ""
+            safe_nome = sanitize_filename_component(raw_nome)
+
+            # Se não tiver nomeCliente válido, cai na data/hora
+            suffix = safe_nome or hoje.strftime('%Y-%m-%d_%H-%M')
+
+            # Nome final (com acento)
+            filename = f"Simulação_de_Venda_{suffix}.pdf"
+
+            # Fallback ASCII (sem acento) pra browsers antigos
+            filename_ascii = ascii_fallback(filename) or f"Simulacao_de_Venda_{hoje.strftime('%Y-%m-%d_%H-%M')}.pdf"
+
+            # Header profissional:
+            # - filename* (UTF-8) é o principal
+            # - filename (ASCII) é fallback
+            quoted = quote(filename)
+            response['Content-Disposition'] = (
+                f'attachment; filename="{filename_ascii}"; filename*=UTF-8\'\'{quoted}'
+            )
+
             return response
+
         else:
             # Fallback: retorna o HTML para debug ou se WeasyPrint falhar
             response = HttpResponse(html_string, content_type='text/html')
