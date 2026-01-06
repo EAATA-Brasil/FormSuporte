@@ -3255,7 +3255,7 @@
     }
     
     function atualizarContadorNotificacoes() {
-        fetch('/ocorrencia/notificacoes/contar/', {
+        fetch('notificacoes/contar/', {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
