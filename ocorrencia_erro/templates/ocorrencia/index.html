@@ -780,7 +780,7 @@
         
         // Função para mostrar pop-up com detalhes do problema
         function showProblemDetails(record) {
-            fetch(`/ocorrencia/notificacoes/record/${record.id}/marcar_lidas/`, {
+            fetch(`notificacoes/record/${record.id}/marcar_lidas/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken')
@@ -3172,7 +3172,7 @@
     }
     
     function carregarNotificacoes() {
-        fetch('/ocorrencia/notificacoes/', {
+        fetch('notificacoes/', {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
@@ -3227,7 +3227,7 @@
     }
     function lerOcorrencia(notificacaoId){
         // Marcar notificação como lida
-        fetch(`/ocorrencia/notificacoes/${notificacaoId}/marcar_lida/`, {
+        fetch(`notificacoes/${notificacaoId}/marcar_lida/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
