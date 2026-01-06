@@ -3243,7 +3243,7 @@
     }
     function abrirOcorrencia(recordId) {
         // Buscar e exibir detalhes da ocorrência
-        fetch(`/ocorrencia/get_record/${recordId}/`)
+        fetch(`get_record/${recordId}/`)
         .then(response => response.json())
         .then(record => {
             showProblemDetails(record);
