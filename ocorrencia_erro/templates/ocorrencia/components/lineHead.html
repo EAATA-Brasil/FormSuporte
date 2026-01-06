@@ -4,7 +4,11 @@
         {{name}}
         {%if checbox != 'false'%}
             <span class="filter-icon">▼</span>
-            <div class="filter-box" id="filter-box-{{ID}}"></div>
+            {% if ID == "finished" %}
+                <div class="filter-box filter-finalizado" id="filter-box-{{ID}}"></div>
+            {% else %}
+                <div class="filter-box" id="filter-box-{{ID}}"></div>
+            {% endif %}
         {%endif%}
     </th>
     {% endwith %}
@@ -13,6 +17,10 @@
         {{name}}
         {%if checbox != 'false'%}
             <span class="filter-icon">▼</span>
-            <div class="filter-box" id="filter-box-{{ID}}"></div>
+            {% if ID == "finished" %}
+                <div class="filter-box filter-finalizado" id="filter-box-{{ID}}"></div>
+            {% else %}
+                <div class="filter-box" id="filter-box-{{ID}}"></div>
+{% endif %}
         {%endif%}
 {% endif %}

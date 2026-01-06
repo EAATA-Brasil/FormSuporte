@@ -11,73 +11,79 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        .filter-finalizado {
+            max-height: 60vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            left: -120px;
+        }
         footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 12px 24px;
-    background: #fff;
-    border-top: 1px solid #e5e7eb;
-}
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 24px;
+            background: #fff;
+            border-top: 1px solid #e5e7eb;
+        }
 
-.btn-dashboard {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 14px;
-    border-radius: 8px;
-    background: #0056b3;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    white-space: nowrap;
-}
+        .btn-dashboard {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: #0056b3;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+        }
 
-.btn-dashboard:hover {
-    background: #004494;
-}
+        .btn-dashboard:hover {
+            background: #004494;
+        }
 
         .table td[data-column="status"][data-initial-value='{%trans "Concluído"%}'] {
-    background-color: var(--success) !important;
-    color: white !important;
-    font-weight: bold;
-    border-radius: 4px;
-    padding: 5px 10px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: relative;
-}
+            background-color: var(--success) !important;
+            color: white !important;
+            font-weight: bold;
+            border-radius: 4px;
+            padding: 5px 10px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+        }
 
-.table td[data-column="status"][data-initial-value='{%trans "Concluído"%}']::after {
-    content: "✓";
-    margin-left: 5px;
-}
+        .table td[data-column="status"][data-initial-value='{%trans "Concluído"%}']::after {
+            content: "✓";
+            margin-left: 5px;
+        }
 
-/* Melhorar a visualização dos outros status */
-.table td[data-column="status"][data-initial-value='{%trans "Em progresso"%}']{
-    background-color: var(--warning) !important;
-    color: var(--dark) !important;
-}
-.table td[data-column="status"][data-initial-value="Aguardando China"] {
-    background-color: var(--waiting) !important;
-    color: var(--light) !important;
-}
-.table td[data-column="status"][data-initial-value="China Atrasada"] {
-    background-color: var(--error-china) !important;
-    color: white !important;
-}
+        /* Melhorar a visualização dos outros status */
+        .table td[data-column="status"][data-initial-value='{%trans "Em progresso"%}']{
+            background-color: var(--warning) !important;
+            color: var(--dark) !important;
+        }
+        .table td[data-column="status"][data-initial-value="Aguardando China"] {
+            background-color: var(--waiting) !important;
+            color: var(--light) !important;
+        }
+        .table td[data-column="status"][data-initial-value="China Atrasada"] {
+            background-color: var(--error-china) !important;
+            color: white !important;
+        }
 
-.table td[data-column="status"][data-initial-value='{%trans "Atrasado"%}'] {
-    background-color: var(--error) !important;
-    color: white !important;
-}
+        .table td[data-column="status"][data-initial-value='{%trans "Atrasado"%}'] {
+            background-color: var(--error) !important;
+            color: white !important;
+        }
 
-.table td[data-column="status"][data-initial-value='{%trans "Requisitado"%}'] {
-    background-color: var(--primary) !important;
-    color: white !important;
-}
+        .table td[data-column="status"][data-initial-value='{%trans "Requisitado"%}'] {
+            background-color: var(--primary) !important;
+            color: white !important;
+        }
         /* Estilos para o modal de imagem */
         #image-modal {
             display: none;
