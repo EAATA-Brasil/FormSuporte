@@ -363,7 +363,8 @@ def filter_data_view(request):
             # --- FIM DA DEPURAÇÃO ---
 
             queryset = base_queryset
-            
+            options_queryset = base_queryset     
+
             # 2. Construção dos filtros selecionados pelo usuário na interface
             q_objects = Q()
             for column, values in filters.items():
@@ -515,19 +516,19 @@ def filter_data_view(request):
             # filtrado por permissão, garantindo que o usuário só veja opções relevantes.
             for col in FILTERABLE_COLUMNS_FOR_OPTIONS:
                 if col == 'country':
-                    options = queryset.exclude(country__isnull=True).values_list('country__name', flat=True).distinct()
+                    options = options_queryset.exclude(country__isnull=True).values_list('country__name', flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
                 elif col == 'device':
-                    options = queryset.exclude(device__isnull=True).values_list('device__name', flat=True).distinct()
+                    options = options_queryset.exclude(device__isnull=True).values_list('device__name', flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt])))
                 elif col == 'status':
-                    status_values = queryset.values_list('status', flat=True).distinct()
+                    status_values = options_queryset.values_list('status', flat=True).distinct()
                     filter_options[col] = sorted(
                         [STATUS_MAP_REVERSED.get(opt, opt) for opt in status_values if opt],
                         key=lambda x: list(STATUS_OCORRENCIA.keys()).index(x) if x in STATUS_OCORRENCIA else float('inf')
                     )
                 elif col in DATE_COLUMNS:
-                    dates = queryset.exclude(**{f'{col}__isnull': True}).values_list(col, flat=True).distinct()
+                    dates = options_queryset.exclude(**{f'{col}__isnull': True}).values_list(col, flat=True).distinct()
                     date_tree = defaultdict(lambda: defaultdict(list))
                     for dt in dates:
                         if dt:
@@ -546,10 +547,10 @@ def filter_data_view(request):
                         date_tree[year] = dict(sorted(date_tree[year].items()))
                     filter_options[col] = dict(sorted(date_tree.items()))
                 elif col == 'codigo_externo':
-                    options = queryset.values_list(col, flat=True).distinct()
+                    options = options_queryset.values_list(col, flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt for opt in options if opt is not None])))
                 else:
-                    options = queryset.exclude(**{f'{col}__isnull': True}).exclude(**{f'{col}__exact': ''}).values_list(col, flat=True).distinct()
+                    options = options_queryset.exclude(**{f'{col}__isnull': True}).exclude(**{f'{col}__exact': ''}).values_list(col, flat=True).distinct()
                     filter_options[col] = sorted(list(set([opt.upper() for opt in options if opt is not None])))
 
             # 7. Resposta final
