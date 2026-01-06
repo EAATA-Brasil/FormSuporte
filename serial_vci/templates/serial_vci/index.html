@@ -671,7 +671,7 @@ function fecharModalImagem() {
 /* ===========================
    WEBSOCKET REALTIME
 =========================== */
-const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+const protocol = "wss://";
 const socket = new WebSocket(
     protocol + window.location.host + "/ws/seriais/"
 );

@@ -1289,7 +1289,7 @@
 
                     const loggedInUsername = document.getElementById('logged-in-username').textContent
 
-                    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                    const protocol = 'wss://';
 
                     const chatSocket = new WebSocket(
                         protocol +
@@ -3292,7 +3292,7 @@
         atualizarContadorNotificacoes();
         
         const notificationSocket = new WebSocket(
-            'ws://'
+            'wss://'
             + window.location.host
             + '/ws/notifications/'
         );
