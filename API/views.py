@@ -238,7 +238,7 @@ def generate_pdf(request):
         frete_valor = float(data.get('frete', 0) or 0)
 
         tem_frete = frete_valor > 0
-        valor_total_final = valor_total_equipamentos - desconto_valor + frete_valor
+        valor_total_final = int(data.get('parcelas', 0) or 0) * valor_parcela
         
         # 4. Preparar Dados para o Template
         template_data = {
