@@ -12,8 +12,8 @@ router.register(r'equipamentos', views.EquipamentosViewSet)
 router.register(r'tiposEquipamento', views.TipoEquipamentoViewSet)
 # Rota para listar e recuperar marcas de equipamento
 router.register(r'marcasEquipamento', views.MarcaEquipamentoViewSet)
-# Rota para listar e recuperar clientes (serial, nome, cnpj, tel, equipamento)
-router.register(r'clientes', views.ClienteViewSet)
+# Removemos a rota de listagem GET para clientes; usaremos POST dedicado abaixo
+# (router.register(r'clientes', views.ClienteViewSet))
 
 # Definição dos padrões de URL
 urlpatterns = [
@@ -22,4 +22,6 @@ urlpatterns = [
     
     # Rota específica para a geração de PDF (usando @api_view)
     path('generate-pdf/', views.generate_pdf, name='generate_pdf'),
+    # Endpoint POST-only para buscar cliente por serial
+    path('clientes/search/', views.cliente_search, name='cliente_search'),
 ]

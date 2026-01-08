@@ -120,6 +120,24 @@ class ClienteViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Cliente.objects.all().order_by('serial')
     serializer_class = ClienteSerializer
 
+
+@api_view(['POST'])
+def cliente_search(request):
+    """Endpoint POST que retorna cliente por serial.
+
+    Recebe JSON: {"serial": "..."} e devolve o cliente serializado.
+    """
+    serial = (request.data.get('serial') or '').strip()
+    if not serial:
+        return Response({'ok': False, 'message': 'Informe o serial.'}, status=400)
+    try:
+        cliente = Cliente.objects.get(serial=serial)
+    except Cliente.DoesNotExist:
+        return Response({'ok': False, 'message': 'Serial não encontrado.'}, status=404)
+
+    serializer = ClienteSerializer(cliente)
+    return Response({'ok': True, 'data': serializer.data}, status=200)
+
 # --- Funções Utilitárias ---
 
 @csrf_exempt
