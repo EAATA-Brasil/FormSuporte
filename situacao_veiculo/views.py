@@ -8,6 +8,8 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET, require_POST
 from openpyxl import load_workbook
 from openpyxl.utils.datetime import from_excel
+import requests
+from email.utils import parsedate_to_datetime
 
 from .models import Cliente
 
@@ -20,8 +22,146 @@ def buscar_serial(request):
         clientes = Cliente.objects.filter(serial=serial)
 
         if not clientes.exists():
-            context['status_message'] = 'SEM DADOS'
-            context['mensagem'] = 'Passar para o comercial atualizar o cadastro.'
+            # Busca em serviço externo usando o serial digitado (headers e cookie conforme curl)
+            try:
+                cookie_value = 'eyJ1c2VyX2lkIjoiZWFhdGFkbWluIn0.aV_2TA.URbvR1qfUJFd6H56IRWZc_hSSp0'
+                headers = {
+                    'Accept': '*/*',
+                    'Accept-Language': 'pt-PT,pt;q=0.9,en-US;q=0.8,en;q=0.7,es;q=0.6',
+                    'Connection': 'keep-alive',
+                    'Content-Type': 'application/json',
+                    'Origin': 'http://20.83.150.13:8088',
+                    'Referer': 'http://20.83.150.13:8088/dashboard',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
+                }
+                resp = requests.post(
+                    'http://20.83.150.13:8088/search_codes',
+                    json={'sn': serial},
+                    headers=headers,
+                    cookies={'session': cookie_value},
+                    timeout=10,
+                )
+                print(resp.text)
+                try:
+                    resp_json = resp.json()
+                except ValueError:
+                    resp_json = {'status_code': resp.status_code, 'text': resp.text}
+
+                # Prepare a rich external_search payload for the template/front
+                external_info = {'status': resp.status_code, 'data': resp_json}
+                print(external_info)
+                try:
+                    if isinstance(resp_json, dict):
+                        codes = resp_json.get('codes')
+                        if codes and isinstance(codes, list) and len(codes) > 0:
+                            first = codes[0]
+                            created_at_str = first.get('created_at')
+                            email = first.get('email')
+                            external_info['cliente'] = email
+                            external_info['sn'] = first.get('sn')
+
+                            if created_at_str:
+                                try:
+                                    created_dt = parsedate_to_datetime(created_at_str)
+                                    # Compute +2 years (fallback for Feb 29)
+                                    try:
+                                        venc_dt = created_dt.replace(year=created_dt.year + 2)
+                                    except ValueError:
+                                        venc_dt = created_dt.replace(month=2, day=28, year=created_dt.year + 2)
+                                    external_info['created_at'] = created_dt.isoformat()
+                                    external_info['vencimento'] = venc_dt.date().isoformat()
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+
+                context['external_search'] = external_info
+            except requests.RequestException as exc:
+                context['external_search'] = {'error': str(exc)}
+
+            # Se o serviço externo retornou algum código, sinaliza que é preciso atualizar os dados
+            found_external = False
+            es = context.get('external_search')
+            if isinstance(es, dict):
+                data = es.get('data')
+                if isinstance(data, dict):
+                    codes = data.get('codes')
+                    if codes and isinstance(codes, list) and len(codes) > 0:
+                        found_external = True
+
+            if found_external:
+                # Indica que os dados foram obtidos externamente e precisam de atualização
+                context['mensagem'] = 'Dados captaados externamente, necessário atualização'
+                # Mapear dados externos para o formato que o template espera (cliente, vencimento)
+                data = es.get('data') if isinstance(es, dict) else None
+                first = None
+                if isinstance(data, dict):
+                    codes = data.get('codes')
+                    if codes and isinstance(codes, list) and len(codes) > 0:
+                        first = codes[0]
+
+                cliente_dict = {
+                    'nome': es.get('email') or (first.get('email') if first else '') or '',
+                    'cnpj': '',
+                    'tel': '',
+                    'equipamento': ('{} - {}'.format(first.get('city',''), first.get('country','')).strip(' -') if first else ''),
+                    'vencimento': es.get('vencimento') or (first.get('created_at') if first else None),
+                }
+                context['cliente'] = cliente_dict
+
+                # Determina status com base em vencimento (created_at + 2 anos)
+                status_val = 'indefinido'
+                venc_str = es.get('vencimento') if isinstance(es, dict) else None
+                if venc_str:
+                    try:
+                        venc_date = parse_date(venc_str)
+                        if isinstance(venc_date, datetime):
+                            venc_date = venc_date.date()
+                        dias = (venc_date - date.today()).days
+                        if dias > 30:
+                            status_val = 'direito'
+                        elif dias < 1:
+                            status_val = 'vencido'
+                        else:
+                            status_val = 'vencendo'
+                    except Exception:
+                        status_val = 'indefinido'
+                else:
+                    # fallback: calcule a partir de created_at se estiver disponível
+                    created_at_str = None
+                    if first:
+                        created_at_str = first.get('created_at')
+                    if created_at_str:
+                        try:
+                            created_dt = parsedate_to_datetime(created_at_str)
+                            try:
+                                venc_dt = created_dt.replace(year=created_dt.year + 2)
+                            except ValueError:
+                                venc_dt = created_dt.replace(month=2, day=28, year=created_dt.year + 2)
+                            dias = (venc_dt.date() - date.today()).days
+                            if dias > 30:
+                                status_val = 'direito'
+                            elif dias < 1:
+                                status_val = 'vencido'
+                            else:
+                                status_val = 'vencendo'
+                            if not cliente_dict.get('vencimento'):
+                                cliente_dict['vencimento'] = venc_dt.date().isoformat()
+                        except Exception:
+                            status_val = 'indefinido'
+
+                context['status'] = status_val
+                # Map status to short message following the same rules as models.status_message_default
+                if status_val == 'direito':
+                    context['status_message'] = "SUPORTE LIBERADO - Atualizar dados e atender normalmente"
+                elif status_val == 'vencido':
+                    context['status_message'] = "SUPORTE VENCIDO - Não fazer atendimento"
+                elif status_val == 'vencendo':
+                    context['status_message'] = "SUPORTE A VENCER - Atualizar dados e atender normalmente"
+            else:
+                context['status_message'] = 'SEM DADOS'
+                context['mensagem'] = 'Passar para o comercial atualizar o cadastro.'
+
             return render(request, 'situacao/index.html', context)
 
         if clientes.count() > 1:

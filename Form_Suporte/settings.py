@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'ocorrencia_erro',
     'API',
     'rest_framework',
+    'rest_framework.authtoken',
     'simulador',
     'serial_vci',
     'situacao_veiculo.apps.SituacaoVeiculoConfig',

@@ -9,5 +9,6 @@ urlpatterns = [
     path('api/cliente/update', views.api_atualizar_cliente, name='api_atualizar_cliente'),
 
     # ==== API usada pelo popup de atualização ====
-    path('api/cliente', views.api_buscar_cliente, name='api_buscar_cliente'),
+    # Nota: rota antiga removida para evitar acesso sem autenticação.
+    # A busca por serial agora deve usar o endpoint protegido em /api/clientes/search/
 ]

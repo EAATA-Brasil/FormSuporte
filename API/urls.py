@@ -3,6 +3,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from rest_framework.authtoken.views import obtain_auth_token
 
 # Cria um roteador para as ViewSets do Django REST Framework
 router = DefaultRouter()
@@ -24,4 +25,6 @@ urlpatterns = [
     path('generate-pdf/', views.generate_pdf, name='generate_pdf'),
     # Endpoint POST-only para buscar cliente por serial
     path('clientes/search/', views.cliente_search, name='cliente_search'),
+    # Endpoint para obter token (POST with username/password)
+    path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
 ]

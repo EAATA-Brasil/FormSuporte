@@ -523,7 +523,8 @@
   const headers = csrfInput ? { 'X-CSRFToken': csrfInput.value } : {};
 
   // Endpoints
-  const urlBuscar    = "{% url 'api_buscar_cliente' %}";
+  // Usar endpoint protegido via API (POST JSON com Authorization: Token)
+  const urlBuscar    = "{% url 'cliente_search' %}";
   const urlAtualizar = "{% url 'api_atualizar_cliente' %}";
 
   // Inputs do popup
