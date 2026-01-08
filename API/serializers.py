@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 from .models import Equipamentos, TipoEquipamento, MarcaEquipamento
+from situacao_veiculo.models import Cliente
 
 class TipoEquipamentoSerializer(serializers.ModelSerializer):
     """
@@ -33,3 +34,12 @@ class EquipamentosSerializer(serializers.ModelSerializer):
         model = Equipamentos
         # Serializa todos os campos do modelo Equipamentos, incluindo o campo 'tipo' aninhado
         fields = '__all__'
+
+class ClienteSerializer(serializers.ModelSerializer):
+    """
+    Serializer para o modelo Cliente de situacao_veiculo.
+    Serializa os campos: serial, nome, cnpj, tel, equipamento
+    """
+    class Meta:
+        model = Cliente
+        fields = ['id', 'serial', 'nome', 'cnpj', 'tel', 'equipamento', 'vencimento', 'status']

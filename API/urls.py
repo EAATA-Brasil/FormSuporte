@@ -12,6 +12,8 @@ router.register(r'equipamentos', views.EquipamentosViewSet)
 router.register(r'tiposEquipamento', views.TipoEquipamentoViewSet)
 # Rota para listar e recuperar marcas de equipamento
 router.register(r'marcasEquipamento', views.MarcaEquipamentoViewSet)
+# Rota para listar e recuperar clientes (serial, nome, cnpj, tel, equipamento)
+router.register(r'clientes', views.ClienteViewSet)
 
 # Definição dos padrões de URL
 urlpatterns = [

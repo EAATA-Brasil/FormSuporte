@@ -14,7 +14,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .models import Equipamentos, TipoEquipamento, MarcaEquipamento
-from .serializers import EquipamentosSerializer, TipoEquipamentoSerializer, MarcaEquipamentoSerializer
+from .serializers import EquipamentosSerializer, TipoEquipamentoSerializer, MarcaEquipamentoSerializer, ClienteSerializer
+from situacao_veiculo.models import Cliente
 
 import re
 import unicodedata
@@ -113,6 +114,11 @@ class MarcaEquipamentoViewSet(viewsets.ReadOnlyModelViewSet):
     """API ViewSet para listar e recuperar marcas de equipamento (somente leitura)."""
     queryset = MarcaEquipamento.objects.all().order_by('nome')
     serializer_class = MarcaEquipamentoSerializer
+
+class ClienteViewSet(viewsets.ReadOnlyModelViewSet):
+    """API ViewSet para listar e recuperar clientes (somente leitura)."""
+    queryset = Cliente.objects.all().order_by('serial')
+    serializer_class = ClienteSerializer
 
 # --- Funções Utilitárias ---
 
