@@ -1409,7 +1409,6 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         y_next_section = min(y1, y2) - 0.3 * inch
         p.line(0.5 * inch, y_next_section + 0.1 * inch, width - 0.5 * inch, y_next_section + 0.1 * inch)
         y_text = y_next_section - 0.2 * inch
-        y_text = draw_long_text_paragraph(x1, y_text, "Detected Problem", record.problem_detected)
         y_text = draw_long_text_paragraph(x1, y_text, "Responsible Details", record.detalhes_responsavel)
 
         # ==================================================================
