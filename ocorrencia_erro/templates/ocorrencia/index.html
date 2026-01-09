@@ -450,6 +450,8 @@
                 {% include 'ocorrencia/components/lineHead.html' with name=_("País") ID="country" %}
                 {% include 'ocorrencia/components/lineHead.html' with name=_("Dispositivo") ID="device" %}
                 {% include 'ocorrencia/components/lineHead.html' with name=_("Área") ID="area" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Sistema") ID="sistema" %}
+                {% include 'ocorrencia/components/lineHead.html' with name=_("Tipo de Problema") ID="tipo_problema" %}
                 {% include 'ocorrencia/components/lineHead.html' with name=_("Marca") ID="brand" %}
                 {% include 'ocorrencia/components/lineHead.html' with name=_("Modelo") ID="model" %}
                 {% include 'ocorrencia/components/lineHead.html' with name=_("Detalhes") ID="problem_detected" checbox='false' %}
@@ -831,11 +833,13 @@
             const problemDetectedValue = record.problem_detected || '';
             const feedbackTechnicalValue = record.feedback_technical || '';
             const feedbackManagerValue = record.feedback_manager || '';
+            const detalhesResponsavelValue = record.detalhes_responsavel || '';
 
             // Gera um ID único para cada textarea para evitar conflitos
             const problemDetectedId = `problem_detected_${record.id}`;
             const feedbackTechnicalId = `feedback_technical_${record.id}`;
             const feedbackManagerId = `feedback_manager_${record.id}`;
+            const detalhesResponsavelId = `detalhes_responsavel_${record.id}`;
             // console.log(record)
             // Cria o conteúdo HTML do pop-up com informações detalhadas e textareas editáveis
             const popupContent = `
@@ -849,13 +853,31 @@
                                   data-field-name="problem_detected" 
                                   data-initial-value="${problemDetectedValue}"
                                   style="width: 100%; min-height: 100px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${problemDetectedValue}</textarea>
-                        <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
-                           {% trans "Gerar PDF" %}
-                        </button>
-
-                        <button id="button_copy" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
-                           {% trans "COPIAR INFORMAÇÕES" %}
-                        </button>
+                                <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                                  <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                                      {% trans "Gerar PDF" %}
+                                  </button>
+                                  <button id="button_copy" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                                      {% trans "COPIAR INFORMAÇÕES" %}
+                                  </button>
+                                </div>
+                    </div>
+                    
+                    <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-top: 0; color: var(--text);">{% trans "Detalhes do Responsável:" %}</h4>
+                        <textarea id="${detalhesResponsavelId}" 
+                                  data-record-id="${record.id}" 
+                                  data-field-name="detalhes_responsavel" 
+                                  data-initial-value="${detalhesResponsavelValue}"
+                                  style="width: 100%; min-height: 100px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${detalhesResponsavelValue}</textarea>
+                                <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                                  <button id="button_pdf_resp" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                                      {% trans "Gerar PDF" %}
+                                  </button>
+                                  <button id="button_copy_resp" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                                      {% trans "COPIAR INFORMAÇÕES" %}
+                                  </button>
+                                </div>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
@@ -888,6 +910,18 @@
                             <strong>{% trans "Área:" %}</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.area || '{% trans "Não informado" %}'}</span>
                         </div>
+                        ${record.sistema ? `
+                            <div>
+                                <strong>{% trans "Sistema:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.sistema || '{% trans "Não informado" %}'}</span>
+                            </div>
+                        ` : ''}
+                        ${record.tipo_problema ? `
+                            <div>
+                                <strong>{% trans "Tipo de Problema:" %}</strong><br>
+                                <span style="color: var(--text-light);" translate="no">${record.tipo_problema || '{% trans "Não informado" %}'}</span>
+                            </div>
+                        ` : ''}
                         <div>
                             <strong>{% trans "Serial:" %}</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.serial || '{% trans "Não informado" %}'}</span>
@@ -1067,10 +1101,10 @@
                     const problemDetectedTextarea = document.getElementById(problemDetectedId);
                     const feedbackTechnicalTextarea = document.getElementById(feedbackTechnicalId);
                     const feedbackManagerTextarea = document.getElementById(feedbackManagerId);
+                    const detalhesResponsavelTextarea = document.getElementById(detalhesResponsavelId);
                     document.getElementById("button_pdf").addEventListener('click', ()=>{
                         handleGerarPdf(id, record.codigo_externo)
                     })
-                    document.getElementById("button_copy").style.display = (window.location.protocol === 'https:'| window.location.host.includes('localhost')  )  ? '' : 'none'
                     document.getElementById("button_copy").addEventListener("click", () => {
                         const idStr = String(record.id);
                         const codigoStr = String(record.codigo_externo || "");
@@ -1086,7 +1120,8 @@
                             `Modelo: ${record.model || 'Não informado'}`,
                             `Ano: ${record.year || 'Não informado'}`,
                             `Data: ${record.data ? formatDateToDisplay(record.data) : 'Não informado'}`,
-                            `Problema Detectado: ${problemDetectedValue}`
+                            `Problema Detectado: ${problemDetectedValue}`,
+                            detalhesResponsavelValue ? `Detalhes do Responsável: ${detalhesResponsavelValue}` : null
                         ].filter(Boolean);
 
                         const textoFinal = infos.join('\n');
@@ -1118,6 +1153,60 @@
                         });
 
                     });
+
+                    // Botões da seção "Detalhes do Responsável"
+                    const btnPdfResp = document.getElementById("button_pdf_resp");
+                    if (btnPdfResp) {
+                        btnPdfResp.addEventListener('click', ()=>{
+                            handleGerarPdf(id, record.codigo_externo)
+                        })
+                    }
+                    const btnCopyResp = document.getElementById("button_copy_resp");
+                    if (btnCopyResp) {
+                        btnCopyResp.addEventListener("click", () => {
+                            const idStr = String(record.id);
+                            const codigoStr = String(record.codigo_externo || "");
+
+                            const infos = [
+                                `ID: ${idStr}`,
+                                codigoStr && codigoStr !== idStr ? `Token: ${codigoStr}` : null,
+                                `Técnico: ${record.technical || 'Não informado'}`,
+                                `Dispositivo: ${record.device || 'Não informado'}`,
+                                `Área: ${record.area || 'Não informado'}`,
+                                `Serial: ${record.serial || 'Não informado'}`,
+                                `Marca: ${record.brand || 'Não informado'}`,
+                                `Modelo: ${record.model || 'Não informado'}`,
+                                `Ano: ${record.year || 'Não informado'}`,
+                                `Data: ${record.data ? formatDateToDisplay(record.data) : 'Não informado'}`,
+                                `Problema Detectado: ${problemDetectedValue}`,
+                                detalhesResponsavelValue ? `Detalhes do Responsável: ${detalhesResponsavelValue}` : null
+                            ].filter(Boolean);
+
+                            const textoFinal = infos.join('\n');
+                            fetch("{% url 'traduzir_api' %}", {
+                                method: "POST",
+                                headers: { 
+                                    "Content-Type": "application/json",
+                                    "X-CSRFToken": getCookie("csrftoken")
+                                },
+                                body: JSON.stringify({ texto: textoFinal })
+                            })
+                            .then(response => {
+                                if (!response.ok) throw new Error(`Erro na requisição: ${response.status}`);
+                                return response.json();
+                            })
+                            .then(data => {
+                                const textoTraduzido = data.traduzido || textoFinal;
+                                navigator.clipboard.writeText(textoTraduzido)
+                                    .then(() => showSwalStyledToast("Information copied successfully!", "success"))
+                                    .catch(err => showSwalStyledToast("Error copying information: " + err.message, "error"));
+                            })
+                            .catch(err => {
+                                console.error("Erro ao traduzir:", err);
+                                showSwalStyledToast("Error translating text: " + err.message, "error");
+                            });
+                        });
+                    }
 
 
                     // função auxiliar para exibir o toast personalizado
@@ -1201,6 +1290,11 @@
                     }
                     if (feedbackManagerTextarea) {
                         feedbackManagerTextarea.addEventListener('input', (e) => {
+                            atualizarDadosPopup(e.target);
+                        });
+                    }
+                    if (detalhesResponsavelTextarea) {
+                        detalhesResponsavelTextarea.addEventListener('input', (e) => {
                             atualizarDadosPopup(e.target);
                         });
                     }

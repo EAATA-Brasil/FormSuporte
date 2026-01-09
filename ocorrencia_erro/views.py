@@ -69,13 +69,13 @@ STATUS_OCORRENCIA = {
 STATUS_MAP_REVERSED = {v: k for k, v in STATUS_OCORRENCIA.items()}
 
 ALLOWED_SORT_COLUMNS = [
-    'feedback_manager', 'feedback_technical', 'problem_detected', 'area', 'brand',
+    'feedback_manager', 'feedback_technical', 'problem_detected', 'area', 'sistema', 'tipo_problema', 'brand',
     'country', 'data', 'deadline', 'device', 'finished', 'model', 'responsible',
     'serial', 'status', 'technical', 'version', 'year'
 ]
 
 FILTERABLE_COLUMNS_FOR_OPTIONS = [
-    'id','technical', 'country', 'device', 'area', 'serial', 'brand',
+    'id','technical', 'country', 'device', 'area', 'sistema', 'tipo_problema', 'serial', 'brand',
     'model', 'year', 'version', 'status', 'responsible',
     'data', 'deadline', 'finished'
 ]
@@ -376,7 +376,7 @@ def filter_data_view(request):
                 non_empty = [v.strip() for v in values if v != ""]
 
                 TEXT_CASE_INSENSITIVE_COLUMNS = [
-                    'codigo_externo', 'technical', 'area', 'serial', 'brand', 'model',
+                    'codigo_externo', 'technical', 'area', 'sistema', 'tipo_problema', 'serial', 'brand', 'model',
                     'version', 'responsible', 'problem_detected', 'feedback_technical',
                     'feedback_manager', 'tipo_chave'
                 ]
@@ -475,6 +475,9 @@ def filter_data_view(request):
                     'vin': record.vin or '',
                     'tipo_ecu': record.tipo_ecu or '',
                     'tipo_motor': record.tipo_motor or '',
+                    'sistema': record.sistema or '',
+                    'tipo_problema': record.tipo_problema or '',
+                    'detalhes_responsavel': record.detalhes_responsavel or '',
                     'brand': record.brand or '',
                     'model': record.model or '',
                     'contact': record.contact or '',
@@ -506,7 +509,7 @@ def filter_data_view(request):
 
             # 6. Geração de opções de filtro dinâmicas
             FILTERABLE_COLUMNS_FOR_OPTIONS = [
-                'codigo_externo', 'technical', 'country', 'device', 'area', 'serial', 'brand',
+                'codigo_externo', 'technical', 'country', 'device', 'area', 'sistema', 'tipo_problema', 'serial', 'brand',
                 'model', 'year', 'version', 'status', 'responsible',
                 'data', 'deadline', 'finished'
             ]
@@ -798,8 +801,27 @@ def subir_ocorrencia(request):
                 'problem_detected': request.POST.get("problem_detected"),
                 'tipo_ecu': request.POST.get("tipo_ecu"),
                 'tipo_motor': request.POST.get("tipo_motor"),
+                'sistema': None,
+                'tipo_problema': None,
                 'status': Record.STATUS_OCORRENCIA.REQUESTED
             }
+
+            # Trata campos Sistema e Tipo de Problema conforme a área
+            selected_area = request.POST.get("area_radio")
+            if selected_area in ["IMMO", "Diagnosis"]:
+                sistema_val = (request.POST.get("sistema") or "").strip()
+                sistema_outro = (request.POST.get("sistema_outro") or "").strip()
+                if sistema_val == "Outro..." and sistema_outro:
+                    record_data['sistema'] = sistema_outro
+                else:
+                    record_data['sistema'] = sistema_val or None
+
+                tipo_prob_val = (request.POST.get("tipo_problema") or "").strip()
+                tipo_prob_outro = (request.POST.get("tipo_problema_outro") or "").strip()
+                if tipo_prob_val == "Outro..." and tipo_prob_outro:
+                    record_data['tipo_problema'] = tipo_prob_outro
+                else:
+                    record_data['tipo_problema'] = tipo_prob_val or None
 
             if ticket:
                 record_data['codigo_externo'] = ticket
@@ -1131,6 +1153,9 @@ def get_record(request, pk):
             "year": record.year,
             "version": record.version,
             "tipo_chave": record.tipo_chave,
+            "detalhes_responsavel": record.detalhes_responsavel,
+            "sistema": record.sistema,
+            "tipo_problema": record.tipo_problema,
             "country": record.country.name if record.country else None,
             "status": record.status,
             "data": record.data.strftime("%Y-%m-%d") if record.data else None,
@@ -1384,7 +1409,8 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         y_next_section = min(y1, y2) - 0.3 * inch
         p.line(0.5 * inch, y_next_section + 0.1 * inch, width - 0.5 * inch, y_next_section + 0.1 * inch)
         y_text = y_next_section - 0.2 * inch
-        y_text = draw_long_text_paragraph(x1, y_text, "Detected Problem", record.problem_detected) # Corrigido para "Problema Detectado"
+        y_text = draw_long_text_paragraph(x1, y_text, "Detected Problem", record.problem_detected)
+        y_text = draw_long_text_paragraph(x1, y_text, "Responsible Details", record.detalhes_responsavel)
 
         # ==================================================================
         # FINALIZAÇÃO DO ARQUIVO PDF

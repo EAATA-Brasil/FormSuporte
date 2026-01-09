@@ -352,6 +352,130 @@
         const ecuField = document.getElementById('ecu-field');
         const motorField = document.getElementById('motor-field');
         const chaveField = document.getElementById('chave-field');
+        const sistemaField = document.getElementById('sistema-field');
+        const sistemaSelect = document.getElementById('sistema');
+        const sistemaOutroField = document.getElementById('sistema-outro-field');
+        const sistemaOutroInput = document.getElementById('sistema_outro');
+        const problemaField = document.getElementById('problema-field');
+        const problemaSelect = document.getElementById('tipo_problema');
+        const problemaOutroField = document.getElementById('problema-outro-field');
+        const problemaOutroInput = document.getElementById('tipo_problema_outro');
+
+        const SISTEMA_OPTIONS = {
+          IMMO: [
+            'Immo - (Painel)',
+            'Immo - (BC)',
+            'Immo - (Caixinha)',
+            'Alarme',
+            'Outro...'
+          ],
+          Diagnosis: [
+            'Injeção Eletrônica',
+            'ABS',
+            'AirBag',
+            'Transmissão Automática',
+            'Painel de Insrutmentos',
+            'BCM - (Carroceria)',
+            'ADAS',
+            'Ar Condicionado - (A/C)',
+            'Suspensão',
+            'Radio',
+            'Direção',
+            'Outro...'
+          ]
+        };
+
+        function populateSistemaOptions(areaValue) {
+          if (!sistemaSelect) return;
+          const opts = SISTEMA_OPTIONS[areaValue] || [];
+          sistemaSelect.innerHTML = '';
+          const emptyOpt = document.createElement('option');
+          emptyOpt.value = '';
+          emptyOpt.textContent = '-- Selecione o sistema --';
+          sistemaSelect.appendChild(emptyOpt);
+          opts.forEach(txt => {
+            const o = document.createElement('option');
+            o.value = txt;
+            o.textContent = txt;
+            sistemaSelect.appendChild(o);
+          });
+        }
+
+        function handleSistemaOutroVisibility() {
+          if (!sistemaSelect || !sistemaOutroField || !sistemaOutroInput) return;
+          const isOutro = sistemaSelect.value === 'Outro...';
+          sistemaOutroField.style.display = isOutro ? 'flex' : 'none';
+          sistemaOutroInput.required = isOutro;
+          if (!isOutro) sistemaOutroInput.value = '';
+        }
+
+        const PROBLEMA_OPTIONS = {
+          IMMO: [
+            'Tradução',
+            'DTC Errado',
+            'DTC Sem Texto',
+            'Não Apaga DTC',
+            'Não le DTC',
+            'Não Le PIN',
+            'Erro CHIP - Chave',
+            'Não Comunica',
+            'Informação Errada (INFO)',
+            'Falta Função',
+            'Senha ERRADA',
+            'Dados Errados - (IMMO)',
+            'Parâmetro - (Errado)',
+            'Não Programa Controle',
+            'Outro...'
+          ],
+          Diagnosis: [
+            'Tradução',
+            'DTC Errado',
+            'DTC Sem Texto',
+            'Não Apaga DTC',
+            'Não le DTC',
+            'Não Reseta Revisão',
+            'Não Reseta Parametro',
+            'Ajuste Basico',
+            'Não Executa Função',
+            'Não Programa Chave',
+            'Não Le PIN',
+            'Erro CHIP - Chave',
+            'Não Comunica',
+            'Informação Errada (INFO)',
+            'Falta Função',
+            'Não Recua Pinça',
+            'Ângulo Direção',
+            'Senha ERRADA',
+            'Dados Errados - (IMMO)',
+            'Parâmetro - (Errado)',
+            'Não Programa Controle',
+            'Outro...'
+          ]
+        };
+
+        function populateProblemaOptions(areaValue) {
+          if (!problemaSelect) return;
+          const opts = PROBLEMA_OPTIONS[areaValue] || [];
+          problemaSelect.innerHTML = '';
+          const emptyOpt = document.createElement('option');
+          emptyOpt.value = '';
+          emptyOpt.textContent = '-- Selecione o tipo de problema --';
+          problemaSelect.appendChild(emptyOpt);
+          opts.forEach(txt => {
+            const o = document.createElement('option');
+            o.value = txt;
+            o.textContent = txt;
+            problemaSelect.appendChild(o);
+          });
+        }
+
+        function handleProblemaOutroVisibility() {
+          if (!problemaSelect || !problemaOutroField || !problemaOutroInput) return;
+          const isOutro = problemaSelect.value === 'Outro...';
+          problemaOutroField.style.display = isOutro ? 'flex' : 'none';
+          problemaOutroInput.required = isOutro;
+          if (!isOutro) problemaOutroInput.value = '';
+        }
 
         function updateConditionalFields() {
           const selectedArea = document.querySelector('input[name="area_radio"]:checked');
@@ -382,6 +506,42 @@
               motorField.style.display = 'none';
               document.getElementById('tipo_motor').value = ''; // Limpa o valor
             }
+
+            // Sistema: Exibir e popular para IMMO e Diagnosis; ocultar para Device
+            if (sistemaField && sistemaSelect) {
+              if (areaValue === 'IMMO' || areaValue === 'Diagnosis') {
+                sistemaField.style.display = 'flex';
+                sistemaSelect.required = true;
+                populateSistemaOptions(areaValue);
+              } else { // Device
+                sistemaField.style.display = 'none';
+                sistemaSelect.required = false;
+                sistemaSelect.value = '';
+                if (sistemaOutroField && sistemaOutroInput) {
+                  sistemaOutroField.style.display = 'none';
+                  sistemaOutroInput.required = false;
+                  sistemaOutroInput.value = '';
+                }
+              }
+            }
+
+            // Tipo de Problema: Exibir e popular para IMMO e Diagnosis; ocultar para Device
+            if (problemaField && problemaSelect) {
+              if (areaValue === 'IMMO' || areaValue === 'Diagnosis') {
+                problemaField.style.display = 'flex';
+                problemaSelect.required = true;
+                populateProblemaOptions(areaValue);
+              } else { // Device
+                problemaField.style.display = 'none';
+                problemaSelect.required = false;
+                problemaSelect.value = '';
+                if (problemaOutroField && problemaOutroInput) {
+                  problemaOutroField.style.display = 'none';
+                  problemaOutroInput.required = false;
+                  problemaOutroInput.value = '';
+                }
+              }
+            }
           } else {
             // Oculta tudo se nenhuma área estiver selecionada
             ecuField.style.display = 'none';
@@ -390,13 +550,44 @@
             document.getElementById('tipo_ecu').value = '';
             document.getElementById('tipo_motor').value = '';
             document.getElementById('tipo_chave').value = '';
+            if (sistemaField && sistemaSelect) {
+              sistemaField.style.display = 'none';
+              sistemaSelect.required = false;
+              sistemaSelect.value = '';
+            }
+            if (sistemaOutroField && sistemaOutroInput) {
+              sistemaOutroField.style.display = 'none';
+              sistemaOutroInput.required = false;
+              sistemaOutroInput.value = '';
+            }
+            if (problemaField && problemaSelect) {
+              problemaField.style.display = 'none';
+              problemaSelect.required = false;
+              problemaSelect.value = '';
+            }
+            if (problemaOutroField && problemaOutroInput) {
+              problemaOutroField.style.display = 'none';
+              problemaOutroInput.required = false;
+              problemaOutroInput.value = '';
+            }
           }
+
+          // Ajusta visibilidade do campo "Outro" conforme seleção atual
+          handleSistemaOutroVisibility();
+          handleProblemaOutroVisibility();
         }
 
         // Adiciona o listener para todos os botões de rádio
         areaRadios.forEach(radio => {
           radio.addEventListener('change', updateConditionalFields);
         });
+
+        if (sistemaSelect) {
+          sistemaSelect.addEventListener('change', handleSistemaOutroVisibility);
+        }
+        if (problemaSelect) {
+          problemaSelect.addEventListener('change', handleProblemaOutroVisibility);
+        }
 
         // Executa na carga da página para o caso de um valor já estar selecionado (ex: erro de submissão)
         updateConditionalFields();
@@ -446,6 +637,24 @@
     <div class="form-pair conditional-field" id="chave-field" style="display: none;">
       <label for="tipo_chave">{% trans "Tipo Chave" %}</label>
       <input type="text" id="tipo_chave" name="tipo_chave" />
+    </div>
+
+    <div class="form-pair conditional-field" id="sistema-field" style="display: none;">
+      <label for="sistema">{% trans "Sistema" %}</label>
+      <select id="sistema" name="sistema"></select>
+    </div>
+    <div class="form-pair conditional-field" id="sistema-outro-field" style="display: none;">
+      <label for="sistema_outro">{% trans "Outro - Descreva" %}</label>
+      <input type="text" id="sistema_outro" name="sistema_outro" />
+    </div>
+
+    <div class="form-pair conditional-field" id="problema-field" style="display: none;">
+      <label for="tipo_problema">{% trans "Tipo de Problema" %}</label>
+      <select id="tipo_problema" name="tipo_problema"></select>
+    </div>
+    <div class="form-pair conditional-field" id="problema-outro-field" style="display: none;">
+      <label for="tipo_problema_outro">{% trans "Outro - Descreva" %}</label>
+      <input type="text" id="tipo_problema_outro" name="tipo_problema_outro" />
     </div>
 
     <div class="form-pair">
@@ -782,6 +991,22 @@
 	    if (document.getElementById('chave-field').style.display === 'none') {
 	        document.getElementById('tipo_chave').value = '';
 	    }
+      if (document.getElementById('sistema-field').style.display === 'none') {
+          const sis = document.getElementById('sistema');
+          if (sis) sis.value = '';
+      }
+      if (document.getElementById('sistema-outro-field').style.display === 'none') {
+          const sisOut = document.getElementById('sistema_outro');
+          if (sisOut) sisOut.value = '';
+      }
+      if (document.getElementById('problema-field').style.display === 'none') {
+          const prob = document.getElementById('tipo_problema');
+          if (prob) prob.value = '';
+      }
+      if (document.getElementById('problema-outro-field').style.display === 'none') {
+          const probOut = document.getElementById('tipo_problema_outro');
+          if (probOut) probOut.value = '';
+      }
 	    
 	    const form = e.target;
 	    const data = new FormData(form);

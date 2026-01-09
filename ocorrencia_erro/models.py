@@ -166,6 +166,18 @@ class Record(models.Model):
         null=True,
         verbose_name='Tipo de Motor'
     )
+    sistema = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        verbose_name='Sistema'
+    )
+    tipo_problema = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        verbose_name='Tipo de Problema'
+    )
     # FIXED: Removed on_delete from CharField
     country_original = models.CharField(
         max_length=100,
@@ -202,6 +214,12 @@ class Record(models.Model):
         null=True,
         default="Não identificado",
         verbose_name="Feedback Manager"
+    )
+    detalhes_responsavel = models.TextField(
+        blank=True,
+        null=True,
+        default="Não identificado",
+        verbose_name="Detalhes do Responsável"
     )
     tipo_chave = models.TextField(
         blank=True,
