@@ -855,7 +855,7 @@
                                   style="width: 100%; min-height: 100px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: inherit;">${problemDetectedValue}</textarea>
                                 <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
                                   <button id="button_pdf" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
-                                      {% trans "Gerar PDF" %}
+                                      {% trans "Gerar PDF completo" %}
                                   </button>
                                   <button id="button_copy" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
                                       {% trans "COPIAR INFORMAÇÕES" %}
@@ -1103,7 +1103,12 @@
                     const feedbackManagerTextarea = document.getElementById(feedbackManagerId);
                     const detalhesResponsavelTextarea = document.getElementById(detalhesResponsavelId);
                     document.getElementById("button_pdf").addEventListener('click', ()=>{
-                        handleGerarPdf(id, record.codigo_externo)
+                        const problemText = document.getElementById(problemDetectedId)?.value || '';
+                        const detalhesText = document.getElementById(detalhesResponsavelId)?.value || '';
+                        handleGerarPdf(id, record.codigo_externo, {
+                            problem_detected: problemText,
+                            detalhes_responsavel: detalhesText
+                        });
                     })
                     document.getElementById("button_copy").addEventListener("click", () => {
                         const idStr = String(record.id);
@@ -1798,7 +1803,7 @@
             });
         }
         
-        function handleGerarPdf(recordId, recordCode) {
+        function handleGerarPdf(recordId, recordCode, extraData = {}) {
             // Mostra um feedback de carregamento para o usuário
             Swal.fire({
                 title: 'Gerando PDF...',
@@ -1811,6 +1816,15 @@
 
             // URL da nossa nova view que aceita POST
             const url = '{% url "gerar_pdf_ocorrencia_post" %}';
+            const payload = { record_id: recordId };
+            if (extraData && typeof extraData === 'object') {
+                if (Object.prototype.hasOwnProperty.call(extraData, 'problem_detected')) {
+                    payload.problem_detected = extraData.problem_detected;
+                }
+                if (Object.prototype.hasOwnProperty.call(extraData, 'detalhes_responsavel')) {
+                    payload.detalhes_responsavel = extraData.detalhes_responsavel;
+                }
+            }
 
             fetch(url, {
                 method: 'POST',
@@ -1818,9 +1832,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken') // Essencial para requisições POST no Django
                 },
-                body: JSON.stringify({
-                    record_id: recordId
-                })
+                body: JSON.stringify(payload)
             })
             .then(response => {
                 if (!response.ok) {
