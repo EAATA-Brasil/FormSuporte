@@ -168,28 +168,33 @@
         
         .payment-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 15px; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
         }
         
         .payment-item { 
             background: white; 
-            padding: 15px; 
+            padding: 10px; 
             border-radius: 5px; 
             border: 1px solid #e0e0e0; 
             text-align: center; 
         }
         
         .payment-label { 
-            font-size: 14px; 
+            font-size: 12px; 
             color: #666; 
             margin-bottom: 5px; 
         }
         
         .payment-value { 
-            font-size: 18px; 
+            font-size: 16px; 
             font-weight: bold; 
             color: #009EE0; 
+        }
+        .payment-extra {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
         }
         
         .observations { 
@@ -295,13 +300,13 @@
                 <tr class="total-row">
                     <td colspan="3" style="text-align: right;">
                         <strong>
-                            Valor final
-                            {% if faturamento == "Cartao" %}
-                            (Cartão de Crédito)
+                            {% if tipoPagamento == "Cartao" %}
+                                Valor nota fiscal:
+                            {% elif tipoPagamento == "Boleto" %}
+                                Valor final (boleto):
                             {% else %}
-                            (Boleto)
+                                Valor final:
                             {% endif %}
-                            :
                         </strong>
                     </td>
 
@@ -317,6 +322,9 @@
             <div class="payment-item">
                 <div class="payment-label">Tipo de Pagamento</div>
                 <div class="payment-value">{{ tipoPagamento }}</div>
+                {% if desconto > 0 %}
+                <div class="payment-extra">Desconto: {{ desconto_formatado }}</div>
+                {% endif %}
             </div>
             <div class="payment-item">
                 <div class="payment-label">Entrada</div>
@@ -326,12 +334,6 @@
                 <div class="payment-label">Parcelas</div>
                 <div class="payment-value">{{ parcelas }}x de {{ valorParcela_formatado }}</div>
             </div>
-            {% if desconto > 0 %}
-            <div class="payment-item">
-                <div class="payment-label">Desconto</div>
-                <div class="payment-value">{{ desconto_formatado }}</div>
-            </div>
-            {% endif %}
         </div>
     </div>
 
