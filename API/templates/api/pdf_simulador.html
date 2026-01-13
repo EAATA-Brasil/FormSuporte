@@ -301,7 +301,7 @@
                     <td colspan="3" style="text-align: right;">
                         <strong>
                             {% if tipoPagamento == "Cartao" %}
-                                Valor final (cartão):
+                                Valor nota fiscal:
                             {% elif tipoPagamento == "Boleto" %}
                                 Valor final (boleto):
                             {% else %}
@@ -310,7 +310,7 @@
                         </strong>
                     </td>
 
-                    <td class="text-right valor"><strong>{{ valorTotalFinal_formatado }}</strong></td>
+                    <td class="text-right valor"><strong>{{ valorFinalSemTaxa_formatado  }}</strong></td>
                 </tr>
             </tfoot>
         </table>
@@ -333,6 +333,9 @@
             <div class="payment-item">
                 <div class="payment-label">Parcelas</div>
                 <div class="payment-value">{{ parcelas }}x de {{ valorParcela_formatado }}</div>
+                {% if parcelasTextoExtra %}
+                <div class="payment-extra">{{ parcelasTextoExtra }}</div>
+                {% endif %}
             </div>
         </div>
     </div>

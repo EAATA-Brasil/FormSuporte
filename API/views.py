@@ -213,52 +213,85 @@ def generate_pdf(request):
         equipamento_ids = data.get('equipamentos', [])
         quantidades = data.get('quantidades', [])
         
-        # 2. Processar cada equipamento
-        for i, equipamento_id in enumerate(equipamento_ids):
-            try:
-                # Garante que a quantidade é um inteiro, padrão 1
+        usar_precos_cliente = bool(data.get("usarPrecosCliente"))
+        itens_pdf = data.get("itensPDF") or []
+
+        equipamentos_data = []
+        valor_total_sem_taxa = None  # será preenchido quando vier do cliente
+        equipamento_ids = data.get("equipamentos", [])
+        quantidades = data.get("quantidades", [])
+        if usar_precos_cliente and isinstance(itens_pdf, list) and len(itens_pdf) > 0:
+            # ✅ usa os preços já calculados no cliente (taxados)
+            valor_total_sem_taxa = 0.0
+            for item in itens_pdf:
                 try:
-                    quantidade = int(quantidades[i])
-                except (ValueError, TypeError, IndexError):
-                    quantidade = 1
-                equipamento = Equipamentos.objects.get(id=equipamento_id)
-                
-                # 2.1. Lógica de Cálculo de Valor Unitário
-                localizacao = data.get('localizacao')
-                faturamento = data.get('faturamento')
-                
-                if localizacao == 'SP':
-                    # Custo geral para SP
-                    valor_unitario = float(equipamento.custo_geral)
-                elif faturamento == 'CPF':
-                    # Custo CPF para outras localizações
-                    valor_unitario = float(equipamento.custo_cpf)
-                else:
-                    # Custo CNPJ (padrão) para outras localizações
-                    valor_unitario = float(equipamento.custo_cnpj)
-                
-                # 2.2. Calcular valor total do item
-                valor_total_item = valor_unitario * quantidade
-                
-                # 2.3. Adicionar dados formatados à lista
-                equipamentos_data.append({
-                    'nome': equipamento.nome,
-                    'valor_unitario': valor_unitario,
-                    'valor_unitario_formatado': format_currency(valor_unitario),
-                    'quantidade': quantidade,
-                    'valor_total': valor_total_item,
-                    'valor_total_formatado': format_currency(valor_total_item)
-                })
-            except Equipamentos.DoesNotExist:
-                # Ignora equipamentos que não existem no banco de dados
-                continue
-            except ValueError:
-                # Ignora se a conversão para float falhar
-                continue
-        
-        # 3. Calcular Totais e Valores Finais
-        valor_total_equipamentos = sum(item['valor_total'] for item in equipamentos_data)
-        
+                    nome = item.get("nome") or "Equipamento"
+                    qtd = int(item.get("quantidade") or 1)
+
+                    valor_total = float(item.get("valorTotal") or 0)
+                    valor_unit = float(item.get("valorUnitario") or (valor_total / qtd if qtd else 0))
+
+                    valor_base_total = float(item.get("valorBaseTotal") or 0)
+                    valor_total_sem_taxa += valor_base_total
+
+                    equipamentos_data.append({
+                        "nome": nome,
+                        "valor_unitario": valor_unit,
+                        "valor_unitario_formatado": format_currency(valor_unit),
+                        "quantidade": qtd,
+                        "valor_total": valor_total,
+                        "valor_total_formatado": format_currency(valor_total),
+                    })
+                except Exception:
+                    continue
+        else:
+            # 🔁 fallback: comportamento antigo (recalcula do banco)
+            for i, equipamento_id in enumerate(equipamento_ids):
+                try:
+                    try:
+                        quantidade = int(quantidades[i])
+                    except (ValueError, TypeError, IndexError):
+                        quantidade = 1
+
+                    equipamento = Equipamentos.objects.get(id=equipamento_id)
+
+                    localizacao = data.get("localizacao")
+                    faturamento = data.get("faturamento")
+
+                    if localizacao == "SP":
+                        valor_unitario = float(equipamento.custo_geral)
+                    elif faturamento == "CPF":
+                        valor_unitario = float(equipamento.custo_cpf)
+                    else:
+                        valor_unitario = float(equipamento.custo_cnpj)
+
+                    valor_total_item = valor_unitario * quantidade
+
+                    equipamentos_data.append({
+                        "nome": equipamento.nome,
+                        "valor_unitario": valor_unitario,
+                        "valor_unitario_formatado": format_currency(valor_unitario),
+                        "quantidade": quantidade,
+                        "valor_total": valor_total_item,
+                        "valor_total_formatado": format_currency(valor_total_item),
+                    })
+                except Exception:
+                    continue
+
+        # ✅ subtotal exibido: se o cliente mandou, use ele
+        subtotal_exib = data.get("subtotalEquipamentosExibicao", None)
+        try:
+            subtotal_exib = float(subtotal_exib) if subtotal_exib is not None else None
+        except Exception:
+            subtotal_exib = None
+
+        valor_total_equipamentos = subtotal_exib if subtotal_exib is not None else sum(
+            item["valor_total"] for item in equipamentos_data
+        )
+
+        # ❗ Valor final SEM taxa
+        valor_final_sem_taxa = valor_total_sem_taxa if valor_total_sem_taxa is not None else valor_total_equipamentos
+
         # Garante que desconto e entrada são floats
         desconto_valor = float(data.get('desconto', 0) or 0)
         entrada_valor = float(data.get('entrada', 0) or 0)
@@ -266,7 +299,26 @@ def generate_pdf(request):
         frete_valor = float(data.get('frete', 0) or 0)
 
         tem_frete = frete_valor > 0
-        valor_total_final = int(data.get('parcelas', 0) or 0) * valor_parcela + entrada_valor
+        valor_total_final = float(data.get("valorTotal") or valor_total_equipamentos)
+
+        # 3. Cálculo das parcelas com ajuste na última parcela (em centavos)
+        parcelas_qtd = int(data.get('parcelas', 0) or 0)
+        parcela_base = 0.0
+        ultima_parcela = 0.0
+        parcelas_texto_extra = None
+        if parcelas_qtd > 0:
+            total_cent = round(valor_total_final * 100)
+            entrada_cent = round(entrada_valor * 100)
+            saldo_cent = max(0, total_cent - entrada_cent)
+            parcela_base_cent = saldo_cent // parcelas_qtd
+            resto_cent = saldo_cent - (parcela_base_cent * parcelas_qtd)
+            ultima_parcela_cent = parcela_base_cent + resto_cent
+
+            parcela_base = parcela_base_cent / 100.0
+            ultima_parcela = ultima_parcela_cent / 100.0
+        # Não exibir linha extra no PDF
+        parcelas_texto_extra = None
+
         
         # 4. Preparar Dados para o Template
         template_data = {
@@ -275,12 +327,16 @@ def generate_pdf(request):
             'entrada': entrada_valor,
             'entrada_formatado': format_currency(entrada_valor),
 
-            'parcelas': int(data.get('parcelas', 0) or 0),
+            'parcelas': parcelas_qtd,
             'localizacao': data.get('localizacao', ''),
             'faturamento': data.get('faturamento', ''),
 
-            'valorParcela': valor_parcela,
-            'valorParcela_formatado': format_currency(valor_parcela),
+            # parcelas: sempre exibir a base inteira; última parcela ajusta o resto
+            'valorParcela': parcela_base,
+            'valorParcela_formatado': format_currency(parcela_base),
+            'ultimaParcela': ultima_parcela,
+            'ultimaParcela_formatado': format_currency(ultima_parcela),
+            'parcelasTextoExtra': parcelas_texto_extra,
 
             'valorTotal': valor_total_equipamentos,
             'valorTotal_formatado': format_currency(valor_total_equipamentos),
@@ -297,6 +353,14 @@ def generate_pdf(request):
             'nomeVendedor': data.get('nomeVendedor', ''),
             'nomeCNPJ': data.get('nomeCNPJ', ''),
             'nomeCliente': data.get('nomeCliente', ''),
+
+            # subtotal COM taxa (como já está)
+            'subtotalEquipamentos': valor_total_equipamentos,
+            'subtotalEquipamentos_formatado': format_currency(valor_total_equipamentos),
+
+            # valor final SEM taxa (novo)
+            'valorFinalSemTaxa': valor_final_sem_taxa,
+            'valorFinalSemTaxa_formatado': format_currency(valor_final_sem_taxa),
         }
 
         if tem_frete:
