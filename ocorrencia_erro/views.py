@@ -1308,12 +1308,22 @@ def gerar_pdf_ocorrencia(request, record_id=None):
     com quebra de linha automática para textos longos. Versão SEM tradução.
     """
     try:
+        # Controle de seções opcionais
+        exclude_problem = False
+
         # Se a requisição for POST, pega o ID do corpo da requisição
         if request.method == 'POST':
             data = json.loads(request.body)
             record_id = data.get('record_id')
+            # Permite inibir seção "Problem Detected" quando acionado pelo campo do responsável
+            exclude_problem = bool(data.get('exclude_problem') or data.get('only_responsible') or False)
             if not record_id:
                 return JsonResponse({'status': 'error', 'message': 'ID da ocorrência não fornecido.'}, status=400)
+        else:
+            # Também aceita via querystring para GET
+            exclude_problem = (request.GET.get('exclude_problem') in ['1', 'true', 'True']) or (
+                request.GET.get('only_responsible') in ['1', 'true', 'True']
+            )
 
         # Busca a ocorrência no banco de dados ou retorna um erro 404
         record = get_object_or_404(Record, id=record_id)
@@ -1409,6 +1419,10 @@ def gerar_pdf_ocorrencia(request, record_id=None):
         y_next_section = min(y1, y2) - 0.3 * inch
         p.line(0.5 * inch, y_next_section + 0.1 * inch, width - 0.5 * inch, y_next_section + 0.1 * inch)
         y_text = y_next_section - 0.2 * inch
+        # Problema detectado (opcional)
+        if not exclude_problem:
+            y_text = draw_long_text_paragraph(x1, y_text, "Problem Detected", record.problem_detected)
+        # Detalhes do responsável
         y_text = draw_long_text_paragraph(x1, y_text, "Responsible Details", record.detalhes_responsavel)
 
         # ==================================================================

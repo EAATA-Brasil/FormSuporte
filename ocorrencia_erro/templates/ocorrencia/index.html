@@ -1163,7 +1163,8 @@
                     const btnPdfResp = document.getElementById("button_pdf_resp");
                     if (btnPdfResp) {
                         btnPdfResp.addEventListener('click', ()=>{
-                            handleGerarPdf(id, record.codigo_externo)
+                            // Gera PDF apenas com os detalhes do responsável (sem Problem Detected)
+                            handleGerarPdf(id, record.codigo_externo, { exclude_problem: true, only_responsible: true });
                         })
                     }
                     const btnCopyResp = document.getElementById("button_copy_resp");
@@ -1818,12 +1819,8 @@
             const url = '{% url "gerar_pdf_ocorrencia_post" %}';
             const payload = { record_id: recordId };
             if (extraData && typeof extraData === 'object') {
-                if (Object.prototype.hasOwnProperty.call(extraData, 'problem_detected')) {
-                    payload.problem_detected = extraData.problem_detected;
-                }
-                if (Object.prototype.hasOwnProperty.call(extraData, 'detalhes_responsavel')) {
-                    payload.detalhes_responsavel = extraData.detalhes_responsavel;
-                }
+                // Envia todos os campos adicionais (inclui flags como exclude_problem)
+                Object.assign(payload, extraData);
             }
 
             fetch(url, {
