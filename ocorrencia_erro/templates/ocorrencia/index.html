@@ -540,6 +540,8 @@
 
     {%endif%}
 <script>
+    const VIEW_DONE_ONLY = '{{ view_done_only }}' === 'True';
+    function showNoPermission() { Swal.fire('Você não tem permissão', '', 'warning'); }
     function getCookie(name) { 
         if (document.cookie && document.cookie !== "") {
             const cookies = document.cookie.split(";");
@@ -594,6 +596,7 @@
         });
     }
     function deleteFile(fileId, fileName, record) {
+        if (VIEW_DONE_ONLY) { showNoPermission(); return; }
         if (confirm(`{% trans "Deseja realmente deletar o arquivo" %} "${fileName}"?`)) {
             const formData = new FormData();
             formData.append('action', 'deletar');
@@ -1243,6 +1246,7 @@
 
                     document.getElementById('form-ocorrencia').addEventListener('submit', async (e) => {
                         e.preventDefault();
+                        if (VIEW_DONE_ONLY) { showNoPermission(); return; }
                         const form = e.target;
                         const data = new FormData(form);
                         try {
@@ -1745,6 +1749,7 @@
 
                                         clearButton.addEventListener('click', function(e) {
                                             e.stopPropagation();
+                                            if (VIEW_DONE_ONLY) { showNoPermission(); return; }
                                             instance.clear();
                                             instance.input.value = '';
                                             instance.close();
@@ -1777,6 +1782,7 @@
 
                                         todayButton.addEventListener('click', function(e) {
                                             e.stopPropagation();
+                                            if (VIEW_DONE_ONLY) { showNoPermission(); return; }
                                             const today = new Date();
                                             instance.setDate(today, true); // true => dispara onChange
                                             instance.close();
@@ -1897,6 +1903,7 @@
         }
 
         function saveFieldPopup(inputElement) {
+            if (VIEW_DONE_ONLY) { showNoPermission(); return; }
             const recordID = inputElement.getAttribute('data-record-id');
             const fieldName = inputElement.getAttribute('data-field-name');
             const newValue = inputElement.value;
@@ -2444,7 +2451,8 @@
                 sort: currentSort,
                 page: page_num
             };
-            if('{{has_edit_permission}}' == 'False'){
+            // Para técnicos comuns, restringe por responsável. Para usuários 'Somente Concluído', não restringe.
+            if('{{has_edit_permission}}' == 'False' && '{{view_done_only}}' !== 'True'){
                 filterData.filters['responsible'] = []
                 filterData.filters['responsible'].push('{{user}}'.toUpperCase())
             }
@@ -2961,6 +2969,7 @@
 
                                             clearButton.addEventListener('click', function(e) {
                                                 e.stopPropagation();
+                                                if (VIEW_DONE_ONLY) { showNoPermission(); return; }
                                                 instance.clear();
                                                 instance.input.value = '';
                                                 instance.close();
@@ -2993,6 +3002,7 @@
 
                                             todayButton.addEventListener('click', function(e) {
                                                 e.stopPropagation();
+                                                if (VIEW_DONE_ONLY) { showNoPermission(); return; }
                                                 const today = new Date();
                                                 instance.setDate(today, true); // true => dispara onChange
                                                 instance.close();
@@ -3208,6 +3218,7 @@
             
         }
         function saveField(inputElement) {
+            if (VIEW_DONE_ONLY) { showNoPermission(); return; }
             const container = inputElement.closest('.editable-field-container') ? inputElement.closest('.editable-field-container') : inputElement.closest('.field-container');
             const reportID = container.getAttribute('data-id');
             const fieldName = container.getAttribute('data-column');

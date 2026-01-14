@@ -215,6 +215,10 @@ def subir_arquivo(files, record):
 @login_required(login_url=URL_LOGIN)
 def download_todos_arquivos(request, record_id):
     record = get_object_or_404(Record, id=record_id)
+    # Usuários de leitura (reporte/concluído) só podem baixar arquivos de ocorrências concluídas
+    if (request.user.groups.filter(name='Somente Concluído').exists() or
+        request.user.groups.filter(name='Técnicos de reporte').exists()) and record.status != Record.STATUS_OCORRENCIA.DONE:
+        raise Http404("Arquivo não encontrado ou sem permissão")
     arquivos = ArquivoOcorrencia.objects.filter(record=record)
 
     print(arquivos)
@@ -249,17 +253,26 @@ def index(request):
     user = request.user
 
     if not user.is_superuser:
-        paises_permitidos_ids = CountryPermission.objects.filter(user=user).values_list('country_id', flat=True)
-        is_semi_admin = user.groups.filter(name='Semi Admin').exists()
-
-        if is_semi_admin:
-            ocorrencias_queryset = ocorrencias_queryset.filter(country_id__in=list(paises_permitidos_ids))
+        # Usuário somente leitura de concluídos (reporte)
+        is_view_done_only = (
+            user.groups.filter(name='Somente Concluído').exists() or
+            user.groups.filter(name='Técnicos de reporte').exists()
+        )
+        if is_view_done_only:
+            # Pode visualizar TODAS as ocorrências concluídas (sem limitar por país ou responsável)
+            ocorrencias_queryset = Record.objects.filter(status=Record.STATUS_OCORRENCIA.DONE)
         else:
-            nome_completo_usuario = f"{user.first_name} {user.last_name}".strip() or user.username
-            ocorrencias_queryset = ocorrencias_queryset.filter(
-                Q(country_id__in=list(paises_permitidos_ids)) & 
-                Q(responsible=nome_completo_usuario)
-            )
+            paises_permitidos_ids = CountryPermission.objects.filter(user=user).values_list('country_id', flat=True)
+            is_semi_admin = user.groups.filter(name='Semi Admin').exists()
+
+            if is_semi_admin:
+                ocorrencias_queryset = ocorrencias_queryset.filter(country_id__in=list(paises_permitidos_ids))
+            else:
+                nome_completo_usuario = f"{user.first_name} {user.last_name}".strip() or user.username
+                ocorrencias_queryset = ocorrencias_queryset.filter(
+                    Q(country_id__in=list(paises_permitidos_ids)) & 
+                    Q(responsible=nome_completo_usuario)
+                )
 
     status_map = {
         Record.STATUS_OCORRENCIA.DONE: _("Concluído"),
@@ -288,15 +301,22 @@ def index(request):
     is_super = user.is_superuser
     # 1. Reutiliza a verificação de 'is_semi_admin' que já fizemos
     is_semi_admin = user.groups.filter(name='Semi Admin').exists() 
+    is_somente_concluido = (
+        user.groups.filter(name='Somente Concluído').exists() or
+        user.groups.filter(name='Técnicos de reporte').exists()
+    )
     
     # 2. Cria a nova variável de permissão
     has_edit_permission = is_super or is_semi_admin
 
     # --- FIM DA ALTERAÇÃO NECESSÁRIA ---
 
-    permitted_countries = Country.objects.filter(
-        id__in=CountryPermission.objects.filter(user=user).values_list('country_id', flat=True)
-    ).values_list('name', flat=True) if not is_super else Country.objects.all().values_list('name', flat=True)
+    if is_super or is_somente_concluido:
+        permitted_countries = Country.objects.all().values_list('name', flat=True)
+    else:
+        permitted_countries = Country.objects.filter(
+            id__in=CountryPermission.objects.filter(user=user).values_list('country_id', flat=True)
+        ).values_list('name', flat=True)
 
     context = {
         'user': user,
@@ -305,6 +325,7 @@ def index(request):
         
         # 3. Adiciona a nova variável ao contexto para ser usada no template
         'has_edit_permission': has_edit_permission,
+        'view_done_only': is_somente_concluido,
         
         'responsaveis_por_pais': responsaveis_por_pais_json,
         'todos_responsaveis': todos_responsaveis_json,
@@ -331,19 +352,32 @@ def filter_data_view(request):
             
             if not user.is_superuser:
                 # 1. Quais países este usuário pode ver?
-                paises_permitidos_ids = CountryPermission.objects.filter(user=user).values_list('country_id', flat=True)
-                paises_permitidos_lista = list(paises_permitidos_ids)
-                print(f"IDs dos países permitidos: {paises_permitidos_lista}")
+                is_somente_concluido = (
+                    user.groups.filter(name='Somente Concluído').exists() or
+                    user.groups.filter(name='Técnicos de reporte').exists()
+                )
+                if is_somente_concluido:
+                    print("Usuário do grupo de leitura (reporte). Filtrando apenas status DONE, sem outras restrições.")
+                    base_queryset = base_queryset.filter(status=Record.STATUS_OCORRENCIA.DONE)
+                    paises_permitidos_lista = []
+                    is_semi_admin = False
+                else:
+                    paises_permitidos_ids = CountryPermission.objects.filter(user=user).values_list('country_id', flat=True)
+                    paises_permitidos_lista = list(paises_permitidos_ids)
+                    print(f"IDs dos países permitidos: {paises_permitidos_lista}")
 
-                # 2. O usuário é Semi Admin?
-                is_semi_admin = user.groups.filter(name='Semi Admin').exists()
-                print(f"É Semi Admin? {is_semi_admin}")
+                    # 2. O usuário é Semi Admin?
+                    is_semi_admin = user.groups.filter(name='Semi Admin').exists()
+                    print(f"É Semi Admin? {is_semi_admin}")
                 
                 # 3. Quais são TODOS os grupos do usuário?
                 grupos_usuario = list(user.groups.all().values_list('name', flat=True))
                 print(f"Grupos do usuário: {grupos_usuario}")
 
-                if is_semi_admin:
+                if is_somente_concluido:
+                    # Já filtrado por DONE acima
+                    pass
+                elif is_semi_admin:
                     print("Lógica de Semi Admin ativada. Filtrando por países...")
                     base_queryset = base_queryset.filter(country_id__in=paises_permitidos_lista)
                 else:
@@ -642,6 +676,7 @@ def criar_usuario(request):
             elif tipo_usuario == 'semi_admin':
                 # O nome do grupo deve ser exatamente este para a lógica de permissão funcionar
                 nome_grupo = 'Semi Admin'
+            # removido: perfil 'somente_concluido' unificado com 'reporte'
             else:
                 # Um fallback seguro, caso algo inesperado aconteça
                 nome_grupo = 'Técnicos de reporte'
@@ -992,6 +1027,10 @@ def get_paises_por_responsavel(request):
 
 @login_required(login_url=URL_LOGIN)
 def alterar_dados(request):
+    # Bloqueia edição para usuários de leitura (reporte/concluído)
+    if request.user.groups.filter(name='Somente Concluído').exists() or request.user.groups.filter(name='Técnicos de reporte').exists():
+        return JsonResponse({'status': 'error', 'message': 'Permissão negada.'}, status=403)
+
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Método inválido'}, status=405)
 
@@ -1097,13 +1136,17 @@ def download_arquivo(request, arquivo_id):
         record = arquivo.record
         user = request.user
         
-
-        has_permission = CountryPermission.objects.filter(
-            user=user,
-            country=record.country
-        ).exists()
-        if not has_permission:
-            raise Http404("Arquivo não encontrado ou sem permissão")
+        # Permite usuários de leitura (reporte/concluído) acessarem apenas arquivos de ocorrências concluídas
+        if user.groups.filter(name='Somente Concluído').exists() or user.groups.filter(name='Técnicos de reporte').exists():
+            if record.status != Record.STATUS_OCORRENCIA.DONE:
+                raise Http404("Arquivo não encontrado ou sem permissão")
+        else:
+            has_permission = CountryPermission.objects.filter(
+                user=user,
+                country=record.country
+            ).exists()
+            if not has_permission:
+                raise Http404("Arquivo não encontrado ou sem permissão")
         
         # Caminho completo do arquivo
         file_path = arquivo.arquivo.path
@@ -1137,6 +1180,10 @@ def download_arquivo(request, arquivo_id):
 def get_record(request, pk):
     try:
         record = Record.objects.prefetch_related('arquivos').get(id=pk)
+        # Restringe visualização para usuários de leitura (reporte/concluído)
+        if request.user.is_authenticated and (request.user.groups.filter(name='Somente Concluído').exists() or request.user.groups.filter(name='Técnicos de reporte').exists()):
+            if record.status != Record.STATUS_OCORRENCIA.DONE:
+                return JsonResponse({'error': 'Registro não encontrado'}, status=404)
         data = {
             "id": record.id,
             "technical": record.technical,
@@ -1327,6 +1374,10 @@ def gerar_pdf_ocorrencia(request, record_id=None):
 
         # Busca a ocorrência no banco de dados ou retorna um erro 404
         record = get_object_or_404(Record, id=record_id)
+        # Se for usuário de leitura (reporte/concluído), só permite gerar PDF para concluídas
+        if request.user.groups.filter(name='Somente Concluído').exists() or request.user.groups.filter(name='Técnicos de reporte').exists():
+            if record.status != Record.STATUS_OCORRENCIA.DONE:
+                return JsonResponse({'status': 'error', 'message': 'Permissão negada.'}, status=403)
 
         # Cria um buffer de bytes em memória para o arquivo PDF
         buffer = io.BytesIO()
@@ -1462,14 +1513,19 @@ def download_arquivo(request, arquivo_id):
         user = request.user
         
         if not user.is_superuser:
-            # Verifica se o usuário tem permissão para o país da ocorrência
-            if record.country:
-                has_permission = CountryPermission.objects.filter(
-                    user=user,
-                    country=record.country
-                ).exists()
-                if not has_permission:
+            # Permite usuários de leitura (reporte/concluído) acessarem apenas arquivos de ocorrências concluídas
+            if user.groups.filter(name='Somente Concluído').exists() or user.groups.filter(name='Técnicos de reporte').exists():
+                if record.status != Record.STATUS_OCORRENCIA.DONE:
                     raise Http404("Arquivo não encontrado ou sem permissão")
+            else:
+                # Verifica se o usuário tem permissão para o país da ocorrência
+                if record.country:
+                    has_permission = CountryPermission.objects.filter(
+                        user=user,
+                        country=record.country
+                    ).exists()
+                    if not has_permission:
+                        raise Http404("Arquivo não encontrado ou sem permissão")
         
         # Caminho completo do arquivo
         file_path = arquivo.arquivo.path
