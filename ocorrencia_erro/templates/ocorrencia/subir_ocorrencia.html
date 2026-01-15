@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n static %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -7,6 +7,7 @@
   <title>Formulário de Ocorrência</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="{% static 'ocorrencia/options.js' %}"></script>
   <style>
     :root {
       --primary: #1a73e8;
@@ -361,34 +362,9 @@
         const problemaOutroField = document.getElementById('problema-outro-field');
         const problemaOutroInput = document.getElementById('tipo_problema_outro');
 
-        const SISTEMA_OPTIONS = {
-          IMMO: [
-            'Immo - (Painel)',
-            'Immo - (BC)',
-            'Immo - (Caixinha)',
-            'Alarme',
-            'Outro...'
-          ],
-          Diagnosis: [
-            'Injeção Eletrônica',
-            'ABS',
-            'AirBag',
-            'Transmissão Automática',
-            'Painel de Insrutmentos',
-            'BCM - (Carroceria)',
-            'ADAS',
-            'Ar Condicionado - (A/C)',
-            'Suspensão',
-            'Radio',
-            'Direção',
-            'Auto VIN',
-            'Outro...'
-          ]
-        };
-
         function populateSistemaOptions(areaValue) {
           if (!sistemaSelect) return;
-          const opts = SISTEMA_OPTIONS[areaValue] || [];
+          const opts = (window.OcorrenciaOptions && window.OcorrenciaOptions.getSistemaOptions(areaValue)) || [];
           sistemaSelect.innerHTML = '';
           const emptyOpt = document.createElement('option');
           emptyOpt.value = '';
@@ -410,53 +386,9 @@
           if (!isOutro) sistemaOutroInput.value = '';
         }
 
-        const PROBLEMA_OPTIONS = {
-          IMMO: [
-            'Tradução',
-            'DTC Errado',
-            'DTC Sem Texto',
-            'Não Apaga DTC',
-            'Não le DTC',
-            'Não Le PIN',
-            'Erro CHIP - Chave',
-            'Não Comunica',
-            'Informação Errada (INFO)',
-            'Falta Função',
-            'Senha ERRADA',
-            'Dados Errados - (IMMO)',
-            'Parâmetro - (Errado)',
-            'Não Programa Controle',
-            'Outro...'
-          ],
-          Diagnosis: [
-            'Tradução',
-            'DTC Errado',
-            'DTC Sem Texto',
-            'Não Apaga DTC',
-            'Não le DTC',
-            'Não Reseta Revisão',
-            'Não Reseta Parametro',
-            'Ajuste Basico',
-            'Não Executa Função',
-            'Não Programa Chave',
-            'Não Le PIN',
-            'Erro CHIP - Chave',
-            'Não Comunica',
-            'Informação Errada (INFO)',
-            'Falta Função',
-            'Não Recua Pinça',
-            'Ângulo Direção',
-            'Senha ERRADA',
-            'Dados Errados - (IMMO)',
-            'Parâmetro - (Errado)',
-            'Não Programa Controle',
-            'Outro...'
-          ]
-        };
-
-        function populateProblemaOptions(areaValue) {
+        function populateProblemaOptionsBySistema(systemLabel) {
           if (!problemaSelect) return;
-          const opts = PROBLEMA_OPTIONS[areaValue] || [];
+          const opts = (window.OcorrenciaOptions && window.OcorrenciaOptions.getProblemaOptionsBySistema(systemLabel)) || [];
           problemaSelect.innerHTML = '';
           const emptyOpt = document.createElement('option');
           emptyOpt.value = '';
@@ -526,12 +458,17 @@
               }
             }
 
-            // Tipo de Problema: Exibir e popular para IMMO e Diagnosis; ocultar para Device
+            // Tipo de Problema: relacionado ao Sistema selecionado
             if (problemaField && problemaSelect) {
               if (areaValue === 'IMMO' || areaValue === 'Diagnosis') {
                 problemaField.style.display = 'flex';
                 problemaSelect.required = true;
-                populateProblemaOptions(areaValue);
+                const currentSystem = sistemaSelect ? sistemaSelect.value : '';
+                if (currentSystem) {
+                  populateProblemaOptionsBySistema(currentSystem);
+                } else {
+                  problemaSelect.innerHTML = '<option value="">-- Selecione o tipo de problema --</option>';
+                }
               } else { // Device
                 problemaField.style.display = 'none';
                 problemaSelect.required = false;
@@ -584,7 +521,10 @@
         });
 
         if (sistemaSelect) {
-          sistemaSelect.addEventListener('change', handleSistemaOutroVisibility);
+          sistemaSelect.addEventListener('change', (e) => {
+            handleSistemaOutroVisibility();
+            populateProblemaOptionsBySistema(e.target.value);
+          });
         }
         if (problemaSelect) {
           problemaSelect.addEventListener('change', handleProblemaOutroVisibility);
@@ -592,6 +532,10 @@
 
         // Executa na carga da página para o caso de um valor já estar selecionado (ex: erro de submissão)
         updateConditionalFields();
+        // Re-popula quando as opções do backend estiverem disponíveis
+        if (window.OcorrenciaOptions && OcorrenciaOptions.onReady) {
+          OcorrenciaOptions.onReady(() => updateConditionalFields());
+        }
       });
     </script>
 

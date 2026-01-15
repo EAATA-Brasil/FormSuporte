@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Record, CountryPermission, Country, Device
+from .models import Record, CountryPermission, Country, Device, OptionItem
 
 # Admin para Record
 @admin.register(Record)
@@ -45,3 +45,12 @@ class CountryAdmin(admin.ModelAdmin):
 class DeviceAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
+
+
+@admin.register(OptionItem)
+class OptionItemAdmin(admin.ModelAdmin):
+    list_display = ('category', 'area', 'label', 'parent', 'order', 'active')
+    list_filter = ('category', 'area', 'active')
+    search_fields = ('label', 'parent__label')
+    list_editable = ('order', 'active')
+    ordering = ('category', 'area', 'parent__label', 'order', 'label')

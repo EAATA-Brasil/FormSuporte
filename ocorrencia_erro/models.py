@@ -391,3 +391,33 @@ class ChatMessage(models.Model):
     
     class Meta:
         ordering = ['timestamp']
+
+
+class OptionItem(models.Model):
+    """Opções configuráveis para Sistema e Tipo de Problema por Área (IMMO/Diagnosis/Device)."""
+    AREA_CHOICES = (
+        ('IMMO', 'IMMO'),
+        ('Diagnosis', 'Diagnosis'),
+        ('Device', 'Device'),
+    )
+    CATEGORY_CHOICES = (
+        ('SISTEMA', 'Sistema'),
+        ('PROBLEMA', 'Tipo de Problema'),
+    )
+
+    area = models.CharField(max_length=20, choices=AREA_CHOICES)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    label = models.CharField(max_length=150)
+    order = models.PositiveIntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    # Quando category == 'PROBLEMA', liga ao item de SISTEMA correspondente
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='children')
+
+    class Meta:
+        unique_together = ('area', 'category', 'label', 'parent')
+        ordering = ['category', 'area', 'parent__label', 'order', 'label']
+
+    def __str__(self) -> str:
+        return f"{self.get_category_display()} / {self.area} - {self.label}"

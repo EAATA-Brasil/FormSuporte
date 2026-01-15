@@ -14,6 +14,7 @@ urlpatterns = [
     path('subir_ocorrencia/', views.subir_ocorrencia, name='subir_ocorrencia'),
     path('filter_data/', views.filter_data_view, name='filter_data'),
     path('update_ocorrencia/', views.alterar_dados, name='update_ocorrencia'),
+    path('options/', views.options_config, name='ocorrencia_options'),
     path('criar_usuario/', views.criar_usuario, name='criar_usuario'),
     path('login/', views.login_view, name='login_ocorrencias'),
     path('logout/', views.logout_view, name='logout'),

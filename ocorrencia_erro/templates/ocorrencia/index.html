@@ -10,12 +10,47 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{% static 'ocorrencia/options.js' %}"></script>
     <style>
+        /* Evitar barra de rolagem horizontal geral */
+        html, body { overflow-x: hidden; }
+
+        /* Garantir que a tabela nunca ultrapasse a largura da tela */
+        #data-table, .table { width: 100%; table-layout: fixed; }
+        #data-table th, #data-table td, .table th, .table td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 320px; /* ajuste fino para manter sem scroll */
+        }
+
+        /* Cabeçalhos precisam permitir overlay do filtro */
+        #data-table th { position: relative; overflow: visible !important; }
+
+        /* Caixas de filtro sobrepostas (dropdown) */
+        .filter-box {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 2000;
+            max-width: min(95vw, 420px);
+            max-height: 60vh;
+            overflow: auto;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+            border-radius: 8px;
+        }
+
+        /* Selects editáveis nas células devem caber no espaço */
+        .editable-field-container select { max-width: 100%; width: 100%; }
+        .editable-field-container input[type="text"] { max-width: 100%; }
+
         .filter-finalizado {
             max-height: 60vh;
             overflow-y: auto;
             overflow-x: hidden;
-            left: -120px;
+            left: -130px !important;
         }
         footer {
             display: flex;
@@ -913,18 +948,20 @@
                             <strong>{% trans "Área:" %}</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.area || '{% trans "Não informado" %}'}</span>
                         </div>
-                        ${record.sistema ? `
-                            <div>
-                                <strong>{% trans "Sistema:" %}</strong><br>
-                                <span style="color: var(--text-light);" translate="no">${record.sistema || '{% trans "Não informado" %}'}</span>
+                        <div id="sistema-container-${record.id}" style="display: none;">
+                            <strong>{% trans "Sistema:" %}</strong><br>
+                            <select id="sistema-select-${record.id}" class="editable-select-field" data-record-id="${record.id}" data-field-name="sistema"></select>
+                            <div id="sistema-outro-wrap-${record.id}" style="margin-top:6px; display:none;">
+                                <input type="text" id="sistema-outro-input-${record.id}" placeholder="{% trans 'Outro - Descreva' %}" data-record-id="${record.id}" data-field-name="sistema" />
                             </div>
-                        ` : ''}
-                        ${record.tipo_problema ? `
-                            <div>
-                                <strong>{% trans "Tipo de Problema:" %}</strong><br>
-                                <span style="color: var(--text-light);" translate="no">${record.tipo_problema || '{% trans "Não informado" %}'}</span>
+                        </div>
+                        <div id="problema-container-${record.id}" style="display: none;">
+                            <strong>{% trans "Tipo de Problema:" %}</strong><br>
+                            <select id="problema-select-${record.id}" class="editable-select-field" data-record-id="${record.id}" data-field-name="tipo_problema"></select>
+                            <div id="problema-outro-wrap-${record.id}" style="margin-top:6px; display:none;">
+                                <input type="text" id="problema-outro-input-${record.id}" placeholder="{% trans 'Outro - Descreva' %}" data-record-id="${record.id}" data-field-name="tipo_problema" />
                             </div>
-                        ` : ''}
+                        </div>
                         <div>
                             <strong>{% trans "Serial:" %}</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.serial || '{% trans "Não informado" %}'}</span>
@@ -1090,6 +1127,137 @@
                     content: 'problem-details-content'
                 },
                 didOpen: () => {
+                        // ---- Sistema e Tipo de Problema (editáveis) ----
+                        try {
+                            const areaAtual = ((record.area || '').trim().toUpperCase() === 'DIAGNOSIS') ? 'Diagnosis' : ((record.area || '').trim().toUpperCase() === 'DEVICE' ? 'Device' : ((record.area || '').trim().toUpperCase() === 'IMMO' ? 'IMMO' : (record.area || '').trim()));
+
+                            const sistemaContainer = document.getElementById(`sistema-container-${record.id}`);
+                            const problemaContainer = document.getElementById(`problema-container-${record.id}`);
+                            const sistemaSelect = document.getElementById(`sistema-select-${record.id}`);
+                            const problemaSelect = document.getElementById(`problema-select-${record.id}`);
+                            const sistemaOutroWrap = document.getElementById(`sistema-outro-wrap-${record.id}`);
+                            const problemaOutroWrap = document.getElementById(`problema-outro-wrap-${record.id}`);
+                            const sistemaOutroInput = document.getElementById(`sistema-outro-input-${record.id}`);
+                            const problemaOutroInput = document.getElementById(`problema-outro-input-${record.id}`);
+
+                            function populateSelect(selectEl, options, includeEmpty=true) {
+                                if (!selectEl) return;
+                                selectEl.innerHTML = '';
+                                if (includeEmpty) {
+                                    const emptyOpt = document.createElement('option');
+                                    emptyOpt.value = '';
+                                    emptyOpt.textContent = '--';
+                                    selectEl.appendChild(emptyOpt);
+                                }
+                                options.forEach(txt => {
+                                    const o = document.createElement('option');
+                                    o.value = txt;
+                                    o.textContent = txt;
+                                    selectEl.appendChild(o);
+                                });
+                            }
+
+                            function setupSistemaProblemaByArea(area) {
+                                const aU = (area || '').toString().toUpperCase();
+                                const show = aU === 'IMMO' || aU === 'DIAGNOSIS';
+                                if (sistemaContainer) sistemaContainer.style.display = show ? 'block' : 'none';
+                                if (problemaContainer) problemaContainer.style.display = show ? 'block' : 'none';
+                                if (!show) return;
+
+                                const sisOptions = (window.OcorrenciaOptions && window.OcorrenciaOptions.getSistemaOptions(area)) || [];
+                                // Problemas dependem do Sistema selecionado
+                                let probOptions = [];
+                                if (record.sistema && window.OcorrenciaOptions) {
+                                    probOptions = OcorrenciaOptions.getProblemaOptionsBySistema(record.sistema) || [];
+                                }
+                                populateSelect(sistemaSelect, sisOptions);
+                                populateSelect(problemaSelect, probOptions);
+
+                                // Estado inicial SISTEMA
+                                if (record.sistema) {
+                                    if (sisOptions.includes(record.sistema)) {
+                                        sistemaSelect.value = record.sistema;
+                                        if (sistemaOutroWrap) sistemaOutroWrap.style.display = 'none';
+                                    } else {
+                                        sistemaSelect.value = 'Outro...';
+                                        if (sistemaOutroWrap && sistemaOutroInput) {
+                                            sistemaOutroWrap.style.display = 'block';
+                                            sistemaOutroInput.value = record.sistema;
+                                        }
+                                    }
+                                }
+                                // Estado inicial PROBLEMA
+                                if (record.tipo_problema) {
+                                    if (probOptions.includes(record.tipo_problema)) {
+                                        problemaSelect.value = record.tipo_problema;
+                                        if (problemaOutroWrap) problemaOutroWrap.style.display = 'none';
+                                    } else {
+                                        problemaSelect.value = 'Outro...';
+                                        if (problemaOutroWrap && problemaOutroInput) {
+                                            problemaOutroWrap.style.display = 'block';
+                                            problemaOutroInput.value = record.tipo_problema;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Listeners de mudança e salvamento
+                            if (sistemaSelect) {
+                                sistemaSelect.addEventListener('change', (e) => {
+                                    const val = e.target.value;
+                                    if (val === 'Outro...') {
+                                        if (sistemaOutroWrap) sistemaOutroWrap.style.display = 'block';
+                                        if (sistemaOutroInput) sistemaOutroInput.focus();
+                                    } else {
+                                        if (sistemaOutroWrap) sistemaOutroWrap.style.display = 'none';
+                                        // salva imediatamente o valor selecionado
+                                        saveFieldPopup(e.target);
+                                    }
+                                });
+                            }
+                            if (sistemaOutroInput) {
+                                const commit = () => {
+                                    if (sistemaOutroInput.value && sistemaOutroInput.value.trim()) {
+                                        saveFieldPopup(sistemaOutroInput);
+                                    }
+                                };
+                                sistemaOutroInput.addEventListener('keydown', (ev) => {
+                                    if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+                                });
+                                sistemaOutroInput.addEventListener('blur', commit);
+                            }
+
+                            if (problemaSelect) {
+                                problemaSelect.addEventListener('change', (e) => {
+                                    const val = e.target.value;
+                                    if (val === 'Outro...') {
+                                        if (problemaOutroWrap) problemaOutroWrap.style.display = 'block';
+                                        if (problemaOutroInput) problemaOutroInput.focus();
+                                    } else {
+                                        if (problemaOutroWrap) problemaOutroWrap.style.display = 'none';
+                                        saveFieldPopup(e.target);
+                                    }
+                                });
+                            }
+                            if (problemaOutroInput) {
+                                const commitP = () => {
+                                    if (problemaOutroInput.value && problemaOutroInput.value.trim()) {
+                                        saveFieldPopup(problemaOutroInput);
+                                    }
+                                };
+                                problemaOutroInput.addEventListener('keydown', (ev) => {
+                                    if (ev.key === 'Enter') { ev.preventDefault(); commitP(); }
+                                });
+                                problemaOutroInput.addEventListener('blur', commitP);
+                            }
+
+                            setupSistemaProblemaByArea(areaAtual);
+                            if (window.OcorrenciaOptions && OcorrenciaOptions.onReady) {
+                                OcorrenciaOptions.onReady(() => setupSistemaProblemaByArea(areaAtual));
+                            }
+                        } catch(err) {
+                            console.warn('Falha ao inicializar edição de Sistema/Tipo de Problema:', err);
+                        }
                     try{
                         const allDownload = document.getElementById("allDownload")
                         allDownload.addEventListener('click', ()=>{
@@ -2173,11 +2341,10 @@
 
         // --- Lógica de UI (Filter Box) --- 
         function positionFilterBox(headerElement, filterBoxElement) { 
-            const headerRect = headerElement.getBoundingClientRect();
-            const tableRect = table.getBoundingClientRect();
-            filterBoxElement.style.top = `${headerRect.bottom - tableRect.top + window.scrollY + 2}px`;
-            filterBoxElement.style.display = "block";
-            const boxRect = filterBoxElement.getBoundingClientRect();
+            // Como .filter-box é absolute dentro do TH, posiciona logo abaixo do cabeçalho
+            filterBoxElement.style.left = '0px';
+            filterBoxElement.style.top = `${headerElement.offsetHeight + 4}px`;
+            filterBoxElement.style.display = 'block';
         }
 
         // *** FUNÇÃO CORRIGIDA E MELHORADA: Criar a árvore de datas hierárquica com toggles ***
@@ -2286,6 +2453,16 @@
                     optionsHTML = '<p style="padding: 5px; color: grey;">{% trans "Nenhuma data disponível." %}</p>';
                 }
             } else {
+                if (options.length === 0) {
+                    // Fallback: quando não há valores na tabela ainda, usa listas do provider
+                    if (window.OcorrenciaOptions) {
+                        if (columnName === 'tipo_problema' && OcorrenciaOptions.getAllProblemaOptions) {
+                            options = OcorrenciaOptions.getAllProblemaOptions();
+                        } else if (columnName === 'sistema' && OcorrenciaOptions.getAllSistemaOptions) {
+                            options = OcorrenciaOptions.getAllSistemaOptions();
+                        }
+                    }
+                }
                 if (options.length > 0) {
                     options.forEach((option, index) => {
                         const optionId = generateUniqueId(`filter_${columnName}`, option, index);
@@ -3060,6 +3237,96 @@
                             });
                         }
 
+                    } else if (columnName === 'sistema' || columnName === 'tipo_problema') {
+                        // Editable select with options from OcorrenciaOptions and "Outro..."
+                        cell.classList.add('editable-field-container');
+                        const isSistema = columnName === 'sistema';
+                        const select = document.createElement('select');
+                        select.className = isSistema ? 'js-sistema-select' : 'js-problema-select';
+                        select.setAttribute('data-record-id', record.id);
+                        select.setAttribute('data-field-name', columnName);
+                        const canonArea = ((record.area || '').toUpperCase() === 'DIAGNOSIS') ? 'Diagnosis' : ((record.area || '').toUpperCase() === 'IMMO' ? 'IMMO' : ((record.area || '').toUpperCase() === 'DEVICE' ? 'Device' : (record.area || '')));
+                        select.setAttribute('data-area', canonArea);
+                        select.setAttribute('data-initial-value', value || '');
+
+                        const outroWrap = document.createElement('div');
+                        outroWrap.style.display = 'none';
+                        outroWrap.style.marginTop = '4px';
+                        const outroInput = document.createElement('input');
+                        outroInput.type = 'text';
+                        outroInput.placeholder = '{% trans "Outro - Descreva" %}';
+                        outroInput.setAttribute('data-record-id', record.id);
+                        outroInput.setAttribute('data-field-name', columnName);
+                        outroInput.setAttribute('data-initial-value', value || '');
+                        outroWrap.appendChild(outroInput);
+
+                        function populate(sel, area, currentVal, systemLabel) {
+                            try {
+                                const opts = (window.OcorrenciaOptions && (isSistema ? OcorrenciaOptions.getSistemaOptions(area) : OcorrenciaOptions.getProblemaOptionsBySistema(systemLabel))) || [];
+                                sel.innerHTML = '';
+                                const emptyOpt = document.createElement('option');
+                                emptyOpt.value = '';
+                                emptyOpt.textContent = '--';
+                                sel.appendChild(emptyOpt);
+                                opts.forEach(txt => {
+                                    const o = document.createElement('option');
+                                    o.value = txt;
+                                    o.textContent = txt;
+                                    sel.appendChild(o);
+                                });
+
+                                if (currentVal) {
+                                    if (opts.includes(currentVal)) {
+                                        sel.value = currentVal;
+                                        outroWrap.style.display = 'none';
+                                    } else {
+                                        sel.value = 'Outro...';
+                                        outroWrap.style.display = 'block';
+                                        outroInput.value = currentVal;
+                                    }
+                                }
+                            } catch(_) {}
+                        }
+
+                        // Initial populate (may be empty until options load)
+                        populate(select, record.area || '', value || '', isSistema ? null : (record.sistema || ''));
+
+                        select.addEventListener('change', (e) => {
+                            const val = e.target.value;
+                            if (val === 'Outro...') {
+                                outroWrap.style.display = 'block';
+                                outroInput.focus();
+                            } else {
+                                outroWrap.style.display = 'none';
+                                // save selected
+                                saveField(e.target);
+                                // if changed sistema, repopulate problema select next to it
+                                if (isSistema) {
+                                    const problemaSel = cell.parentElement?.querySelector('.js-problema-select');
+                                    if (problemaSel && window.OcorrenciaOptions) {
+                                        const sysLabel = val;
+                                        const opts = OcorrenciaOptions.getProblemaOptionsBySistema(sysLabel) || [];
+                                        problemaSel.innerHTML = '';
+                                        const emptyOpt = document.createElement('option');
+                                        emptyOpt.value = '';
+                                        emptyOpt.textContent = '--';
+                                        problemaSel.appendChild(emptyOpt);
+                                        opts.forEach(txt => { const o=document.createElement('option'); o.value=txt; o.textContent=txt; problemaSel.appendChild(o); });
+                                    }
+                                }
+                            }
+                        });
+                        const commitOutro = () => {
+                            if (outroInput.value && outroInput.value.trim()) {
+                                saveField(outroInput);
+                            }
+                        };
+                        outroInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); commitOutro(); }});
+                        outroInput.addEventListener('blur', commitOutro);
+
+                        cell.appendChild(select);
+                        cell.appendChild(outroWrap);
+
                     } else if (headerInfo.isTextAreaColumn) {
                         cell.id = `${columnName}${record.id}`
                         cell.classList.add('editable-field-container')
@@ -3102,6 +3369,43 @@
                         chinaStatusObserver.observe(record.id, record);
                     }
                 });
+
+                // Re-populate options for Sistema/Tipo de Problema when options data finishes loading
+                if (window.OcorrenciaOptions && OcorrenciaOptions.onReady) {
+                    OcorrenciaOptions.onReady(() => {
+                        document.querySelectorAll('.js-sistema-select,.js-problema-select').forEach(sel => {
+                            const area = sel.getAttribute('data-area') || '';
+                            const currentVal = sel.getAttribute('data-initial-value') || '';
+                            const isSistema = sel.classList.contains('js-sistema-select');
+                            const sysLabel = isSistema ? null : (sel.closest('td')?.parentElement?.querySelector('.js-sistema-select')?.value || sel.getAttribute('data-system') || '');
+                            const opts = isSistema ? OcorrenciaOptions.getSistemaOptions(area) : OcorrenciaOptions.getProblemaOptionsBySistema(sysLabel);
+                            const prev = sel.value;
+                            sel.innerHTML = '';
+                            const emptyOpt = document.createElement('option');
+                            emptyOpt.value = '';
+                            emptyOpt.textContent = '--';
+                            sel.appendChild(emptyOpt);
+                            opts.forEach(txt => {
+                                const o = document.createElement('option');
+                                o.value = txt;
+                                o.textContent = txt;
+                                sel.appendChild(o);
+                            });
+                            // Restore selection
+                            if (currentVal) {
+                                if (opts.includes(currentVal)) {
+                                    sel.value = currentVal;
+                                    const wrap = sel.nextElementSibling; if (wrap) wrap.style.display = 'none';
+                                } else {
+                                    sel.value = 'Outro...';
+                                    const wrap = sel.nextElementSibling; if (wrap) { wrap.style.display = 'block'; const input = wrap.querySelector('input'); if (input) input.value = currentVal; }
+                                }
+                            } else {
+                                sel.value = prev || '';
+                            }
+                        });
+                    });
+                }
             }, 100);
         }
 

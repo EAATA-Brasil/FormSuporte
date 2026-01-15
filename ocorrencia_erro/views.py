@@ -54,7 +54,7 @@ from django.utils import timezone
 from weasyprint import HTML
 
 from ocorrencia_erro.services.dashboard import dashboard_responsavel
-from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao
+from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao, OptionItem
 
 # Constantes
 DATE_COLUMNS = ["data", "deadline", "finished"]
@@ -1226,6 +1226,59 @@ def get_record(request, pk):
 
     except Record.DoesNotExist:
         return JsonResponse({'error': 'Registro não encontrado'}, status=404)
+
+
+def options_config(request):
+    """Retorna opções configuráveis.
+    - SISTEMA por área
+    - PROBLEMA por sistema (quando parent definido) e fallback por área
+    Estrutura:
+    {
+      "SISTEMA": {"IMMO": [...], "Diagnosis": [...], "Device": [...]},
+      "PROBLEMA_BY_SYSTEM": {"Injeção Eletrônica": [...], ...},
+      "PROBLEMA_BY_AREA": {"IMMO": [...], "Diagnosis": [...], "Device": [...]}
+    }
+    """
+    qs = OptionItem.objects.filter(active=True).order_by('category', 'area', 'parent__label', 'order', 'label')
+
+    result = {
+        'SISTEMA': { 'IMMO': [], 'Diagnosis': [], 'Device': [] },
+        'PROBLEMA_BY_SYSTEM': {},
+        'PROBLEMA_BY_AREA': { 'IMMO': [], 'Diagnosis': [], 'Device': [] },
+    }
+
+    for item in qs:
+        if item.category == 'SISTEMA':
+            result['SISTEMA'].setdefault(item.area, [])
+            result['SISTEMA'][item.area].append(item.label)
+        else:  # PROBLEMA
+            # por sistema (quando parent definido)
+            if item.parent and item.parent.label:
+                key = item.parent.label
+                result['PROBLEMA_BY_SYSTEM'].setdefault(key, [])
+                result['PROBLEMA_BY_SYSTEM'][key].append(item.label)
+            # fallback por área
+            result['PROBLEMA_BY_AREA'].setdefault(item.area, [])
+            result['PROBLEMA_BY_AREA'][item.area].append(item.label)
+
+    # Ordena alfabeticamente e garante 'Outro...' por último nas listas de problemas
+    def sort_alpha(lst):
+        return sorted([x for x in lst if x != 'Outro...'], key=lambda s: s.lower()) + (['Outro...'] if ('Outro...' in lst or True) else [])
+
+    for area, lst in result['SISTEMA'].items():
+        result['SISTEMA'][area] = sorted(lst, key=lambda s: s.lower())
+    for sys, lst in result['PROBLEMA_BY_SYSTEM'].items():
+        base = sorted([x for x in lst if x != 'Outro...'], key=lambda s: s.lower())
+        if 'Outro...' in lst:
+            base.append('Outro...')
+        result['PROBLEMA_BY_SYSTEM'][sys] = base
+    for area, lst in result['PROBLEMA_BY_AREA'].items():
+        base = sorted([x for x in lst if x != 'Outro...'], key=lambda s: s.lower())
+        if 'Outro...' in lst:
+            base.append('Outro...')
+        result['PROBLEMA_BY_AREA'][area] = base
+
+    return JsonResponse(result)
 
 
 def criar_notificacao_feedback(record, tipo_feedback, gestor_user):
