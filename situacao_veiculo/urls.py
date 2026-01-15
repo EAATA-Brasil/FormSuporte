@@ -9,6 +9,7 @@ urlpatterns = [
     path('api/cliente', views.api_buscar_cliente, name='api_buscar_cliente'),
     path('api/cliente/update', views.api_atualizar_cliente, name='api_atualizar_cliente'),
     path('api/equipamentos-suggest', views.equipamentos_suggest, name='equipamentos_suggest'),
+    path('odoo/sync', views.odoo_sync, name='odoo_sync'),
 
     # ==== API usada pelo popup de atualização ====
 ]

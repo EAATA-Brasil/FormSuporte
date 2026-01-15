@@ -15,6 +15,10 @@ from .models import Cliente
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from ocorrencia_erro.models import Device
+from .services.odoo_sync import sync_odoo_to_clientes
+import requests
+import os
+from django.conf import settings
 import unicodedata
 
 def buscar_serial(request):
@@ -536,6 +540,40 @@ def equipamentos_suggest(request):
 
     # Limita e retorna
     return JsonResponse({"results": filtered[:limit]})
+
+
+@require_GET
+def odoo_sync(request):
+    """Endpoint manual para sincronizar movimentações do Odoo.
+    Uso: GET /situacao/odoo/sync?limit=NNN
+    """
+    try:
+        limit = int(request.GET.get('limit') or 1000)
+    except ValueError:
+        limit = 1000
+    try:
+        # Info de debug para verificar de onde vem a URL
+        used_url = getattr(settings, 'ODOO_URL', None) or os.getenv('ODOO_URL')
+        used_db = getattr(settings, 'ODOO_DB', None) or os.getenv('ODOO_DB')
+
+        # suporte a "limit=all" ou sem parâmetro => ilimitado
+        raw_limit = request.GET.get('limit')
+        if not raw_limit or str(raw_limit).lower() in ('all', 'ilimitado', 'none', 'null'):
+            eff_limit = None
+        else:
+            try:
+                eff_limit = int(raw_limit)
+            except ValueError:
+                eff_limit = None
+
+        stats = sync_odoo_to_clientes(max_rows=eff_limit)
+        return JsonResponse({"ok": True, "message": "Sync concluído", "data": {**stats, "using_url": used_url, "using_db": used_db}})
+    except (requests.exceptions.RequestException, ConnectionError) as e:
+        used_url = getattr(settings, 'ODOO_URL', None) or os.getenv('ODOO_URL')
+        used_db = getattr(settings, 'ODOO_DB', None) or os.getenv('ODOO_DB')
+        return JsonResponse({"ok": False, "message": f"Falha ao conectar ao Odoo: {e}", "using_url": used_url, "using_db": used_db}, status=502)
+    except Exception as e:
+        return JsonResponse({"ok": False, "message": str(e)}, status=500)
 
 
 def index(request):

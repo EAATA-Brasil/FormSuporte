@@ -16,12 +16,19 @@ import sys
 from dotenv import load_dotenv
 from django.utils.translation import gettext_lazy as _
 
-# Carregar variáveis do .env
-load_dotenv()
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Carregar variáveis do .env ANTES de ler qualquer env, a partir do BASE_DIR
+load_dotenv(dotenv_path=BASE_DIR / '.env')
+
+# ===================== ODOO SETTINGS (from env) =====================
+ODOO_URL = os.environ.get('ODOO_URL', '')
+ODOO_DB = os.environ.get('ODOO_DB', '')
+ODOO_USER = os.environ.get('ODOO_USER', '')
+ODOO_PASSWORD = os.environ.get('ODOO_PASSWORD') or os.environ.get('ODOO_PASS', '')
+
+
 LOCALE_PATHS = [os.path.join(BASE_DIR,'locale'),]
 
 # Quick-start development settings - unsuitable for production
