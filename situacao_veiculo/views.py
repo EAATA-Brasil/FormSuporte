@@ -12,6 +12,9 @@ import requests
 from email.utils import parsedate_to_datetime
 
 from .models import Cliente
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
+from ocorrencia_erro.models import Device
 
 def buscar_serial(request):
     context = {}
@@ -496,6 +499,28 @@ def importar_excel(request):
         {"ok": True, "message": message, "data": {"created": created, "duplicates": duplicates, "errors": errors}},
         status=status_code,
     )
+
+
+@require_GET
+def equipamentos_suggest(request):
+    """Autocomplete de equipamentos baseado na tabela Device (ocorrencia_erro).
+    Parâmetros:
+      - q: trecho a buscar (case-insensitive). Opcional; sem q retorna os primeiros.
+      - limit: máximo de resultados (default 15, máx 50)
+    Retorna: { results: ["nome1", "nome2", ...] }
+    """
+    q = (request.GET.get('q') or '').strip()
+    try:
+        limit = int(request.GET.get('limit') or 15)
+    except ValueError:
+        limit = 15
+    limit = max(1, min(limit, 50))
+
+    qs = Device.objects.all()
+    if q:
+        qs = qs.filter(name__icontains=q)
+    names = list(qs.order_by('name').values_list('name', flat=True)[:limit])
+    return JsonResponse({"results": names})
 
 
 def index(request):

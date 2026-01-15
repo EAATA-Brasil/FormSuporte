@@ -8,6 +8,7 @@ urlpatterns = [
     path('importar-excel/', views.importar_excel, name='importar_excel'),
     path('api/cliente', views.api_buscar_cliente, name='api_buscar_cliente'),
     path('api/cliente/update', views.api_atualizar_cliente, name='api_atualizar_cliente'),
+    path('api/equipamentos-suggest', views.equipamentos_suggest, name='equipamentos_suggest'),
 
     # ==== API usada pelo popup de atualização ====
 ]

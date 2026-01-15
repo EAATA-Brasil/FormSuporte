@@ -209,7 +209,8 @@
         </div>
         <div class="form-group">
           <label for="equipamento">Equipamento</label>
-          <input type="text" id="equipamento" name="equipamento" placeholder="Digite qual o equipamento">
+          <input type="text" id="equipamento" name="equipamento" list="equipamentosList" placeholder="Digite qual o equipamento">
+          <datalist id="equipamentosList"></datalist>
           <small class="input-error" data-for="equipamento"></small>
         </div>
         <div class="form-divider"></div>
@@ -501,6 +502,46 @@
     btnFechar2?.addEventListener('click', closePopup);
     window.addEventListener('click', (e) => { if(e.target === popup) closePopup(); });
     window.addEventListener('keydown', (e) => { if(e.key === 'Escape') closePopup(); });
+  })();
+  </script>
+
+  <!-- ========================= AUTOCOMPLETE: EQUIPAMENTO (busca em Device) ========================= -->
+  <script>
+  (function(){
+    const input = document.getElementById('equipamento');
+    const list = document.getElementById('equipamentosList');
+    if (!input || !list) return;
+
+    const url = "{% url 'equipamentos_suggest' %}";
+    let lastQuery = '';
+    let timer = null;
+
+    function clearList(){ list.innerHTML = ''; }
+    function fillList(items){
+      clearList();
+      (items||[]).forEach(txt => { const opt = document.createElement('option'); opt.value = txt; list.appendChild(opt); });
+    }
+    async function fetchSuggest(q){
+      try{
+        const resp = await fetch(url + (q? ('?q='+encodeURIComponent(q)) : ''), { credentials:'same-origin' });
+        if(!resp.ok) return;
+        const data = await resp.json();
+        if (input.value.trim() !== lastQuery) return; // usuário já digitou outra coisa
+        fillList(data.results || []);
+      }catch(_){}
+    }
+    function schedule(){
+      const q = input.value.trim();
+      lastQuery = q;
+      clearTimeout(timer);
+      timer = setTimeout(()=>{
+        if (q.length < 2) { clearList(); return; }
+        fetchSuggest(q);
+      }, 250);
+    }
+    input.addEventListener('input', schedule);
+    // Primeira abertura pode sugerir principais
+    input.addEventListener('focus', ()=>{ if (!input.value.trim()) fetchSuggest(''); });
   })();
   </script>
 
