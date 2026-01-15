@@ -524,7 +524,8 @@
 
   // Endpoints
   // Usar endpoint protegido via API (POST JSON com Authorization: Token)
-  const urlBuscar    = "{% url 'cliente_search' %}";
+  // Usa endpoint local (GET) sem Auth para buscar por serial
+  const urlBuscar    = "{% url 'api_buscar_cliente' %}";
   const urlAtualizar = "{% url 'api_atualizar_cliente' %}";
 
   // Inputs do popup
