@@ -376,6 +376,11 @@
             o.textContent = txt;
             sistemaSelect.appendChild(o);
           });
+          // Sempre oferecer a criação de novo sistema
+          const outroOpt = document.createElement('option');
+          outroOpt.value = 'Outro...';
+          outroOpt.textContent = 'Outro...';
+          sistemaSelect.appendChild(outroOpt);
         }
 
         function handleSistemaOutroVisibility() {
@@ -388,18 +393,34 @@
 
         function populateProblemaOptionsBySistema(systemLabel) {
           if (!problemaSelect) return;
-          const opts = (window.OcorrenciaOptions && window.OcorrenciaOptions.getProblemaOptionsBySistema(systemLabel)) || [];
+
+          let opts = [];
+          const isOutro = (systemLabel || '').trim() === 'Outro...';
+          if (!systemLabel || isOutro) {
+            // Fallback por ÁREA quando sistema é vazio ou "Outro..."
+            const areaChecked = document.querySelector('input[name="area_radio"]:checked');
+            const areaVal = areaChecked ? areaChecked.value : '';
+            opts = (window.OcorrenciaOptions && areaVal
+              ? OcorrenciaOptions.getProblemaOptions(areaVal)
+              : []);
+          } else {
+            // Normal: problemas atrelados ao SISTEMA selecionado
+            opts = (window.OcorrenciaOptions && OcorrenciaOptions.getProblemaOptionsBySistema(systemLabel)) || [];
+          }
+
           problemaSelect.innerHTML = '';
           const emptyOpt = document.createElement('option');
           emptyOpt.value = '';
           emptyOpt.textContent = '-- Selecione o tipo de problema --';
           problemaSelect.appendChild(emptyOpt);
-          opts.forEach(txt => {
+          (opts || []).forEach(txt => {
             const o = document.createElement('option');
             o.value = txt;
             o.textContent = txt;
             problemaSelect.appendChild(o);
           });
+          // Garantir visibilidade correta do campo "Outro - Descreva"
+          handleProblemaOutroVisibility();
         }
 
         function handleProblemaOutroVisibility() {
@@ -536,6 +557,51 @@
         if (window.OcorrenciaOptions && OcorrenciaOptions.onReady) {
           OcorrenciaOptions.onReady(() => updateConditionalFields());
         }
+      });
+    </script>
+    <script>
+      // Criação dinâmica de opções quando usuário preenche "Outro..."
+      document.addEventListener('DOMContentLoaded', function(){
+        const sistemaOutroInput = document.getElementById('sistema_outro');
+        const problemaOutroInput = document.getElementById('tipo_problema_outro');
+        const sistemaSelect = document.getElementById('sistema');
+        const problemaSelect = document.getElementById('tipo_problema');
+        const getArea = () => {
+          const r = document.querySelector('input[name="area_radio"]:checked');
+          return r ? r.value : '';
+        };
+
+        async function commitSistemaOutro(){
+          const area = getArea();
+          const label = (sistemaOutroInput?.value || '').trim();
+          if (!label || !area || !window.OcorrenciaOptions || !OcorrenciaOptions.addSistema) return;
+          await OcorrenciaOptions.addSistema(area, label);
+          const opts = OcorrenciaOptions.getSistemaOptions(area) || [];
+          sistemaSelect.innerHTML = '<option value="">-- Selecione o sistema --</option>' + opts.map(o=>`<option value="${o}">${o}</option>`).join('');
+          sistemaSelect.value = label;
+          // após criar sistema, os problemas serão escolhidos; nada global aqui
+        }
+
+        async function commitProblemaOutro(){
+          const area = getArea();
+          const sys = sistemaSelect?.value || '';
+          const label = (problemaOutroInput?.value || '').trim();
+          if (!label || !area || !window.OcorrenciaOptions || !OcorrenciaOptions.addProblema) return;
+          if (sys) {
+            await OcorrenciaOptions.addProblema(area, label, sys, false);
+            const opts = OcorrenciaOptions.getProblemaOptionsBySistema(sys) || [];
+            problemaSelect.innerHTML = '<option value="">-- Selecione o tipo de problema --</option>' + opts.map(o=>`<option value="${o}">${o}</option>`).join('');
+            problemaSelect.value = label;
+          } else {
+            await OcorrenciaOptions.addProblema(area, label, null, true);
+            // sem sistema selecionado => vale para todos os sistemas da área; lista será exibida quando sistema for escolhido
+          }
+        }
+
+        sistemaOutroInput?.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); commitSistemaOutro(); }});
+        sistemaOutroInput?.addEventListener('blur', commitSistemaOutro);
+        problemaOutroInput?.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); commitProblemaOutro(); }});
+        problemaOutroInput?.addEventListener('blur', commitProblemaOutro);
       });
     </script>
 

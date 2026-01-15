@@ -68,6 +68,50 @@ STATUS_OCORRENCIA = {
 }
 STATUS_MAP_REVERSED = {v: k for k, v in STATUS_OCORRENCIA.items()}
 
+# Problemas padrão por área (usados ao criar um novo SISTEMA)
+# Mantém alinhado com as seeds de migração (0004_seed_problem_by_system)
+DEFAULT_PROBLEMS_BY_AREA = {
+    'IMMO': [
+        'Tradução',
+        'DTC Errado',
+        'DTC Sem Texto',
+        'Não Apaga DTC',
+        'Não le DTC',
+        'Não Le PIN',
+        'Erro CHIP - Chave',
+        'Não Comunica',
+        'Informação Errada (INFO)',
+        'Falta Função',
+        'Senha ERRADA',
+        'Dados Errados - (IMMO)',
+        'Parâmetro - (Errado)',
+        'Não Programa Controle',
+    ],
+    'Diagnosis': [
+        'Tradução',
+        'DTC Errado',
+        'DTC Sem Texto',
+        'Não Apaga DTC',
+        'Não le DTC',
+        'Não Reseta Revisão',
+        'Não Reseta Parametro',
+        'Ajuste Basico',
+        'Não Executa Função',
+        'Não Programa Chave',
+        'Não Le PIN',
+        'Erro CHIP - Chave',
+        'Não Comunica',
+        'Informação Errada (INFO)',
+        'Falta Função',
+        'Não Recua Pinça',
+        'Ângulo Direção',
+        'Senha ERRADA',
+        'Dados Errados - (IMMO)',
+        'Parâmetro - (Errado)',
+        'Não Programa Controle',
+    ],
+}
+
 ALLOWED_SORT_COLUMNS = [
     'feedback_manager', 'feedback_technical', 'problem_detected', 'area', 'sistema', 'tipo_problema', 'brand',
     'country', 'data', 'deadline', 'device', 'finished', 'model', 'responsible',
@@ -1241,44 +1285,160 @@ def options_config(request):
     """
     qs = OptionItem.objects.filter(active=True).order_by('category', 'area', 'parent__label', 'order', 'label')
 
-    result = {
-        'SISTEMA': { 'IMMO': [], 'Diagnosis': [], 'Device': [] },
-        'PROBLEMA_BY_SYSTEM': {},
-        'PROBLEMA_BY_AREA': { 'IMMO': [], 'Diagnosis': [], 'Device': [] },
-    }
+    # Usa sets internamente para evitar duplicados
+    sist = { 'IMMO': set(), 'Diagnosis': set(), 'Device': set() }
+    prob_by_sys = {}            # key: system label -> set()
+    # Para calcular fallback de área, vamos armazenar os conjuntos por SISTEMA (para fazer interseção)
+    area_systems = { 'IMMO': set(), 'Diagnosis': set(), 'Device': set() }  # nomes dos sistemas por área
+    probs_per_system = {}  # key: system label -> set()
 
     for item in qs:
         if item.category == 'SISTEMA':
-            result['SISTEMA'].setdefault(item.area, [])
-            result['SISTEMA'][item.area].append(item.label)
+            sist.setdefault(item.area, set()).add(item.label)
         else:  # PROBLEMA
-            # por sistema (quando parent definido)
             if item.parent and item.parent.label:
                 key = item.parent.label
-                result['PROBLEMA_BY_SYSTEM'].setdefault(key, [])
-                result['PROBLEMA_BY_SYSTEM'][key].append(item.label)
-            # fallback por área
-            result['PROBLEMA_BY_AREA'].setdefault(item.area, [])
-            result['PROBLEMA_BY_AREA'][item.area].append(item.label)
+                prob_by_sys.setdefault(key, set()).add(item.label)
+                probs_per_system.setdefault(key, set()).add(item.label)
+                # registra sistema -> área
+                # Precisamos ligar system label à sua área (buscaremos pela OptionItem de sistema abaixo se necessário)
+            else:
+                # Problema "global" (sem parent) — entra em todos os sistemas da área no fallback
+                # Guardaremos em um marcador especial por área usando um nome fictício de sistema "__GLOBAL__<AREA>"
+                key = f"__GLOBAL__{item.area}__"
+                prob_by_sys.setdefault(key, set()).add(item.label)
+                probs_per_system.setdefault(key, set()).add(item.label)
+            # Nota: o fallback por área será calculado por interseção entre sistemas + globais
 
-    # Ordena alfabeticamente e garante 'Outro...' por último nas listas de problemas
-    def sort_alpha(lst):
-        return sorted([x for x in lst if x != 'Outro...'], key=lambda s: s.lower()) + (['Outro...'] if ('Outro...' in lst or True) else [])
+    def with_outro_sorted_unique(values):
+        # deduplica, remove vazio e 'Outro...' e garante 'Outro...' ao final
+        base = sorted({x for x in values if x and x != 'Outro...'}, key=lambda s: s.lower())
+        base.append('Outro...')
+        return base
 
-    for area, lst in result['SISTEMA'].items():
-        result['SISTEMA'][area] = sorted(lst, key=lambda s: s.lower())
-    for sys, lst in result['PROBLEMA_BY_SYSTEM'].items():
-        base = sorted([x for x in lst if x != 'Outro...'], key=lambda s: s.lower())
-        if 'Outro...' in lst:
-            base.append('Outro...')
-        result['PROBLEMA_BY_SYSTEM'][sys] = base
-    for area, lst in result['PROBLEMA_BY_AREA'].items():
-        base = sorted([x for x in lst if x != 'Outro...'], key=lambda s: s.lower())
-        if 'Outro...' in lst:
-            base.append('Outro...')
-        result['PROBLEMA_BY_AREA'][area] = base
+    # Constrói o mapa área -> [sets de problemas por sistema dessa área]
+    # 1) Obter sistemas por área a partir de OptionItem (category=SISTEMA)
+    sistemas_qs = OptionItem.objects.filter(category='SISTEMA', active=True)
+    system_area = {}
+    for s in sistemas_qs:
+        sist.setdefault(s.area, set()).add(s.label)
+        area_systems.setdefault(s.area, set()).add(s.label)
+        system_area[s.label] = s.area
+
+    # 2) Calcular fallback por área: interseção dos problemas de todos os sistemas da área
+    problema_by_area_final = {}
+    for area, systems in area_systems.items():
+        sets = []
+        # problemas "globais" sem parent contam para todas as áreas respectivas
+        global_key = f"__GLOBAL__{area}__"
+        if global_key in probs_per_system:
+            sets.append(probs_per_system[global_key])
+        for sys_label in systems:
+            if sys_label in probs_per_system:
+                sets.append(probs_per_system[sys_label])
+        if not sets:
+            problema_by_area_final[area] = with_outro_sorted_unique([])
+        else:
+            inter = set.intersection(*sets) if len(sets) > 1 else set(sets[0])
+            problema_by_area_final[area] = with_outro_sorted_unique(inter)
+
+    result = {
+        'SISTEMA': { area: sorted(list(vals), key=lambda s: s.lower()) for area, vals in sist.items() },
+        'PROBLEMA_BY_SYSTEM': { sys: with_outro_sorted_unique(vals) for sys, vals in prob_by_sys.items() if not sys.startswith('__GLOBAL__') },
+        'PROBLEMA_BY_AREA': problema_by_area_final,
+    }
 
     return JsonResponse(result)
+
+
+@require_http_methods(["POST"])
+def add_option_item(request):
+    """Cria opções dinamicamente a partir do frontend.
+    Body JSON:
+      category: 'SISTEMA' | 'PROBLEMA'
+      area: 'IMMO' | 'Diagnosis' | 'Device'
+      label: texto
+      system_label: (opcional) rótulo do sistema para vincular o problema
+      global_problem: (opcional bool) quando verdadeiro, cria o problema para TODOS os sistemas da área
+    Retorna {status:'success', created:n}
+    """
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'status': 'error', 'message': 'JSON inválido.'}, status=400)
+
+    category = (data.get('category') or '').strip().upper()
+    area = (data.get('area') or '').strip()
+    label = (data.get('label') or '').strip()
+    system_label = (data.get('system_label') or '').strip()
+    global_problem = bool(data.get('global_problem'))
+
+    if category not in ('SISTEMA', 'PROBLEMA'):
+        return JsonResponse({'status': 'error', 'message': 'Categoria inválida.'}, status=400)
+    if not area or not label:
+        return JsonResponse({'status': 'error', 'message': 'Área e label são obrigatórios.'}, status=400)
+
+    created = 0
+    try:
+        if category == 'SISTEMA':
+            sys_obj, was_created = OptionItem.objects.get_or_create(
+                area=area,
+                category='SISTEMA',
+                label=label,
+                defaults={'order': 0, 'active': True}
+            )
+            created += int(was_created)
+
+            # Ao criar (ou quando ainda não há problemas vinculados), semear problemas padrão da área
+            try:
+                should_seed = was_created or not OptionItem.objects.filter(
+                    area=area, category='PROBLEMA', parent=sys_obj
+                ).exists()
+                if should_seed:
+                    defaults_list = DEFAULT_PROBLEMS_BY_AREA.get(area, [])
+                    for idx, prob_label in enumerate(defaults_list):
+                        _, was_p_created = OptionItem.objects.get_or_create(
+                            area=area,
+                            category='PROBLEMA',
+                            label=prob_label,
+                            parent=sys_obj,
+                            defaults={'order': idx, 'active': True}
+                        )
+                        created += int(was_p_created)
+            except Exception:
+                # Não falha a requisição caso a semeadura automática dê erro
+                pass
+        else:
+            # PROBLEMA
+            if global_problem:
+                systems = OptionItem.objects.filter(area=area, category='SISTEMA', active=True)
+                for sys in systems:
+                    _, was_created = OptionItem.objects.get_or_create(
+                        area=area,
+                        category='PROBLEMA',
+                        label=label,
+                        parent=sys,
+                        defaults={'order': 0, 'active': True}
+                    )
+                    created += int(was_created)
+            else:
+                if not system_label:
+                    return JsonResponse({'status': 'error', 'message': 'Informe o sistema para vincular o problema.'}, status=400)
+                parent = OptionItem.objects.filter(area=area, category='SISTEMA', label=system_label).first()
+                if not parent:
+                    return JsonResponse({'status': 'error', 'message': 'Sistema não encontrado.'}, status=404)
+                _, was_created = OptionItem.objects.get_or_create(
+                    area=area,
+                    category='PROBLEMA',
+                    label=label,
+                    parent=parent,
+                    defaults={'order': 0, 'active': True}
+                )
+                created += int(was_created)
+
+        return JsonResponse({'status': 'success', 'created': created})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 def criar_notificacao_feedback(record, tipo_feedback, gestor_user):

@@ -1216,10 +1216,15 @@
                                 });
                             }
                             if (sistemaOutroInput) {
-                                const commit = () => {
-                                    if (sistemaOutroInput.value && sistemaOutroInput.value.trim()) {
-                                        saveFieldPopup(sistemaOutroInput);
+                                const commit = async () => {
+                                    const label = (sistemaOutroInput.value || '').trim();
+                                    if (label && window.OcorrenciaOptions && OcorrenciaOptions.addSistema) {
+                                        try {
+                                            await OcorrenciaOptions.addSistema(areaAtual, label);
+                                            populateSelect(sistemaSelect, areaAtual, label);
+                                        } catch(_) {}
                                     }
+                                    if (label) saveFieldPopup(sistemaOutroInput);
                                 };
                                 sistemaOutroInput.addEventListener('keydown', (ev) => {
                                     if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
@@ -1240,10 +1245,20 @@
                                 });
                             }
                             if (problemaOutroInput) {
-                                const commitP = () => {
-                                    if (problemaOutroInput.value && problemaOutroInput.value.trim()) {
-                                        saveFieldPopup(problemaOutroInput);
+                                const commitP = async () => {
+                                    const label = (problemaOutroInput.value || '').trim();
+                                    if (label && window.OcorrenciaOptions && OcorrenciaOptions.addProblema) {
+                                        try {
+                                            const sysLabel = sistemaSelect?.value || '';
+                                            if (sysLabel) {
+                                                await OcorrenciaOptions.addProblema(areaAtual, label, sysLabel, false);
+                                                populateSelect(problemaSelect, areaAtual, label, sysLabel);
+                                            } else {
+                                                await OcorrenciaOptions.addProblema(areaAtual, label, null, true);
+                                            }
+                                        } catch(_) {}
                                     }
+                                    if (label) saveFieldPopup(problemaOutroInput);
                                 };
                                 problemaOutroInput.addEventListener('keydown', (ev) => {
                                     if (ev.key === 'Enter') { ev.preventDefault(); commitP(); }
@@ -3262,12 +3277,30 @@
 
                         function populate(sel, area, currentVal, systemLabel) {
                             try {
-                                const opts = (window.OcorrenciaOptions && (isSistema ? OcorrenciaOptions.getSistemaOptions(area) : OcorrenciaOptions.getProblemaOptionsBySistema(systemLabel))) || [];
+                                let opts = [];
+                                if (window.OcorrenciaOptions) {
+                                    if (isSistema) {
+                                        opts = OcorrenciaOptions.getSistemaOptions(area) || [];
+                                    } else {
+                                        const sys = (systemLabel || '').trim();
+                                        if (!sys || sys === 'Outro...') {
+                                            // Fallback: quando o sistema é vazio ou "Outro...", use problemas padrão da área
+                                            opts = OcorrenciaOptions.getProblemaOptions(area) || [];
+                                        } else {
+                                            opts = OcorrenciaOptions.getProblemaOptionsBySistema(sys) || [];
+                                        }
+                                    }
+                                }
                                 sel.innerHTML = '';
                                 const emptyOpt = document.createElement('option');
                                 emptyOpt.value = '';
                                 emptyOpt.textContent = '--';
                                 sel.appendChild(emptyOpt);
+                                // Para Sistema, sempre disponibiliza 'Outro...'
+                                if (isSistema && !opts.includes('Outro...')) {
+                                    opts = opts.slice();
+                                    opts.push('Outro...');
+                                }
                                 opts.forEach(txt => {
                                     const o = document.createElement('option');
                                     o.value = txt;
@@ -3304,8 +3337,11 @@
                                 if (isSistema) {
                                     const problemaSel = cell.parentElement?.querySelector('.js-problema-select');
                                     if (problemaSel && window.OcorrenciaOptions) {
-                                        const sysLabel = val;
-                                        const opts = OcorrenciaOptions.getProblemaOptionsBySistema(sysLabel) || [];
+                                        const sysLabel = (val || '').trim();
+                                        const areaVal = select.getAttribute('data-area') || '';
+                                        const opts = (!sysLabel || sysLabel === 'Outro...')
+                                          ? (OcorrenciaOptions.getProblemaOptions(areaVal) || [])
+                                          : (OcorrenciaOptions.getProblemaOptionsBySistema(sysLabel) || []);
                                         problemaSel.innerHTML = '';
                                         const emptyOpt = document.createElement('option');
                                         emptyOpt.value = '';
@@ -3316,10 +3352,29 @@
                                 }
                             }
                         });
-                        const commitOutro = () => {
-                            if (outroInput.value && outroInput.value.trim()) {
-                                saveField(outroInput);
+                        const commitOutro = async () => {
+                            const label = (outroInput.value || '').trim();
+                            if (!label) return;
+                            if (window.OcorrenciaOptions && (OcorrenciaOptions.addSistema || OcorrenciaOptions.addProblema)) {
+                                try {
+                                    if (isSistema && OcorrenciaOptions.addSistema) {
+                                        await OcorrenciaOptions.addSistema(canonArea, label);
+                                        populate(select, canonArea, label);
+                                    }
+                                    if (!isSistema && OcorrenciaOptions.addProblema) {
+                                        const sistemaSel = cell.parentElement?.querySelector('.js-sistema-select');
+                                        const sysLabel = sistemaSel ? (sistemaSel.value || '') : '';
+                                        if (sysLabel) {
+                                            await OcorrenciaOptions.addProblema(canonArea, label, sysLabel, false);
+                                            populate(select, canonArea, label, sysLabel);
+                                        } else {
+                                            await OcorrenciaOptions.addProblema(canonArea, label, null, true);
+                                            // será mostrado quando o sistema for selecionado
+                                        }
+                                    }
+                                } catch(_) {}
                             }
+                            saveField(outroInput);
                         };
                         outroInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); commitOutro(); }});
                         outroInput.addEventListener('blur', commitOutro);
@@ -3378,13 +3433,25 @@
                             const currentVal = sel.getAttribute('data-initial-value') || '';
                             const isSistema = sel.classList.contains('js-sistema-select');
                             const sysLabel = isSistema ? null : (sel.closest('td')?.parentElement?.querySelector('.js-sistema-select')?.value || sel.getAttribute('data-system') || '');
-                            const opts = isSistema ? OcorrenciaOptions.getSistemaOptions(area) : OcorrenciaOptions.getProblemaOptionsBySistema(sysLabel);
+                            let opts;
+                            if (isSistema) {
+                                opts = OcorrenciaOptions.getSistemaOptions(area);
+                            } else {
+                                const sys = (sysLabel || '').trim();
+                                opts = (!sys || sys === 'Outro...')
+                                    ? OcorrenciaOptions.getProblemaOptions(area)
+                                    : OcorrenciaOptions.getProblemaOptionsBySistema(sys);
+                            }
                             const prev = sel.value;
                             sel.innerHTML = '';
                             const emptyOpt = document.createElement('option');
                             emptyOpt.value = '';
                             emptyOpt.textContent = '--';
                             sel.appendChild(emptyOpt);
+                            if (isSistema && !opts.includes('Outro...')) {
+                                opts = opts.slice();
+                                opts.push('Outro...');
+                            }
                             opts.forEach(txt => {
                                 const o = document.createElement('option');
                                 o.value = txt;

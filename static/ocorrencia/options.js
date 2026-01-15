@@ -91,6 +91,30 @@
       if (STATE.loaded) { try { cb(); } catch(_) {} return; }
       STATE.waiters.push(cb);
       loadIfNeeded();
+    },
+    async addSistema(area, label) {
+      const url = (buildOptionsUrl().replace(/\/$/, '')) + '/add/';
+      const payload = { category: 'SISTEMA', area, label };
+      const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1];
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(csrftoken?{'X-CSRFToken': csrftoken}:{}) },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
+      STATE.loaded = false; loadIfNeeded();
+    },
+    async addProblema(area, label, systemLabel=null, globalProblem=false) {
+      const url = (buildOptionsUrl().replace(/\/$/, '')) + '/add/';
+      const payload = { category: 'PROBLEMA', area, label, system_label: systemLabel, global_problem: !!globalProblem };
+      const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1];
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(csrftoken?{'X-CSRFToken': csrftoken}:{}) },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
+      STATE.loaded = false; loadIfNeeded();
     }
   };
 
