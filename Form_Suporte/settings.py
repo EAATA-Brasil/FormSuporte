@@ -16,11 +16,13 @@ import sys
 from dotenv import load_dotenv
 from django.utils.translation import gettext_lazy as _
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Diretório do app Form_Suporte (onde está este settings.py)
+SETTINGS_DIR = Path(__file__).resolve().parent
 
-# Carregar variáveis do .env ANTES de ler qualquer env, a partir do BASE_DIR
-load_dotenv(dotenv_path=BASE_DIR / '.env')
+# Carrega .env específico de Form_Suporte (prioridade para este arquivo)
+load_dotenv(dotenv_path=SETTINGS_DIR / '.env')
 
 # ===================== ODOO SETTINGS (from env) =====================
 ODOO_URL = os.environ.get('ODOO_URL', '')
