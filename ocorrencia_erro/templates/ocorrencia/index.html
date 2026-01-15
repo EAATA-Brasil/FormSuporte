@@ -1157,6 +1157,26 @@
                                 });
                             }
 
+                            function populateSistema(area) {
+                                const opts = (window.OcorrenciaOptions && window.OcorrenciaOptions.getSistemaOptions(area)) || [];
+                                // garante "Outro..." para permitir novo sistema
+                                if (!opts.includes('Outro...')) opts.push('Outro...');
+                                populateSelect(sistemaSelect, opts);
+                            }
+
+                            function populateProblema(area, systemLabel) {
+                                let opts = [];
+                                if (window.OcorrenciaOptions) {
+                                    const sys = (systemLabel || '').trim();
+                                    if (!sys || sys === 'Outro...') {
+                                        opts = OcorrenciaOptions.getProblemaOptions(area) || [];
+                                    } else {
+                                        opts = OcorrenciaOptions.getProblemaOptionsBySistema(sys) || [];
+                                    }
+                                }
+                                populateSelect(problemaSelect, opts);
+                            }
+
                             function setupSistemaProblemaByArea(area) {
                                 const aU = (area || '').toString().toUpperCase();
                                 const show = aU === 'IMMO' || aU === 'DIAGNOSIS';
@@ -1164,14 +1184,9 @@
                                 if (problemaContainer) problemaContainer.style.display = show ? 'block' : 'none';
                                 if (!show) return;
 
-                                const sisOptions = (window.OcorrenciaOptions && window.OcorrenciaOptions.getSistemaOptions(area)) || [];
-                                // Problemas dependem do Sistema selecionado
-                                let probOptions = [];
-                                if (record.sistema && window.OcorrenciaOptions) {
-                                    probOptions = OcorrenciaOptions.getProblemaOptionsBySistema(record.sistema) || [];
-                                }
-                                populateSelect(sistemaSelect, sisOptions);
-                                populateSelect(problemaSelect, probOptions);
+                                populateSistema(area);
+                                // Problemas dependem do Sistema selecionado (ou fallback por área)
+                                populateProblema(area, record.sistema);
 
                                 // Estado inicial SISTEMA
                                 if (record.sistema) {
@@ -1212,6 +1227,8 @@
                                         if (sistemaOutroWrap) sistemaOutroWrap.style.display = 'none';
                                         // salva imediatamente o valor selecionado
                                         saveFieldPopup(e.target);
+                                        // Recarrega problemas para o novo sistema
+                                        populateProblema(areaAtual, val);
                                     }
                                 });
                             }
@@ -1221,7 +1238,9 @@
                                     if (label && window.OcorrenciaOptions && OcorrenciaOptions.addSistema) {
                                         try {
                                             await OcorrenciaOptions.addSistema(areaAtual, label);
-                                            populateSelect(sistemaSelect, areaAtual, label);
+                                            populateSistema(areaAtual);
+                                            if (sistemaSelect) sistemaSelect.value = label;
+                                            populateProblema(areaAtual, label);
                                         } catch(_) {}
                                     }
                                     if (label) saveFieldPopup(sistemaOutroInput);
@@ -1252,7 +1271,8 @@
                                             const sysLabel = sistemaSelect?.value || '';
                                             if (sysLabel) {
                                                 await OcorrenciaOptions.addProblema(areaAtual, label, sysLabel, false);
-                                                populateSelect(problemaSelect, areaAtual, label, sysLabel);
+                                                populateProblema(areaAtual, sysLabel);
+                                                if (problemaSelect) problemaSelect.value = label;
                                             } else {
                                                 await OcorrenciaOptions.addProblema(areaAtual, label, null, true);
                                             }
