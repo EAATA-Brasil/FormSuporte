@@ -535,7 +535,8 @@
       lastQuery = q;
       clearTimeout(timer);
       timer = setTimeout(()=>{
-        if (q.length < 2) { clearList(); return; }
+        if (q.length === 0) { clearList(); fetchSuggest(''); return; }
+        // busca a partir de 1 caractere para ser mais permissivo
         fetchSuggest(q);
       }, 250);
     }

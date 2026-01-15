@@ -15,6 +15,7 @@ from .models import Cliente
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from ocorrencia_erro.models import Device
+import unicodedata
 
 def buscar_serial(request):
     context = {}
@@ -516,11 +517,25 @@ def equipamentos_suggest(request):
         limit = 15
     limit = max(1, min(limit, 50))
 
-    qs = Device.objects.all()
-    if q:
-        qs = qs.filter(name__icontains=q)
-    names = list(qs.order_by('name').values_list('name', flat=True)[:limit])
-    return JsonResponse({"results": names})
+    def _norm(s: str) -> str:
+        if not s:
+            return ''
+        s = unicodedata.normalize('NFKD', s)
+        s = ''.join(ch for ch in s if not unicodedata.combining(ch))
+        s = ''.join(ch for ch in s if ch.isalnum())  # remove espaços, hífens, pontuação
+        return s.casefold()
+
+    norm_q = _norm(q)
+
+    # Busca base do banco e filtra por Python para tolerar hífens/acentos/espacos
+    base = list(Device.objects.order_by('name').values_list('name', flat=True))
+    if norm_q:
+        filtered = [name for name in base if norm_q in _norm(name)]
+    else:
+        filtered = base
+
+    # Limita e retorna
+    return JsonResponse({"results": filtered[:limit]})
 
 
 def index(request):
