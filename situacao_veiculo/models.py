@@ -47,13 +47,17 @@ class Cliente(models.Model):
 
     def clean(self):
         if self.serial:
-            qs = Cliente.objects.filter(serial=self.serial)
+            # Unicidade sem diferenciar maiúsculas/minúsculas
+            qs = Cliente.objects.filter(serial__iexact=self.serial)
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
             if qs.exists():
                 raise ValidationError({'serial': 'Este serial já está cadastrado para outro cliente.'})
 
     def save(self, *args, **kwargs):
+        # Normaliza serial removendo espaços excedentes
+        if isinstance(self.serial, str):
+            self.serial = self.serial.strip()
         if not self.vencimento and self.data and self.anos_para_vencimento:
             self.vencimento = self.data + relativedelta(years=self.anos_para_vencimento)
         super().save(*args, **kwargs)

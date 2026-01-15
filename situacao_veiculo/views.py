@@ -19,7 +19,8 @@ def buscar_serial(request):
         serial = request.POST.get('serial', '').strip()
         context['serial_digitado'] = serial
 
-        clientes = Cliente.objects.filter(serial=serial)
+        # Busca case-insensitive para evitar falhas por maiúsculas/minúsculas
+        clientes = Cliente.objects.filter(serial__iexact=serial)
 
         if not clientes.exists():
             # Busca em serviço externo usando o serial digitado (headers e cookie conforme curl)
@@ -273,7 +274,8 @@ def cadastrar_serial(request):
         )
 
     try:
-        if Cliente.objects.filter(serial=serial).exists():
+        # Evita duplicidade ignorando caixa
+        if Cliente.objects.filter(serial__iexact=serial).exists():
             return JsonResponse(
                 {"ok": False, "message": "Serial já em uso.", "field_errors": {"serial": "Serial já cadastrado."}},
                 status=409,
@@ -347,8 +349,10 @@ def api_buscar_cliente(request):
         return JsonResponse({"ok": False, "message": "Informe o serial."}, status=400)
 
     try:
-        cliente = Cliente.objects.get(serial=serial)
+        cliente = Cliente.objects.filter(serial__iexact=serial).first()
     except Cliente.DoesNotExist:
+        cliente = None
+    if not cliente:
         return JsonResponse({"ok": False, "message": "Serial não encontrado."}, status=404)
 
     data = {
@@ -373,9 +377,8 @@ def api_atualizar_cliente(request):
     if field not in ALLOWED_FIELDS:
         return JsonResponse({"ok": False, "message": "Campo não permitido para atualização."}, status=400)
 
-    try:
-        cliente = Cliente.objects.get(serial=serial)
-    except Cliente.DoesNotExist:
+    cliente = Cliente.objects.filter(serial__iexact=serial).first()
+    if not cliente:
         return JsonResponse({"ok": False, "message": "Serial não encontrado."}, status=404)
 
     # Normalizações específicas
@@ -453,7 +456,7 @@ def importar_excel(request):
             errors.append({"row": row_index, "message": "Serial ausente."})
             continue
 
-        if Cliente.objects.filter(serial=serial).exists():
+        if Cliente.objects.filter(serial__iexact=serial).exists():
             duplicates += 1
             continue
 
