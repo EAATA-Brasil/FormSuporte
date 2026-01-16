@@ -1,0 +1,143 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}EAATA – Painel{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/modern-normalize/modern-normalize.css" />
+  <style>
+    :root{
+      --bg1:#f6f8fb; --bg2:#eef3f9; --panel:#ffffff; --stroke:#e5e7eb; --muted:#64748b; --link:#0b66c3; --text:#0f172a;
+    }
+    body{ margin:0; color:var(--text); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans; background: linear-gradient(180deg,var(--bg1),var(--bg2)); min-height:100vh; }
+    a{ color: var(--link); text-decoration: none; }
+    .app{ display:grid; grid-template-columns: 260px 1fr; }
+
+    /* Sidebar vira coluna pra empurrar o footer pra baixo */
+    .sidebar{
+      min-height:100vh;
+      background:#ffffff;
+      border-right:1px solid var(--stroke);
+      padding:24px 18px;
+      position:sticky;
+      top:0;
+
+      display:flex;
+      flex-direction:column;
+    }
+
+    .brand{ display:flex; align-items:center; gap:10px; margin-bottom:24px; }
+    .logo-img{ height:50px; margin: 0 auto; display:block; }
+
+    .menu{
+      display:grid;
+      gap:6px;
+      margin-top:10px;
+
+      flex:1; /* empurra o footer */
+      align-content:start;
+    }
+
+    .menu a{ padding:10px 12px; border-radius:10px; display:flex; gap:10px; align-items:center; border:1px solid transparent; color:#0f172a; }
+    .menu a.active, .menu a:hover{ background:#f1f5f9; border-color:#e2e8f0; }
+
+    /* Footer fixo no fim do menu lateral */
+    .sidebar-footer{
+      margin-top:auto;
+      padding-top:16px;
+      border-top:1px solid var(--stroke);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+
+    .sidebar-footer a{
+      width:42px;
+      height:42px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:10px;
+      border:1px solid transparent;
+    }
+
+    .sidebar-footer a:hover{
+      background:#f1f5f9;
+      border-color:#e2e8f0;
+    }
+
+    .sidebar-footer img{
+      width:20px;
+      height:20px;
+      opacity:.75;
+    }
+
+    .sidebar-footer a:hover img,
+    .sidebar-footer a.active img{
+      opacity:1;
+    }
+
+    .content{ padding:28px; }
+    .panel{ background:var(--panel); border:1px solid var(--stroke); border-radius:16px; padding:18px; }
+    .grid{ display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .card{ background:#ffffff; border:1px solid var(--stroke); border-radius:14px; padding:18px; color:#0f172a; text-decoration:none; transition:transform .15s, box-shadow .15s, border-color .15s; cursor:pointer; }
+    .card:hover{ transform: translateY(-2px); box-shadow:0 8px 20px rgba(15,23,42,.08); border-color:#cbd5e1; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="logo-img" src="{% static 'icons/eaata-logo.png' %}" alt="EAATA" onerror="this.style.display='none'" />
+      </div>
+
+      <nav class="menu">
+        <a href="{% url 'painel_dashboard' %}" class="{% if request.resolver_match.url_name == 'painel_dashboard' %}active{% endif %}">Dashboard</a>
+
+        {% if request.user.is_superuser or user_role in 'dono diretor ti' %}
+          <a href="{% url 'painel_user_create' %}" class="{% if request.resolver_match.url_name == 'painel_user_create' %}active{% endif %}">Criar usuário</a>
+
+          <details>
+            <summary style="cursor:pointer; padding:10px 12px; border-radius:10px;">Admin</summary>
+            <div style="display:grid; gap:6px; margin-top:8px;">
+              {% for m in admin_modules %}
+                <a href="{{ m.url }}">{{ m.name }}</a>
+              {% endfor %}
+            </div>
+          </details>
+
+        {% elif user_role == 'gestor' %}
+          <a href="{% url 'painel_user_create' %}" class="{% if request.resolver_match.url_name == 'painel_user_create' %}active{% endif %}">Criar usuário</a>
+
+          <details>
+            <summary style="cursor:pointer; padding:10px 12px; border-radius:10px;">Admin</summary>
+            <div style="display:grid; gap:6px; margin-top:8px;">
+              {% for m in allowed_admin_modules %}
+                <a href="{{ m.url }}">{{ m.name }}</a>
+              {% endfor %}
+            </div>
+          </details>
+        {% endif %}
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="{% url 'painel_settings' %}"
+           class="{% if request.resolver_match.url_name == 'painel_settings' %}active{% endif %}"
+           title="Configurações">
+          <img src="{% static 'icons/engrenagem.png' %}" alt="Configurações" />
+        </a>
+
+        <a href="{% url 'painel_logout' %}" title="Sair">
+          <img src="{% static 'icons/sair.png' %}" alt="Sair" />
+        </a>
+      </div>
+    </aside>
+
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

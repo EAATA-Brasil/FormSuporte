@@ -101,11 +101,38 @@ class MarcaEquipamentoViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
+<<<<<<< Updated upstream
     @api_metrics("marcaequipamento_retrieve")
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 =======
     permission_classes = [IsAuthenticated]
+>>>>>>> Stashed changes
+=======
+class ClienteViewSet(viewsets.ReadOnlyModelViewSet):
+    """API ViewSet para listar e recuperar clientes (somente leitura)."""
+    queryset = Cliente.objects.all().order_by('serial')
+    serializer_class = ClienteSerializer
+
+@csrf_exempt
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def cliente_search(request):
+    """Endpoint POST que retorna cliente por serial.
+
+    Recebe JSON: {"serial": "..."} e devolve o cliente serializado.
+    """
+    serial = (request.data.get('serial') or '').strip()
+    if not serial:
+        return Response({'ok': False, 'message': 'Informe o serial.'}, status=400)
+    try:
+        cliente = Cliente.objects.get(serial=serial)
+    except Cliente.DoesNotExist:
+        return Response({'ok': False, 'message': 'Serial não encontrado.'}, status=404)
+
+    serializer = ClienteSerializer(cliente)
+    return Response({'ok': True, 'data': serializer.data}, status=200)
 >>>>>>> Stashed changes
 
 # --- Funções Utilitárias ---

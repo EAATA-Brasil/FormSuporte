@@ -1,0 +1,235 @@
+{% extends 'painel/base.html' %}
+{% block title %}EAATA – Criar Usuário{% endblock %}
+
+{% block head %}
+<style>
+  .form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  .row{ display:flex; flex-direction:column; }
+  .row label{ color:var(--muted); font-size:13px; margin-bottom:6px; }
+  input, select{
+    height:44px; padding:0 12px; border-radius:10px;
+    border:1px solid var(--stroke); background:#fff;
+  }
+  input:focus, select:focus{ outline:none; border-color:#0b66c3; box-shadow:0 0 0 3px rgba(11,102,195,.15); }
+  .btn-primary{
+    margin-top:10px; display:inline-flex; align-items:center; justify-content:center;
+    height:44px; border-radius:10px; padding:0 18px; font-weight:700;
+    border:1px solid #2563eb; background:linear-gradient(180deg,#2d6df7 0%, #1553cf 100%); color:#fff; cursor:pointer;
+  }
+  .btn-primary:hover{ filter:brightness(.96); }
+  .msg-error{ background:#b91c1c; color:#fff; padding:8px 10px; border-radius:10px; margin:10px 0; }
+  .msg-ok{ background:#166534; color:#fff; padding:8px 10px; border-radius:10px; margin:10px 0; }
+
+  /* ====== bloco legado (estilo parecido com o antigo) ====== */
+  .legacy-box{
+    margin-top:14px;
+    padding:14px;
+    border-radius:14px;
+    border:1px solid var(--stroke);
+    background:#fff;
+  }
+  .legacy-title{ font-weight:800; margin:0 0 10px 0; }
+  .radio-group{
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--stroke);
+    border-radius: 10px;
+    background: rgba(2,6,23,.03);
+  }
+  .radio-options{ display:flex; gap: 1rem; flex-wrap:wrap; }
+  .radio-item{ display:flex; align-items:center; }
+  .radio-item label{ margin-left:.5rem; cursor:pointer; color:var(--text, #111827); }
+
+  .checkbox-group{
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--stroke);
+    border-radius: 10px;
+    background: rgba(2,6,23,.03);
+  }
+  .checkbox-group-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:.5rem;
+  }
+  .selected-count{ font-size:12px; color: var(--muted); }
+  .checkbox-item{ display:flex; align-items:center; gap:8px; padding:6px 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 style="margin-top:0;">Criar Usuário</h2>
+
+<div class="panel">
+  {% if error %}<div class="msg-error">{{ error }}</div>{% endif %}
+  {% if messages %}
+    {% for m in messages %}<div class="msg-ok">{{ m }}</div>{% endfor %}
+  {% endif %}
+
+  {# ✅ suporte legado agora usa user_setor #}
+  {% if user_role == 'gestor' and user_setor == 'suporte' %}
+    <div class="legacy-box">
+      <p class="legacy-title">Criar Usuário (Suporte)</p>
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="suporte_legacy" />
+
+        <div class="form-grid">
+          <div class="row">
+            <label for="username">Nome de usuário</label>
+            <input type="text" id="username" name="username" placeholder="Digite o nome de usuário" required>
+          </div>
+
+          <div class="row">
+            <label for="password">Senha</label>
+            <input type="password" id="password" name="password" placeholder="Digite a senha" required>
+          </div>
+        </div>
+
+        <div class="radio-group">
+          <div style="font-weight:700; margin-bottom:8px;">Tipo de usuário (Técnicos)</div>
+          <div class="radio-options">
+            <div class="radio-item">
+              <input type="radio" id="tipo-responsavel" name="tipo_usuario" value="responsavel" checked>
+              <label for="tipo-responsavel">Responsável</label>
+            </div>
+
+            <div class="radio-item">
+              <input type="radio" id="tipo-reporte" name="tipo_usuario" value="reporte">
+              <label for="tipo-reporte">Reporte</label>
+            </div>
+
+            <div class="radio-item">
+              {# mantém o value legado "semi_admin", só troca o texto #}
+              <input type="radio" id="tipo-semi-admin" name="tipo_usuario" value="semi_admin">
+              <label for="tipo-semi-admin">Sub Gestor</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="checkbox-group">
+          <div class="checkbox-group-header">
+            <strong>Países responsáveis:</strong>
+            <span class="selected-count" id="selected-count">0 selecionados</span>
+          </div>
+
+          {% for pais in paises %}
+            <div class="checkbox-item">
+              <input type="checkbox" id="pais-{{ pais.id }}" name="paises_responsavel" value="{{ pais.id }}">
+              <label for="pais-{{ pais.id }}">{{ pais.name }}</label>
+            </div>
+          {% empty %}
+            <p>Nenhum país disponível.</p>
+          {% endfor %}
+        </div>
+
+        <button class="btn-primary" type="submit">Criar usuário</button>
+      </form>
+    </div>
+
+    <script>
+      (function(){
+        const checkboxes = document.querySelectorAll('input[name="paises_responsavel"]');
+        const counter = document.getElementById('selected-count');
+        if(!counter) return;
+
+        function updateCounter() {
+          const selected = document.querySelectorAll('input[name="paises_responsavel"]:checked').length;
+          counter.textContent = `${selected} selecionado${selected !== 1 ? 's' : ''}`;
+        }
+        checkboxes.forEach(cb => cb.addEventListener('change', updateCounter));
+        updateCounter();
+      })();
+    </script>
+
+  {% else %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-grid">
+      <div class="row">
+        <label>Nome</label>
+        <input type="text" name="nome" placeholder="Nome completo" required />
+      </div>
+
+      <div class="row">
+        <label>E-mail (opcional)</label>
+        <input type="email" name="email" placeholder="email@dominio.com" />
+      </div>
+
+      <div class="row">
+        <label>Senha</label>
+        <input type="password" name="senha" required />
+      </div>
+
+      <div class="row">
+        <label>CPF/CNPJ</label>
+        <input type="text" name="cpf_cnpj" placeholder="Somente números" />
+      </div>
+
+      <div class="row">
+        <label>Contato</label>
+        <input type="text" name="contato" placeholder="(00) 00000-0000" />
+      </div>
+
+      {# 🆕 NOVO CAMPO: área (responsabilidade) #}
+      <div class="row">
+        <label>Área (responsabilidade)</label>
+        <input type="text" name="area" placeholder="Ex.: Região, carteira, squad..." />
+      </div>
+
+      {% if user.is_superuser or user_role in 'dono,diretor,ti' %}
+        <div class="row">
+          <label>Hierarquia</label>
+          <select name="role" id="role-select" required>
+            {% for v,lbl in roles %}<option value="{{ v }}">{{ lbl }}</option>{% endfor %}
+          </select>
+        </div>
+
+        <div class="row" id="setor-row">
+          <label>Setor</label>
+          <select name="setor" id="setor-select">
+            {% for v,lbl in setores %}<option value="{{ v }}">{{ lbl }}</option>{% endfor %}
+          </select>
+        </div>
+      {% else %}
+        {# gestor de outros setores: continua criando colaborador do próprio setor #}
+        <input type="hidden" name="role" value="colaborador" />
+        <input type="hidden" name="setor" value="{{ user_setor }}" />
+
+        <div class="row">
+          <label>Hierarquia</label>
+          <input type="text" value="Colaborador" disabled />
+        </div>
+
+        <div class="row">
+          <label>Setor</label>
+          <input type="text" value="{{ user_setor|default:'(sem setor)' }}" disabled />
+        </div>
+      {% endif %}
+    </div>
+
+    <button class="btn-primary" type="submit">Salvar</button>
+  </form>
+
+  <script>
+    (function(){
+      const roleSel = document.getElementById('role-select');
+      const setorRow = document.getElementById('setor-row');
+      const setorSel = document.getElementById('setor-select');
+      if (!roleSel || !setorRow || !setorSel) return;
+
+      function toggleSetor(){
+        const r = roleSel.value;
+        const needSetor = !(r === 'dono' || r === 'diretor');
+        setorRow.style.display = needSetor ? '' : 'none';
+        setorSel.required = needSetor;
+      }
+      roleSel.addEventListener('change', toggleSetor);
+      toggleSetor();
+    })();
+  </script>
+
+  {% endif %}
+</div>
+{% endblock %}

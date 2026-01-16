@@ -71,7 +71,13 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'simulador',
     'serial_vci',
+<<<<<<< Updated upstream
     'situacao_veiculo.apps.SituacaoVeiculoConfig'
+=======
+    'situacao_veiculo.apps.SituacaoVeiculoConfig',
+    'pedido',
+    'painel',
+>>>>>>> Stashed changes
 ]
 
 
@@ -110,6 +116,8 @@ MIDDLEWARE = [
     'Form_Suporte.middleware.RequestMetricsMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'painel.middleware.LoginRequiredMiddleware',
+    'painel.middleware.AdminAreaAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
@@ -127,10 +135,21 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'painel.context_processors.painel_modules',
             ],
         },
     },
 ]
+# Áreas dos módulos (usado para controlar acesso ao admin por área)
+PAINEL_MODULE_AREAS = {
+    'ocorrencia_erro': 'suporte',
+    'situacao_veiculo': 'suporte',
+    'simulador': 'comercial',
+    'serial_vci': 'suporte',
+    'form': 'suporte',
+    'pedido': 'comercial',
+    'API': 'ti',
+}
 
 
 
