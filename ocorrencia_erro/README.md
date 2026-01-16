@@ -58,6 +58,7 @@ O modelo central que representa uma ocorrência ou problema.
 | `country_original` | `CharField(max_length=100, null=True, blank=True)` | País original da ocorrência (preenchido na criação). |
 | `version` | `CharField(max_length=100, blank=True, null=True, default="N/A")` | Versão do software/firmware. |
 | `problem_detected` | `TextField(default="Não identificado")` | Descrição do problema detectado. |
+| `solution` | `TextField(blank=True, null=True)` | Solução final da ocorrência; preenchida automaticamente quando uma mensagem no chat começa com `solução:`/`solucao:`. |
 | `status` | `CharField(max_length=20, choices=STATUS_OCORRENCIA.choices, default=STATUS_OCORRENCIA.REQUESTED)` | Status da ocorrência (Concluído, Atrasado, Em progresso, Requisitado, Aguardando). |
 | `feedback_technical` | `TextField(blank=True, null=True, default="Não identificado")` | Feedback do técnico. |
 | `feedback_manager` | `TextField(blank=True, null=True, default="Não identificado")` | Feedback do gestor. |
@@ -173,7 +174,7 @@ Função auxiliar que processa e salva múltiplos arquivos (`files`) associados 
 
 - **URL:** `get_record/<int:pk>/`
 - **Métodos:** `GET`
-- **Funcionalidade:** Retorna os detalhes completos de uma ocorrência específica (identificada por `pk`) em formato JSON, incluindo informações sobre arquivos anexados e mensagens de chat.
+- **Funcionalidade:** Retorna os detalhes completos de uma ocorrência específica (identificada por `pk`) em formato JSON, incluindo `solution`. Se `solution` estiver vazio, procura a última mensagem do chat iniciada por `solução:`/`solucao:` e persiste no registro.
 
 ### 3.12. `criar_notificacao_feedback(record, tipo_feedback, gestor_user)`
 

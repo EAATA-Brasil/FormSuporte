@@ -4,7 +4,7 @@
 
 O aplicativo **`situacao_veiculo`** gerencia o status de suporte técnico de clientes com base no número de série dos equipamentos.
 
-Com a versão atual, ele passou a contar com recursos **interativos e automatizados**, incluindo:
+Com a versão atual, ele conta com recursos **interativos e automatizados**, incluindo:
 - Consulta rápida do status de suporte;
 - Cadastro de novos clientes (popup AJAX);
 - Atualização automática de dados com observer e autosave;
@@ -30,6 +30,15 @@ Representa o cliente e os dados do equipamento, com controle de vencimento e sta
 | `cnpj` | `CharField(max_length=30, blank=True, default="SEM DADO")` | CPF/CNPJ do cliente. |
 | `tel` | `CharField(max_length=30, blank=True, default="SEM DADO")` | Telefone do cliente. |
 | `equipamento` | `CharField(max_length=100, blank=True, default="")` | Equipamento associado. |
+
+### 2.2. Regras de preenchimento/atualização
+- `data` (Data Efetiva):
+  - Na criação via sincronização Odoo é definida com a data do movimento (efetiva).
+  - Em atualizações posteriores via sync, NÃO é alterada.
+- `equipamento`:
+  - Sempre atualizado pelo sync. O nome é normalizado removendo prefixo entre colchetes do início (ex.: `[EAATA010-BR] EAATA90` → `EAATA90`) e preservando espaços (ex.: `Thinktool master 2` → `THINKTOOL MASTER 2`).
+- `tel`/`nome`:
+  - Preenchidos pelo sync quando vazios, a partir de `res.partner` (usa `mobile` ou `phone`).
 
 **Métodos Especiais**
 - `clean()`: Garante unicidade do `serial`.
@@ -198,6 +207,164 @@ from django.apps import AppConfig
 class SituacaoVeiculoConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'situacao_veiculo'
+
+---
+
+## 9. Integração com Odoo (JSON-RPC)
+
+### 9.1. Variáveis de ambiente
+- `ODOO_URL`, `ODOO_DB`, `ODOO_USER`, `ODOO_PASSWORD`.
+
+### 9.2. Execução manual
+```
+python manage.py sync_situacao_serial --settings=Form_Suporte.settings
+```
+
+### 9.3. Crontab (Linux)
+```
+SHELL=/bin/bash
+PATH=/caminho/para/env/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ODOO_URL=https://seu-odoo
+ODOO_DB=seu_db
+ODOO_USER=usuario
+ODOO_PASSWORD=senha
+0 */2 * * * cd /caminho/para/Sistema_Suporte && /caminho/para/env/bin/python manage.py sync_situacao_serial --settings=Form_Suporte.settings >> /var/log/situacao_sync.log 2>&1
+```
+
+### 9.4. Regras de normalização e mapeamento
+- Equipamento: remove prefixo entre colchetes no início, preserva espaços e usa caixa alta.
+- Data Efetiva (data): somente na criação; não é alterada em updates.
+- Telefone/Email: lidos de `res.partner` (prioriza `mobile`, depois `phone`).
+
+---
+
+## 10. API HTTP (situação)
+
+### 10.1. Buscar cliente
+- Método: GET
+- Rota: `/situacao/api/cliente`
+- Parâmetros (query):
+  - `serial` (string) – obrigatório
+
+Exemplo (curl):
+```
+curl -G \
+  --data-urlencode "serial=9TDP12345678" \
+  https://seu-dominio/situacao/api/cliente
+```
+
+Resposta (200):
+```json
+{
+  "ok": true,
+  "data": {
+    "id": 123,
+    "serial": "9TDP12345678",
+    "nome": "Cliente Exemplo",
+    "cnpj": "00000000000000",
+    "tel": "(11) 99999-9999",
+    "vencimento": "2026-01-16"
+  }
+}
+```
+Erros comuns:
+- 400: {"ok": false, "message": "Informe o serial."}
+- 404: {"ok": false, "message": "Serial não encontrado."}
+
+### 10.2. Atualizar cliente (autosave)
+- Método: POST (form urlencoded ou multipart)
+- Rota: `/situacao/api/cliente/update`
+- Campos do corpo:
+  - `serial` (string) – obrigatório
+  - `field` (string) – um de: `nome`, `cnpj`, `tel`, `vencimento`
+  - `value` (string) – novo valor
+
+Regras específicas:
+- `cnpj`: o backend remove caracteres não numéricos antes de salvar.
+- `vencimento`: formato `YYYY-MM-DD`. Valor vazio remove o vencimento.
+
+Exemplos (curl):
+
+Atualizar nome:
+```
+curl -X POST https://seu-dominio/situacao/api/cliente/update \
+  -d "serial=9TDP12345678" \
+  -d "field=nome" \
+  -d "value=Novo Nome"
+```
+
+Definir vencimento:
+```
+curl -X POST https://seu-dominio/situacao/api/cliente/update \
+  -d "serial=9TDP12345678" \
+  -d "field=vencimento" \
+  -d "value=2026-12-31"
+```
+
+Remover vencimento:
+```
+curl -X POST https://seu-dominio/situacao/api/cliente/update \
+  -d "serial=9TDP12345678" \
+  -d "field=vencimento" \
+  -d "value="
+```
+
+Respostas típicas (200):
+```json
+{"ok": true, "message": "Nome atualizado.", "data": {"nome": "Novo Nome"}}
+```
+```json
+{"ok": true, "message": "Vencimento atualizado.", "data": {"vencimento": "2026-12-31"}}
+```
+```json
+{"ok": true, "message": "Vencimento removido."}
+```
+
+Erros comuns:
+- 400: {"ok": false, "message": "Serial é obrigatório."}
+- 400: {"ok": false, "message": "Campo não permitido para atualização."}
+- 400: {"ok": false, "message": "Data inválida. Use formato YYYY-MM-DD."}
+- 404: {"ok": false, "message": "Serial não encontrado."}
+
+Autenticação/CSRF
+- Se consumir a API via browser, inclua o header `X-CSRFToken` como já feito nos formulários do projeto.
+- Para integrações servidor-servidor, avalie autenticação e CSRF conforme política do ambiente (por padrão, CSRF está habilitado).
+
+### 10.3. Token de acesso (server-to-server)
+Caso as rotas estejam protegidas por `TokenAuthentication` (DRF) no ambiente de produção, siga:
+
+1) Habilitar tokens (uma vez no projeto)
+- Em `INSTALLED_APPS` adicione `rest_framework.authtoken`.
+- Migre: `python manage.py migrate`
+
+2) Gerar token para um usuário
+- Via comando (necessário DRF >= 3.6):
+```
+python manage.py drf_create_token <username>
+```
+- Ou via shell/admin:
+```python
+from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+u = User.objects.get(username="seu_usuario")
+token, _ = Token.objects.get_or_create(user=u)
+print(token.key)
+```
+
+3) Enviar o token no header Authorization
+```
+curl -H "Authorization: Token SEU_TOKEN" \
+  -G --data-urlencode "serial=9TDP12345678" \
+  https://seu-dominio/situacao/api/cliente
+
+curl -H "Authorization: Token SEU_TOKEN" \
+  -X POST https://seu-dominio/situacao/api/cliente/update \
+  -d "serial=9TDP12345678" -d "field=nome" -d "value=Novo Nome"
+```
+
+Observações
+- O uso de token dispensa CSRF para chamadas server-to-server.
+- Se sua instalação ainda não aplica `TokenAuthentication` a essas rotas, combine com o time para ativá-la (ex.: via `DEFAULT_AUTHENTICATION_CLASSES` no settings ou decoradores por view).
     verbose_name = 'Verificar suporte'
 ```
 

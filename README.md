@@ -1,3 +1,27 @@
+# EAATA – Sistema de Suporte (Monorepo)
+
+Este repositório reúne várias apps Django que compõem o sistema de suporte da EAATA (ocorrências, situação por serial, simulador de propostas, API, etc.).
+
+Leituras rápidas
+- Instalação básica
+  1) python -m venv env
+  2) Ative o venv (Linux/macOS: source env/bin/activate | Windows PowerShell: .\\env\\Scripts\\Activate.ps1)
+  3) pip install -r requirements.txt
+  4) python manage.py migrate
+  5) python manage.py createsuperuser
+  6) python manage.py runserver
+- WebSocket/Channels: em produção configure Redis; em dev a camada in-memory funciona para testes.
+- Geração de PDF: WeasyPrint/ReportLab conforme cada app.
+
+Documentação por app
+- ocorrencia_erro/README.md – Gestão de ocorrências (chat, anexos, permissões, PDF).
+- situacao_veiculo/README.md – Status de clientes por serial + sincronização Odoo.
+- API/README.md – Endpoints REST e geração de PDF de simulação.
+- simulador/README.md – Interface web do app móvel de simulação.
+- serial_vci/README.md – Registros VCI com WebSockets e mídia.
+- form/README.md – Base de dados de veículos.
+- pedido/README.md – Fluxos de pedido/orçamento (se aplicável).
+
 # FormSuporte
 
 ## Visão Geral do Projeto
