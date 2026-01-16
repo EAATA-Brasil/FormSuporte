@@ -200,10 +200,10 @@ def sync_odoo_to_clientes(max_rows: Optional[int] = None) -> Dict[str, int]:
         """
         if not name:
             return ""
-        # remove prefixo em colchetes
+        # remove prefixo em colchetes do início
         s = re.sub(r"^\[[^\]]*\]\s*", "", str(name)).strip()
-        # remove todos os espaços
-        s = re.sub(r"\s+", "", s)
+        # normaliza múltiplos espaços, preservando espaços entre palavras
+        s = re.sub(r"\s+", " ", s).strip()
         # padroniza em maiúsculas
         return s.upper()
 
