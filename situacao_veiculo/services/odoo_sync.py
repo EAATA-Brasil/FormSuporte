@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from datetime import datetime, date
 from typing import Any, Dict, List, Optional, Tuple
@@ -105,21 +106,58 @@ def fetch_done_outgoing_moves_with_serial(client: OdooClient, limit: Optional[in
         offset += len(batch)
         if limit is not None and offset >= limit:
             break
-    # Map picking -> partner
+    # Map picking -> partner (inclui dados detalhados do parceiro)
     picking_ids = list({rec["picking_id"][0] for rec in result if isinstance(rec.get("picking_id"), list)})
-    picking_partner: Dict[int, str] = {}
+    picking_partner_name: Dict[int, Optional[str]] = {}
+    picking_partner_id_map: Dict[int, Optional[int]] = {}
+    partner_ids: List[int] = []
     if picking_ids:
         pickings = client.execute_kw("stock.picking", "read", [picking_ids], {"fields": ["name", "partner_id", "date_done"]})
         for p in pickings:
             partner = p.get("partner_id")
-            picking_partner[p["id"]] = partner[1] if isinstance(partner, list) and len(partner) > 1 else None
-    # Enriquecer
+            pid = p.get("id")
+            partner_id = partner[0] if isinstance(partner, list) and len(partner) > 0 else None
+            partner_name = partner[1] if isinstance(partner, list) and len(partner) > 1 else None
+            picking_partner_name[pid] = partner_name
+            picking_partner_id_map[pid] = partner_id
+            if partner_id:
+                partner_ids.append(partner_id)
+
+    partner_info: Dict[int, Dict[str, Optional[str]]] = {}
+    if partner_ids:
+        # Remove duplicados
+        partner_ids = list(sorted(set(partner_ids)))
+        partners = client.execute_kw(
+            "res.partner",
+            "read",
+            [partner_ids],
+            {"fields": ["name", "phone", "mobile", "email", "vat"]},
+        )
+        for p in partners:
+            partner_info[p.get("id")] = {
+                "name": p.get("name"),
+                "phone": p.get("phone"),
+                "mobile": p.get("mobile"),
+                "email": p.get("email"),
+                "vat": p.get("vat"),
+            }
+
+    # Enriquecer resultado final com dados de parceiro (nome/contatos)
     for r in result:
         pid = r.get("picking_id")
         if isinstance(pid, list):
-            r["partner_name"] = picking_partner.get(pid[0])
+            pick_id = pid[0]
+            r["partner_name"] = picking_partner_name.get(pick_id)
+            p_id = picking_partner_id_map.get(pick_id)
+            pinfo = partner_info.get(p_id or -1, {})
+            r["partner_phone"] = pinfo.get("mobile") or pinfo.get("phone")
+            r["partner_email"] = pinfo.get("email")
+            r["partner_vat"] = pinfo.get("vat")
         else:
             r["partner_name"] = None
+            r["partner_phone"] = None
+            r["partner_email"] = None
+            r["partner_vat"] = None
     return result
 
 
@@ -155,14 +193,32 @@ def sync_odoo_to_clientes(max_rows: Optional[int] = None) -> Dict[str, int]:
     def anos_por_equip(equip: str) -> int:
         return 1 if (equip or '').lower().find('reader') != -1 else 2
 
+    def format_equip_name(name: str) -> str:
+        """
+        Remove prefixos em colchetes e insere espaço entre letras e números.
+        Ex.: "[EAATA010-BR] EAATA90" -> "EAATA 90"
+        """
+        if not name:
+            return ""
+        # remove prefixo em colchetes
+        s = re.sub(r"^\[[^\]]*\]\s*", "", str(name)).strip()
+        # insere espaço entre letras e números (EAATA90 -> EAATA 90)
+        s = re.sub(r"([A-Za-z])([0-9])", r"\1 \2", s)
+        # normaliza múltiplos espaços
+        s = re.sub(r"\s+", " ", s).strip()
+        # padroniza em maiúsculas como no exemplo
+        return s.upper()
+
     for rec in rows:
         serial = _norm_serial(rec.get("lot_name") or (rec.get("lot_id")[1] if isinstance(rec.get("lot_id"), list) else None))
         if not serial:
             skipped += 1
             continue
         produto = rec.get("product_id")
-        equipamento = produto[1] if isinstance(produto, list) and len(produto) > 1 else ""
+        equipamento_raw = produto[1] if isinstance(produto, list) and len(produto) > 1 else ""
+        equipamento = format_equip_name(equipamento_raw)
         partner_name = rec.get("partner_name") or ""
+        partner_phone = rec.get("partner_phone") or ""
         dt = rec.get("date")
         try:
             data_date = datetime.fromisoformat(dt.replace('Z','+00:00')).date() if isinstance(dt, str) else timezone.localdate()
@@ -178,8 +234,19 @@ def sync_odoo_to_clientes(max_rows: Optional[int] = None) -> Dict[str, int]:
             if (not obj.equipamento) and equipamento:
                 obj.equipamento = equipamento
                 changed = True
+            if (not obj.tel) and partner_phone:
+                obj.tel = partner_phone
+                changed = True
             if changed:
-                obj.save(update_fields=["nome", "equipamento"])  # saves only changed fields; harmless if not both
+                # salva apenas campos alterados
+                update_fields = [
+                    f for f, cond in (
+                        ("nome", bool(partner_name and not obj.nome)),
+                        ("equipamento", bool(equipamento and not obj.equipamento)),
+                        ("tel", bool(partner_phone and not obj.tel)),
+                    ) if cond
+                ] or ["nome", "equipamento", "tel"]
+                obj.save(update_fields=update_fields)
                 updated += 1
             else:
                 skipped += 1
@@ -193,7 +260,7 @@ def sync_odoo_to_clientes(max_rows: Optional[int] = None) -> Dict[str, int]:
                 serial=serial,
                 nome=partner_name,
                 cnpj=None,
-                tel=None,
+                tel=partner_phone or None,
                 equipamento=equipamento or "N/D",
             )
             created += 1
