@@ -5,6 +5,7 @@ from channels.db import database_sync_to_async
 from .models import ChatMessage, Record, Notificacao
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+import re
 
 User = get_user_model()
 
@@ -143,7 +144,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Para este exemplo, vamos salvar normalmente
             pass
             
-        return ChatMessage.objects.create(
+        msg = ChatMessage.objects.create(
             record_id=self.record_id,
             author=self.user,
             message=message,
@@ -151,7 +152,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             image_type=image_type,
             image_name=image_name
         )
-
+        # Se a mensagem tiver formato de solução, salva em Record.solution
+        try:
+            sol_pattern = re.compile(r"(?i)solu[cç][aã]o\s*[:\-]\s*(.+)")
+            m = sol_pattern.search(message or "")
+            if m:
+                Record.objects.filter(id=self.record_id).update(solution=m.group(1).strip())
+        except Exception:
+            pass
+        return msg
     @database_sync_to_async
     def get_recipient_id(self):
         try:

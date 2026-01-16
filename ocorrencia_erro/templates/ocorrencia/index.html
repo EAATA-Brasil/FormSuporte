@@ -491,11 +491,15 @@
                 {% include 'ocorrencia/components/lineHead.html' with name=_("Modelo") ID="model" %}
                 {% include 'ocorrencia/components/lineHead.html' with name=_("Detalhes") ID="problem_detected" checbox='false' %}
                 {% include 'ocorrencia/components/lineHead.html' with name=_("Status") ID="status" %}
-                {% include 'ocorrencia/components/lineHead.html' with name=_("Deadline") ID="deadline" %}
+                {% if not view_done_only %}
+                    {% include 'ocorrencia/components/lineHead.html' with name=_("Deadline") ID="deadline" %}
+                {% endif %}
                 {% if has_edit_permission %}
                     {% include 'ocorrencia/components/lineHead.html' with name=_("Responsável") ID="responsible" %}
                 {% endif %}
-                {% include 'ocorrencia/components/lineHead.html' with name=_("Finalizado") ID="finished" %}
+                {% if not view_done_only %}
+                    {% include 'ocorrencia/components/lineHead.html' with name=_("Finalizado") ID="finished" %}
+                {% endif %}
             </tr>
             
         </thead>
@@ -879,7 +883,22 @@
             const feedbackManagerId = `feedback_manager_${record.id}`;
             const detalhesResponsavelId = `detalhes_responsavel_${record.id}`;
             // console.log(record)
-            // Cria o conteúdo HTML do pop-up com informações detalhadas e textareas editáveis
+            // Cria o conteúdo HTML do pop-up
+            {% if view_done_only %}
+            const popupContent = `
+                <div style="text-align: left;">
+                    <h3 style="color: var(--primary); margin-bottom: 20px;">{% trans "Detalhes da Ocorrência" %}</h3>
+                    <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-top: 0; color: var(--text);">{% trans "Problema Detectado:" %}</h4>
+                        <div class="observations" style="white-space: pre-wrap; color: var(--text-light);">${problemDetectedValue}</div>
+                    </div>
+                    <div style="background: var(--gray); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-top: 0; color: var(--text);">{% trans "Solução:" %}</h4>
+                        <div id="solution-text" class="observations" style="white-space: pre-wrap; color: var(--text-light);">${record.solution || '{% trans "Não informado" %}'}</div>
+                    </div>
+                </div>
+            `;
+            {% else %}
             const popupContent = `
                 <div style="text-align: left;">
                     <h3 style="color: var(--primary); margin-bottom: 20px;">{% trans "Detalhes da Ocorrência" %}</h3>
@@ -1017,15 +1036,17 @@
                                     <option value="AWAITING_CHINA" ${record.status_code === 'AWAITING_CHINA' || record.status_code === 'AWAITING_CHINA_LATE' ? 'selected' : ''}>{% trans "Aguardando China" %}</option>
                                 </select>
                         </div>
+                        {% if not view_done_only %}
                         <div>
                             <strong>{% trans "Responsável:" %}</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.responsible || '{% trans "Não informado" %}'}</span>
                         </div>
+                        {% endif %}
                         <div>
                             <strong>{% trans "Data:" %}</strong><br>
                             <span style="color: var(--text-light);" translate="no">${record.data ? formatDateToDisplay(record.data) : '{% trans "Não informado" %}'}</span>
                         </div>
-                        {% if has_edit_permission %}
+                        {% if not view_done_only and has_edit_permission %}
                             <div>
                                 <strong>{% trans "Prazo:" %}</strong><br>
                                 <input type="text"
@@ -1036,7 +1057,7 @@
                                     placeholder="{% trans 'dd/mm/aaaa' %}" />
                             </div>
                             
-                            {% else %}
+                        {% elif not view_done_only %}
                             <div>
                                 <strong>{% trans "Prazo:" %}</strong><br>
                                 <span style="color: var(--text-light);" translate="no">
@@ -1044,6 +1065,7 @@
                                 </span>
                             </div>
                         {% endif %}
+                        {% if not view_done_only %}
                         <div>
                             <strong>{% trans "Finalizado:" %}</strong><br>
                             <input type="text"
@@ -1053,6 +1075,7 @@
                                 value="${record.finished ? formatDateToDisplay(record.finished) : ''}"
                                 placeholder="{% trans 'dd/mm/aaaa' %}" />
                         </div>
+                        {% endif %}
                     </div>
                     <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--secondary);">{% trans "Adicionar novo arquivo:" %}</h5>
                         <div id="file-upload-wrapper-${record.id}" class="file-upload-wrapper full-width">
@@ -1111,6 +1134,7 @@
                     
                 </div>
             `;
+            {% endif %}
             
             let id = record.id  
             Swal.fire({
@@ -1127,6 +1151,19 @@
                     content: 'problem-details-content'
                 },
                 didOpen: () => {
+                        {% if view_done_only %}
+                        // Atualiza solução com GET se não vier na linha da tabela
+                        if (!record.solution) {
+                            fetch(`/ocorrencia/get_record/${id}/`)
+                              .then(r => r.ok ? r.json() : null)
+                              .then(j => {
+                                  const el = document.getElementById('solution-text');
+                                  if (j && el) el.textContent = j.solution || '{% trans "Não informado" %}';
+                              })
+                              .catch(() => {});
+                        }
+                        return; // não configurar edições/chat para usuários de reporte
+                        {% endif %}
                         // ---- Sistema e Tipo de Problema (editáveis) ----
                         try {
                             const areaAtual = ((record.area || '').trim().toUpperCase() === 'DIAGNOSIS') ? 'Diagnosis' : ((record.area || '').trim().toUpperCase() === 'DEVICE' ? 'Device' : ((record.area || '').trim().toUpperCase() === 'IMMO' ? 'IMMO' : (record.area || '').trim()));
@@ -1601,15 +1638,21 @@
 
                     const loggedInUsername = document.getElementById('logged-in-username').textContent
 
-                    const protocol = 'wss://';
+                    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
 
-                    const chatSocket = new WebSocket(
-                        protocol +
-                        window.location.host +
-                        '/ws/chat/' +
-                        recordId +
-                        '/'
+                    let chatSocket = new WebSocket(
+                        wsProtocol + window.location.host + '/ws/chat/' + recordId + '/'
                     );
+                    let chatSocketReady = false;
+                    const pendingChatQueue = [];
+
+                    chatSocket.addEventListener('open', function() {
+                        chatSocketReady = true;
+                        // envia pendentes
+                        while (pendingChatQueue.length > 0 && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                            try { chatSocket.send(JSON.stringify(pendingChatQueue.shift())); } catch(e) { break; }
+                        }
+                    });
 
                     chatSocket.onclose = function(e) {
                         console.error('{% trans "O socket do chat foi fechado inesperadamente" %}');
@@ -1862,8 +1905,15 @@
                                 messageData.image_name = file ? file.name : 'imagem_colada.png';
                             }
                             
-                            // Envia via WebSocket
-                            chatSocket.send(JSON.stringify(messageData));
+                            // Envia via WebSocket quando pronto
+                            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                                chatSocket.send(JSON.stringify(messageData));
+                            } else {
+                                // Fila enquanto conecta
+                                pendingChatQueue.push(messageData);
+                                // feedback simples opcional
+                                try { showSwalStyledToast('{% trans "Conectando ao chat... sua mensagem será enviada." %}', 'info'); } catch(_) {}
+                            }
                             
                             // Limpa os inputs
                             chatInput.value = '';

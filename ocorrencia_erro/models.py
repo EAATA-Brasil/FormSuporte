@@ -215,6 +215,11 @@ class Record(models.Model):
         default="Não identificado",
         verbose_name="Feedback Manager"
     )
+    solution = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Solução'
+    )
     detalhes_responsavel = models.TextField(
         blank=True,
         null=True,

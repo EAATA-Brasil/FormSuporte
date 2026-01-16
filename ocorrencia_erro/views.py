@@ -32,6 +32,7 @@ from reportlab.lib.units import inch, mm
 import io
 from django.views.decorators.http import require_http_methods
 import json
+import re
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
@@ -54,7 +55,7 @@ from django.utils import timezone
 from weasyprint import HTML
 
 from ocorrencia_erro.services.dashboard import dashboard_responsavel
-from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao, OptionItem
+from .models import Record, Country, CountryPermission, Device, ArquivoOcorrencia, Notificacao, OptionItem, ChatMessage
 
 # Constantes
 DATE_COLUMNS = ["data", "deadline", "finished"]
@@ -563,6 +564,7 @@ def filter_data_view(request):
                     'version': record.version or '',
                     'tipo_chave': record.tipo_chave or '',
                     'problem_detected': record.problem_detected or '',
+                    'solution': record.solution or '',
                     'status': STATUS_MAP_REVERSED.get(record.status, record.status or ''),
 
                     'status_display': STATUS_MAP_REVERSED.get(record.status, record.status or ''),
@@ -1228,6 +1230,26 @@ def get_record(request, pk):
         if request.user.is_authenticated and (request.user.groups.filter(name='Somente Concluído').exists() or request.user.groups.filter(name='Técnicos de reporte').exists()):
             if record.status != Record.STATUS_OCORRENCIA.DONE:
                 return JsonResponse({'error': 'Registro não encontrado'}, status=404)
+        # Solução registrada no banco (preferencial)
+        last_solution = getattr(record, 'solution', None)
+        try:
+            if not last_solution:
+                # Fallback: scan do chat e, se encontrar, salva em record.solution
+                sol_pattern = re.compile(r"(?i)solu[cç][aã]o\s*[:\-]\s*(.+)")
+                for msg in ChatMessage.objects.filter(record=record).order_by('-timestamp')[:200]:
+                    raw = (msg.message or '').strip()
+                    m = sol_pattern.search(raw)
+                    if m:
+                        last_solution = m.group(1).strip()
+                        try:
+                            record.solution = last_solution
+                            record.save(update_fields=['solution'])
+                        except Exception:
+                            pass
+                        break
+        except Exception:
+            last_solution = None
+
         data = {
             "id": record.id,
             "technical": record.technical,
@@ -1255,6 +1277,7 @@ def get_record(request, pk):
             "problem_detected": record.problem_detected,
             "feedback_technical": record.feedback_technical,
             "feedback_manager": record.feedback_manager,
+            "solution": last_solution,
             "arquivos": [
                 {
                     "id": arquivo.id,
