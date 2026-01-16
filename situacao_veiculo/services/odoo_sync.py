@@ -195,18 +195,16 @@ def sync_odoo_to_clientes(max_rows: Optional[int] = None) -> Dict[str, int]:
 
     def format_equip_name(name: str) -> str:
         """
-        Remove prefixos em colchetes e insere espaço entre letras e números.
-        Ex.: "[EAATA010-BR] EAATA90" -> "EAATA 90"
+        Normaliza o nome do equipamento removendo prefixos em colchetes
+        e também espaços. Ex.: "[EAATA010-BR] EAATA90" -> "EAATA90".
         """
         if not name:
             return ""
         # remove prefixo em colchetes
         s = re.sub(r"^\[[^\]]*\]\s*", "", str(name)).strip()
-        # insere espaço entre letras e números (EAATA90 -> EAATA 90)
-        s = re.sub(r"([A-Za-z])([0-9])", r"\1 \2", s)
-        # normaliza múltiplos espaços
-        s = re.sub(r"\s+", " ", s).strip()
-        # padroniza em maiúsculas como no exemplo
+        # remove todos os espaços
+        s = re.sub(r"\s+", "", s)
+        # padroniza em maiúsculas
         return s.upper()
 
     for rec in rows:
@@ -228,25 +226,20 @@ def sync_odoo_to_clientes(max_rows: Optional[int] = None) -> Dict[str, int]:
         obj = Cliente.objects.filter(serial__iexact=serial).first()
         if obj:
             changed = False
+            # Atualiza nome somente se vazio
             if not obj.nome and partner_name:
                 obj.nome = partner_name
                 changed = True
-            if (not obj.equipamento) and equipamento:
-                obj.equipamento = equipamento
-                changed = True
+            # Atualiza telefone se vazio
             if (not obj.tel) and partner_phone:
                 obj.tel = partner_phone
                 changed = True
+            # Atualiza equipamento sempre; data efetiva (data) é a de criação e NÃO deve ser alterada
+            if equipamento and obj.equipamento != equipamento:
+                obj.equipamento = equipamento
+                changed = True
             if changed:
-                # salva apenas campos alterados
-                update_fields = [
-                    f for f, cond in (
-                        ("nome", bool(partner_name and not obj.nome)),
-                        ("equipamento", bool(equipamento and not obj.equipamento)),
-                        ("tel", bool(partner_phone and not obj.tel)),
-                    ) if cond
-                ] or ["nome", "equipamento", "tel"]
-                obj.save(update_fields=update_fields)
+                obj.save(update_fields=["nome", "tel", "equipamento"])  # não altera 'data' em updates
                 updated += 1
             else:
                 skipped += 1
